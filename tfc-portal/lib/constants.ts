@@ -10,6 +10,18 @@ export const COLUMNS = [
   { id: "published", label: "Published", color: "#E02020" },
 ] as const;
 
+export type ColumnId = (typeof COLUMNS)[number]["id"];
+
+/** Map column id to its display label */
+export const COLUMN_LABELS: Record<ColumnId, string> = Object.fromEntries(
+  COLUMNS.map((c) => [c.id, c.label])
+) as Record<ColumnId, string>;
+
+/** Map column id to its dot color */
+export const COLUMN_COLORS: Record<ColumnId, string> = Object.fromEntries(
+  COLUMNS.map((c) => [c.id, c.color])
+) as Record<ColumnId, string>;
+
 export const STEP_TITLES = [
   "Define Your Positioning",
   "Clarify Your Audience",
@@ -67,3 +79,18 @@ export const EMPTY_ONBOARDING_DATA = {
 };
 
 export type OnboardingData = typeof EMPTY_ONBOARDING_DATA;
+
+/** Shared design tokens (mirrors tailwind.config.ts) */
+export const COLORS = {
+  red: "#E02020",
+  redLight: "#FF3B3B",
+  bg: "#0A0A0A",
+  surface: "#111111",
+  surface2: "#181818",
+  surface3: "#202020",
+  border: "#252525",
+  border2: "#2E2E2E",
+  text: "#F0EDE6",
+  text2: "#A8A49C",
+  text3: "#5A5652",
+} as const;

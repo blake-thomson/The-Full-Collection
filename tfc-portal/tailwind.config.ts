@@ -4,6 +4,7 @@ const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
+    "./emails/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
@@ -15,8 +16,11 @@ const config: Config = {
         text: { DEFAULT: "#F0EDE6", 2: "#A8A49C", 3: "#5A5652" },
       },
       fontFamily: {
-        heading: ["Syne", "sans-serif"],
-        body: ["DM Sans", "sans-serif"],
+        heading: ["var(--font-syne)", "Syne", "sans-serif"],
+        body: ["var(--font-dm-sans)", "DM Sans", "sans-serif"],
+      },
+      screens: {
+        xs: "480px",
       },
     },
   },

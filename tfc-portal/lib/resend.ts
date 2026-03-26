@@ -1,9 +1,13 @@
 import { Resend } from "resend";
 import { TeamInviteEmail } from "@/emails/TeamInvite";
 import { ClientWelcomeEmail } from "@/emails/ClientWelcome";
+import { StatusNotificationEmail } from "@/emails/StatusNotification";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = "The Full Collection <hello@thefullcollection.com>";
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
+
+// TODO: Change FROM to 'The Full Collection <hello@thefullcollection.com>' once the domain is verified in Resend.
+// Using the Resend test address until then.
+const FROM = "The Full Collection <onboarding@resend.dev>";
 
 export async function sendTeamInvite({
   to,
@@ -51,6 +55,33 @@ export async function sendClientWelcome({
       name,
       email,
       password,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+    }),
+  });
+}
+
+export async function sendStatusNotification({
+  to,
+  clientName,
+  contentTitle,
+  oldStatus,
+  newStatus,
+}: {
+  to: string;
+  clientName: string;
+  contentTitle: string;
+  oldStatus: string;
+  newStatus: string;
+}) {
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Content Update: "${contentTitle}" moved to ${newStatus}`,
+    react: StatusNotificationEmail({
+      clientName,
+      contentTitle,
+      oldStatus,
+      newStatus,
       appUrl: process.env.NEXT_PUBLIC_APP_URL!,
     }),
   });

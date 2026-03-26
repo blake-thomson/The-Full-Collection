@@ -1,4 +1,4 @@
-import { createServerClient, type CookieMethods } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export function createServerSupabase() {
@@ -17,7 +17,7 @@ export function createServerSupabase() {
         remove(name: string, options: any) {
           try { cookieStore.set({ name, value: "", ...options }); } catch {}
         },
-      } as CookieMethods,
+      },
     }
   );
 }

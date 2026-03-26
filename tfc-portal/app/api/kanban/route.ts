@@ -23,7 +23,17 @@ export async function GET(req: NextRequest) {
 
 // POST /api/kanban — add a card
 export async function POST(req: NextRequest) {
-  const { client_id, column_id, title, platform } = await req.json();
+  const {
+    client_id,
+    column_id,
+    title,
+    platform,
+    description,
+    due_date,
+    priority,
+    created_by,
+  } = await req.json();
+
   if (!client_id || !column_id || !title) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
@@ -43,7 +53,17 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("kanban_cards")
-    .insert({ client_id, column_id, title, platform: platform || null, position: nextPos })
+    .insert({
+      client_id,
+      column_id,
+      title,
+      platform: platform || null,
+      position: nextPos,
+      description: description || null,
+      due_date: due_date || null,
+      priority: priority || null,
+      created_by: created_by || null,
+    })
     .select()
     .single();
 
@@ -53,9 +73,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data);
 }
 
-// PATCH /api/kanban — move or delete a card
+// PATCH /api/kanban — update a card
 export async function PATCH(req: NextRequest) {
-  const { id, column_id, position } = await req.json();
+  const { id, column_id, position, title, description, due_date, priority } =
+    await req.json();
+
   if (!id) {
     return NextResponse.json({ error: "Card id required" }, { status: 400 });
   }
@@ -64,16 +86,23 @@ export async function PATCH(req: NextRequest) {
   const updates: Record<string, any> = {};
   if (column_id !== undefined) updates.column_id = column_id;
   if (position !== undefined) updates.position = position;
+  if (title !== undefined) updates.title = title;
+  if (description !== undefined) updates.description = description;
+  if (due_date !== undefined) updates.due_date = due_date;
+  if (priority !== undefined) updates.priority = priority;
+  updates.updated_at = new Date().toISOString();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("kanban_cards")
     .update(updates)
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
+  return NextResponse.json(data);
 }
 
 // DELETE /api/kanban?id=...
