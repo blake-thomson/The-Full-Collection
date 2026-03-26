@@ -5,9 +5,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 interface Message {
   id: string;
   client_id: string;
-  author_name: string;
-  author_type: "client" | "team";
-  message: string;
+  sender_email: string;
+  sender_name: string;
+  sender_type: "client" | "team";
+  content: string;
   created_at: string;
 }
 
@@ -27,6 +28,7 @@ export function MessageThread({ clientId, currentUser }: Props) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const [showTyping, setShowTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,8 +44,8 @@ export function MessageThread({ clientId, currentUser }: Props) {
         const data = await res.json();
         setMessages(data);
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      setError("Failed to load messages.");
     }
     setLoading(false);
   }, [clientId]);
@@ -69,9 +71,10 @@ export function MessageThread({ clientId, currentUser }: Props) {
     const optimisticMsg: Message = {
       id: `temp-${Date.now()}`,
       client_id: clientId,
-      author_name: currentUser.name,
-      author_type: currentUser.type,
-      message: text,
+      sender_email: currentUser.email,
+      sender_name: currentUser.name,
+      sender_type: currentUser.type,
+      content: text,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimisticMsg]);
@@ -82,19 +85,21 @@ export function MessageThread({ clientId, currentUser }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: clientId,
-          author_name: currentUser.name,
-          author_type: currentUser.type,
-          message: text,
+          sender_email: currentUser.email,
+          sender_name: currentUser.name,
+          sender_type: currentUser.type,
+          content: text,
         }),
       });
       if (res.ok) {
         const saved = await res.json();
         setMessages((prev) => prev.map((m) => m.id === optimisticMsg.id ? saved : m));
       }
-    } catch {
+    } catch (err) {
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
       setInput(text);
+      setError("Failed to send message. Please try again.");
     }
     setSending(false);
   };
@@ -151,7 +156,7 @@ export function MessageThread({ clientId, currentUser }: Props) {
           </div>
         )}
         {messages.map((msg, i) => {
-          const isMe = msg.author_type === currentUser.type;
+          const isMe = msg.sender_type === currentUser.type;
           const dateSep = getDateSeparator(msg.created_at, i > 0 ? messages[i - 1].created_at : undefined);
 
           return (
@@ -166,7 +171,7 @@ export function MessageThread({ clientId, currentUser }: Props) {
               <div className={`flex mb-3 ${isMe ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[75%] sm:max-w-[60%] ${isMe ? "items-end" : "items-start"} flex flex-col`}>
                   <div className={`flex items-center gap-2 mb-1 ${isMe ? "flex-row-reverse" : ""}`}>
-                    <span className="text-text-2 text-[11px] font-semibold">{msg.author_name}</span>
+                    <span className="text-text-2 text-[11px] font-semibold">{msg.sender_name}</span>
                     <span className="text-text-3 text-[10px]">{formatTime(msg.created_at)}</span>
                   </div>
                   <div
@@ -180,7 +185,7 @@ export function MessageThread({ clientId, currentUser }: Props) {
                       borderBottomLeftRadius: isMe ? 12 : 4,
                     }}
                   >
-                    {msg.message}
+                    {msg.content}
                   </div>
                 </div>
               </div>
@@ -200,6 +205,13 @@ export function MessageThread({ clientId, currentUser }: Props) {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="px-4 sm:px-6 py-2 shrink-0">
+          <p className="text-[#EF4444] text-[12px] m-0">{error}</p>
+        </div>
+      )}
 
       {/* Input Area */}
       <div className="border-t border-border px-4 py-3 sm:px-6 sm:py-4 shrink-0">

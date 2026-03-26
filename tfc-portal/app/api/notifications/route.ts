@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/notifications?email=xxx&type=client
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const email = req.nextUrl.searchParams.get("email");
   const type = req.nextUrl.searchParams.get("type");
 
@@ -32,6 +39,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/notifications — create a notification
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { recipient_email, recipient_type, title, message, link, type } =
     await req.json();
 
@@ -64,6 +77,12 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/notifications — mark as read (by id, or all for a user)
 export async function PATCH(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id, email } = await req.json();
 
   if (!id && !email) {

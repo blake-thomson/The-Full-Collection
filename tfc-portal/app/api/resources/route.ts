@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/resources?client_id=xxx
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const clientId = req.nextUrl.searchParams.get("client_id");
   if (!clientId) {
     return NextResponse.json({ error: "client_id required" }, { status: 400 });
@@ -23,6 +30,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/resources — create a resource
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { client_id, name, type, url, file_path, uploaded_by, description } =
     await req.json();
 
@@ -56,6 +69,12 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/resources?id=...
 export async function DELETE(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const id = req.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json(

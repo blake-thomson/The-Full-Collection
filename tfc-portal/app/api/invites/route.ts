@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 import { sendTeamInvite } from "@/lib/resend";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { name, email, role, inviterName } = await req.json();
   if (!name || !email || !role) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/kanban?client_id=...
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const clientId = req.nextUrl.searchParams.get("client_id");
   if (!clientId) {
     return NextResponse.json({ error: "client_id required" }, { status: 400 });
@@ -23,6 +30,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/kanban — add a card
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const {
     client_id,
     column_id,
@@ -75,7 +88,13 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/kanban — update a card
 export async function PATCH(req: NextRequest) {
-  const { id, column_id, position, title, description, due_date, priority } =
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id, column_id, position, title, description, platform, due_date, priority } =
     await req.json();
 
   if (!id) {
@@ -88,6 +107,7 @@ export async function PATCH(req: NextRequest) {
   if (position !== undefined) updates.position = position;
   if (title !== undefined) updates.title = title;
   if (description !== undefined) updates.description = description;
+  if (platform !== undefined) updates.platform = platform;
   if (due_date !== undefined) updates.due_date = due_date;
   if (priority !== undefined) updates.priority = priority;
   updates.updated_at = new Date().toISOString();
@@ -107,6 +127,12 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/kanban?id=...
 export async function DELETE(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const id = req.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "Card id required" }, { status: 400 });

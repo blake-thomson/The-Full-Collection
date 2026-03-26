@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/kanban/comments?card_id=...
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const cardId = req.nextUrl.searchParams.get("card_id");
   if (!cardId) {
     return NextResponse.json({ error: "card_id required" }, { status: 400 });
@@ -23,6 +30,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/kanban/comments — create a comment
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { card_id, author_email, author_name, author_type, content } =
     await req.json();
 

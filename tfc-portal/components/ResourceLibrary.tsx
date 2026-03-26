@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface Resource {
   id: string;
   client_id: string;
   name: string;
-  file_url: string;
-  file_type: string;
-  file_size: number;
-  category: string;
-  thumbnail_url?: string;
+  type?: string;
+  url?: string;
+  file_path?: string;
   uploaded_by: string;
+  description?: string;
   created_at: string;
 }
 
@@ -50,19 +49,12 @@ const FILE_ICONS: Record<string, { icon: string; color: string }> = {
   ai: { icon: "AI", color: "#FF6F00" },
   psd: { icon: "PSD", color: "#31A8FF" },
   fig: { icon: "FIG", color: "#A259FF" },
+  link: { icon: "LINK", color: "#3B82F6" },
 };
-
-const IMAGE_TYPES = ["png", "jpg", "jpeg", "gif", "svg", "webp"];
 
 function getFileIcon(fileType: string) {
   const ext = fileType.toLowerCase().replace(".", "");
   return FILE_ICONS[ext] || { icon: ext.toUpperCase().slice(0, 3) || "FILE", color: "#5A5652" };
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
@@ -70,7 +62,14 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("All");
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    url: "",
+    category: "General",
+    description: "",
+  });
 
   const loadResources = useCallback(async () => {
     setLoading(true);
@@ -79,8 +78,8 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
       if (res.ok) {
         setResources(await res.json());
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      setError("Failed to load resources.");
     }
     setLoading(false);
   }, [clientId]);
@@ -91,36 +90,40 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
 
   const filtered = category === "All"
     ? resources
-    : resources.filter((r) => r.category === category);
+    : resources.filter((r) => r.type === category);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const handleUpload = async () => {
+    if (!formData.name.trim() || !formData.url.trim()) return;
 
     setUploading(true);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("client_id", clientId);
-      formData.append("uploaded_by", currentUser.name);
-      formData.append("category", category === "All" ? "General" : category);
-
-      try {
-        const res = await fetch("/api/resources", {
-          method: "POST",
-          body: formData,
-        });
-        if (res.ok) {
-          const resource = await res.json();
-          setResources((prev) => [resource, ...prev]);
-        }
-      } catch {
-        // Handle silently
+    setError("");
+    try {
+      const res = await fetch("/api/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          name: formData.name.trim(),
+          type: formData.category,
+          url: formData.url.trim(),
+          file_path: null,
+          uploaded_by: currentUser.name,
+          description: formData.description.trim() || null,
+        }),
+      });
+      if (res.ok) {
+        const resource = await res.json();
+        setResources((prev) => [resource, ...prev]);
+        setFormData({ name: "", url: "", category: "General", description: "" });
+        setShowForm(false);
+      } else {
+        const errData = await res.json();
+        setError(errData.error || "Failed to add resource.");
       }
+    } catch (err) {
+      setError("Failed to add resource.");
     }
     setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDelete = async (id: string) => {
@@ -129,19 +132,15 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
       if (res.ok) {
         setResources((prev) => prev.filter((r) => r.id !== id));
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      setError("Failed to delete resource.");
     }
   };
 
-  const handleDownload = (resource: Resource) => {
-    const a = document.createElement("a");
-    a.href = resource.file_url;
-    a.download = resource.name;
-    a.target = "_blank";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleOpen = (resource: Resource) => {
+    if (resource.url) {
+      window.open(resource.url, "_blank");
+    }
   };
 
   return (
@@ -154,24 +153,81 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
             <polyline points="13 2 13 9 20 9" />
           </svg>
           <h3 className="text-text font-heading text-[15px] font-bold m-0">Resource Library</h3>
-          <span className="text-text-3 text-[12px]">{filtered.length} file{filtered.length !== 1 ? "s" : ""}</span>
+          <span className="text-text-3 text-[12px]">{filtered.length} resource{filtered.length !== 1 ? "s" : ""}</span>
         </div>
         <button
           className="tfc-btn shrink-0"
           style={{ padding: "8px 16px", fontSize: 12 }}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => setShowForm(!showForm)}
           disabled={uploading}
         >
-          {uploading ? "Uploading..." : "+ Upload File"}
+          {showForm ? "Cancel" : "+ Add Resource"}
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleUpload}
-        />
       </div>
+
+      {/* Add Resource Form */}
+      {showForm && (
+        <div className="px-5 py-4 border-b border-border bg-surface-2 shrink-0">
+          <h4 className="text-text font-heading text-[13px] font-bold m-0 mb-3">Add Resource</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="tfc-label">Name</label>
+              <input
+                className="tfc-input"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Resource name..."
+              />
+            </div>
+            <div>
+              <label className="tfc-label">URL</label>
+              <input
+                className="tfc-input"
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label className="tfc-label">Category</label>
+              <select
+                className="tfc-input"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                style={{ cursor: "pointer" }}
+              >
+                {CATEGORIES.filter((c) => c !== "All").map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="tfc-label">Description (optional)</label>
+              <input
+                className="tfc-input"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Brief description..."
+              />
+            </div>
+          </div>
+          <button
+            className="tfc-btn"
+            style={{ padding: "9px 20px", fontSize: 12 }}
+            onClick={handleUpload}
+            disabled={uploading || !formData.name.trim() || !formData.url.trim()}
+          >
+            {uploading ? "Adding..." : "Add Resource"}
+          </button>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="px-5 py-2 shrink-0">
+          <p className="text-[#EF4444] text-[12px] m-0">{error}</p>
+        </div>
+      )}
 
       {/* Category Tabs */}
       <div className="px-5 py-2.5 border-b border-border flex gap-1.5 overflow-x-auto shrink-0">
@@ -198,52 +254,37 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
               <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
               <polyline points="13 2 13 9 20 9" />
             </svg>
-            No resources {category !== "All" ? `in "${category}"` : "uploaded yet"}.
+            No resources {category !== "All" ? `in "${category}"` : "added yet"}.
             <br />
-            <span className="text-text-3 text-[11px]">Click Upload File to add resources.</span>
+            <span className="text-text-3 text-[11px]">Click Add Resource to get started.</span>
           </div>
         )}
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {filtered.map((resource) => {
-              const ext = resource.file_type.toLowerCase().replace(".", "");
-              const isImage = IMAGE_TYPES.includes(ext);
-              const icon = getFileIcon(resource.file_type);
+              const typeStr = resource.type || "link";
+              const icon = getFileIcon(typeStr);
 
               return (
                 <div
                   key={resource.id}
                   className="bg-surface border border-border rounded-xl overflow-hidden group transition-colors hover:border-border-2"
                 >
-                  {/* Thumbnail / Icon */}
+                  {/* Icon */}
                   <div
                     className="h-[120px] flex items-center justify-center relative overflow-hidden"
                     style={{ background: "#0D0D0D" }}
                   >
-                    {isImage && resource.thumbnail_url ? (
-                      <img
-                        src={resource.thumbnail_url}
-                        alt={resource.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : isImage && resource.file_url ? (
-                      <img
-                        src={resource.file_url}
-                        alt={resource.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="text-[22px] font-bold font-heading tracking-[0.06em] py-2 px-3.5 rounded-lg"
-                        style={{
-                          background: `${icon.color}15`,
-                          color: icon.color,
-                          border: `1px solid ${icon.color}30`,
-                        }}
-                      >
-                        {icon.icon}
-                      </div>
-                    )}
+                    <div
+                      className="text-[22px] font-bold font-heading tracking-[0.06em] py-2 px-3.5 rounded-lg"
+                      style={{
+                        background: `${icon.color}15`,
+                        color: icon.color,
+                        border: `1px solid ${icon.color}30`,
+                      }}
+                    >
+                      {icon.icon}
+                    </div>
                   </div>
 
                   {/* Info */}
@@ -251,9 +292,13 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
                     <p className="text-text text-[13px] font-medium m-0 truncate" title={resource.name}>
                       {resource.name}
                     </p>
+                    {resource.description && (
+                      <p className="text-text-3 text-[11px] m-0 mt-1 truncate" title={resource.description}>
+                        {resource.description}
+                      </p>
+                    )}
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-text-3 text-[10px] uppercase font-bold tracking-[0.06em]">{ext}</span>
-                      <span className="text-text-3 text-[10px]">{formatFileSize(resource.file_size)}</span>
+                      <span className="text-text-3 text-[10px] uppercase font-bold tracking-[0.06em]">{typeStr}</span>
                       <span className="text-text-3 text-[10px] ml-auto">
                         {new Date(resource.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
@@ -261,12 +306,14 @@ export function ResourceLibrary({ clientId, currentUser, isTeam }: Props) {
 
                     {/* Actions */}
                     <div className="flex gap-1.5 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        className="flex-1 text-[11px] font-semibold py-1.5 rounded-md cursor-pointer font-body transition-colors bg-surface-3 border border-border text-text-2 hover:text-text hover:border-border-2"
-                        onClick={() => handleDownload(resource)}
-                      >
-                        Download
-                      </button>
+                      {resource.url && (
+                        <button
+                          className="flex-1 text-[11px] font-semibold py-1.5 rounded-md cursor-pointer font-body transition-colors bg-surface-3 border border-border text-text-2 hover:text-text hover:border-border-2"
+                          onClick={() => handleOpen(resource)}
+                        >
+                          Open
+                        </button>
+                      )}
                       {(isTeam || resource.uploaded_by === currentUser.name) && (
                         <button
                           className="text-[11px] font-semibold py-1.5 px-3 rounded-md cursor-pointer font-body transition-colors bg-transparent border border-border text-text-3 hover:text-red hover:border-red"

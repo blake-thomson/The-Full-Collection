@@ -31,8 +31,8 @@ export function NotificationBell({ userEmail, userType }: Props) {
       if (res.ok) {
         setNotifications(await res.json());
       }
-    } catch {
-      // Endpoint may not exist yet
+    } catch (err) {
+      console.error("Failed to load notifications.");
     }
     setLoading(false);
   }, [userEmail, userType]);
@@ -57,27 +57,27 @@ export function NotificationBell({ userEmail, userType }: Props) {
 
   const markAllRead = async () => {
     try {
-      await fetch("/api/notifications/mark-read", {
-        method: "POST",
+      await fetch("/api/notifications", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail, type: userType }),
+        body: JSON.stringify({ email: userEmail }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch {
-      // Handle silently
+    } catch (err) {
+      console.error("Failed to mark all notifications as read.");
     }
   };
 
   const markOneRead = async (id: string) => {
     try {
-      await fetch("/api/notifications/mark-read", {
-        method: "POST",
+      await fetch("/api/notifications", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-    } catch {
-      // Handle silently
+    } catch (err) {
+      console.error("Failed to mark notification as read.");
     }
   };
 

@@ -5,9 +5,10 @@ import { useState, useEffect, useRef } from "react";
 interface Comment {
   id: string;
   card_id: string;
+  author_email: string;
   author_name: string;
   author_type: "client" | "team";
-  message: string;
+  content: string;
   created_at: string;
 }
 
@@ -64,6 +65,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [newComment, setNewComment] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingComments, setLoadingComments] = useState(true);
+  const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -87,12 +89,12 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const loadComments = async () => {
     setLoadingComments(true);
     try {
-      const res = await fetch(`/api/comments?card_id=${card.id}`);
+      const res = await fetch(`/api/kanban/comments?card_id=${card.id}`);
       if (res.ok) {
         setComments(await res.json());
       }
-    } catch {
-      // Comments endpoint may not exist yet
+    } catch (err) {
+      setError("Failed to load comments.");
     }
     setLoadingComments(false);
   };
@@ -122,8 +124,8 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           priority,
         });
       }
-    } catch {
-      // Handle error silently
+    } catch (err) {
+      setError("Failed to save changes.");
     }
     setSaving(false);
   };
@@ -137,22 +139,23 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
       await fetch(`/api/kanban?id=${card.id}`, { method: "DELETE" });
       onDelete(card.id);
       onClose();
-    } catch {
-      // Handle error silently
+    } catch (err) {
+      setError("Failed to delete card.");
     }
   };
 
   const addComment = async () => {
     if (!newComment.trim()) return;
     try {
-      const res = await fetch("/api/comments", {
+      const res = await fetch("/api/kanban/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_id: card.id,
+          author_email: currentUser.email,
           author_name: currentUser.name,
           author_type: currentUser.type,
-          message: newComment.trim(),
+          content: newComment.trim(),
         }),
       });
       if (res.ok) {
@@ -160,8 +163,8 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
         setComments((prev) => [...prev, comment]);
         setNewComment("");
       }
-    } catch {
-      // Handle error silently
+    } catch (err) {
+      setError("Failed to add comment.");
     }
   };
 
@@ -273,6 +276,9 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             </div>
           </div>
 
+          {/* Error */}
+          {error && <p className="text-[#EF4444] text-[12px] mb-4">{error}</p>}
+
           {/* Divider */}
           <div className="border-t border-border my-6" />
 
@@ -305,7 +311,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
                     </span>
                     <span className="text-text-3 text-[11px] ml-auto">{formatDate(c.created_at)}</span>
                   </div>
-                  <p className="text-text-2 text-[13px] leading-[1.5] m-0">{c.message}</p>
+                  <p className="text-text-2 text-[13px] leading-[1.5] m-0">{c.content}</p>
                 </div>
               ))}
               <div ref={commentsEndRef} />
