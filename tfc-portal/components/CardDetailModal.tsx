@@ -32,6 +32,7 @@ interface Card {
   publish_date?: string;
   shoot_location?: string;
   revision_notes?: string;
+  is_evergreen?: boolean;
 }
 
 interface CurrentUser {
@@ -51,6 +52,42 @@ interface Props {
 
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
+
+function getVideoEmbed(url: string): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+    // Vimeo
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    // Direct video files
+    if (/\.(mp4|mov|webm|m4v)$/i.test(u.pathname)) return url;
+  } catch {}
+  return null;
+}
+
+function VideoPreview({ url, label }: { url: string; label: string }) {
+  const embed = getVideoEmbed(url);
+  if (!embed) return null;
+  const isDirect = /\.(mp4|mov|webm|m4v)$/i.test(embed);
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-border bg-surface-2">
+      <div className="px-3 py-1.5 border-b border-border flex items-center gap-1.5">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3">
+          <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+        </svg>
+        <span className="text-text-3 text-[10px] font-semibold">{label}</span>
+      </div>
+      {isDirect
+        ? <video src={embed} controls className="w-full max-h-[280px] bg-black" />
+        : <iframe src={embed} className="w-full aspect-video" allowFullScreen frameBorder="0" allow="autoplay; encrypted-media" />
+      }
+    </div>
+  );
+}
 
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "#6B7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.25)" },
@@ -75,6 +112,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [publishDate, setPublishDate] = useState(card.publish_date || "");
   const [shootLocation, setShootLocation] = useState(card.shoot_location || "");
   const [revisionNotes, setRevisionNotes] = useState(card.revision_notes || "");
+  const [isEvergreen, setIsEvergreen] = useState(card.is_evergreen ?? false);
   const [sendingToRevisions, setSendingToRevisions] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -182,6 +220,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           shoot_date: shootDate || null, edit_deadline: editDeadline || null,
           publish_date: publishDate || null, shoot_location: shootLocation.trim() || null,
           revision_notes: revisionNotes.trim() || null,
+          is_evergreen: isEvergreen,
         }),
       });
       if (res.ok) {
@@ -193,6 +232,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           shoot_date: shootDate || undefined, edit_deadline: editDeadline || undefined,
           publish_date: publishDate || undefined, shoot_location: shootLocation.trim() || undefined,
           revision_notes: revisionNotes.trim() || undefined,
+          is_evergreen: isEvergreen,
         });
       }
     } catch { setError("Failed to save changes."); }
@@ -423,17 +463,42 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             <div>
               <label className="tfc-label">Reference URL</label>
               <input type="url" className="tfc-input" value={referenceUrl} onChange={(e) => setReferenceUrl(e.target.value)} placeholder="https://..." />
+              {referenceUrl && <VideoPreview url={referenceUrl} label="Reference Preview" />}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="tfc-label">Raw Footage URL</label>
                 <input type="url" className="tfc-input" value={uneditedUrl} onChange={(e) => setUneditedUrl(e.target.value)} placeholder="Link to raw footage" />
+                {uneditedUrl && <VideoPreview url={uneditedUrl} label="Raw Footage Preview" />}
               </div>
               <div>
                 <label className="tfc-label">Edited Video URL</label>
                 <input type="url" className="tfc-input" value={editedVideoUrl} onChange={(e) => setEditedVideoUrl(e.target.value)} placeholder="Link to edited video" />
+                {editedVideoUrl && <VideoPreview url={editedVideoUrl} label="Edited Video Preview" />}
               </div>
             </div>
+          </div>
+
+          {/* Evergreen toggle */}
+          <div className="mb-5">
+            <button
+              type="button"
+              onClick={() => setIsEvergreen((v) => !v)}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer transition-all w-full text-left font-body ${
+                isEvergreen
+                  ? "bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]"
+                  : "bg-surface-2 border-border text-text-3 hover:text-text-2 hover:border-border-2"
+              }`}
+            >
+              <span className="text-[16px]">♻️</span>
+              <div className="flex-1">
+                <div className="text-[12px] font-semibold">Evergreen Content</div>
+                <div className="text-[10px] opacity-70">Flag this piece as reusable / recyclable content</div>
+              </div>
+              <div className={`w-8 h-4 rounded-full transition-colors flex items-center ${isEvergreen ? "bg-[#10B981]" : "bg-surface-3"}`}>
+                <div className={`w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${isEvergreen ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+            </button>
           </div>
 
           {/* Editor & Location */}

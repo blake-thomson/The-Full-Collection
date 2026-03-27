@@ -27,12 +27,42 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "The Full Collection — Client Portal",
   description: "Content strategy portal for The Full Collection clients and team.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "TFC Portal",
+  },
+  icons: {
+    apple: "/icons/icon-192.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${syne.variable} ${dmSans.variable}`}>
-      <body className="bg-bg font-body text-text antialiased">{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="TFC Portal" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+      </head>
+      <body className="bg-bg font-body text-text antialiased">
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
+      </body>
     </html>
   );
 }

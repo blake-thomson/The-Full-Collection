@@ -9,6 +9,7 @@
  */
 
 import { createSupabaseAdmin } from "./supabase";
+import { sendStatusNotification } from "./resend";
 import type { ColumnId } from "./constants";
 
 type NotificationRule = {
@@ -148,6 +149,33 @@ export async function triggerKanbanNotifications(
     // ── Batch insert all notifications ────────────────────────────────────────
     if (notifications.length > 0) {
       await admin.from("notifications").insert(notifications);
+    }
+
+    // ── Email the client for client-facing column transitions ─────────────────
+    if (rule.notifyClient) {
+      const { data: client } = await admin
+        .from("clients")
+        .select("email, name")
+        .eq("id", clientId)
+        .maybeSingle();
+
+      if (client?.email) {
+        // Map column IDs to human-readable status labels
+        const STATUS_LABELS: Partial<Record<ColumnId, string>> = {
+          ready_review: "Ready for Review",
+          scheduled: "Scheduled",
+          published: "Published",
+        };
+        const statusLabel = STATUS_LABELS[newColumnId] ?? newColumnId;
+
+        sendStatusNotification({
+          to: client.email,
+          clientName: client.name ?? client.email,
+          contentTitle: cardTitle,
+          oldStatus: "",
+          newStatus: statusLabel,
+        }).catch(() => {}); // Fire-and-forget, never block card update
+      }
     }
   } catch (err) {
     // Never block the card update — log and move on

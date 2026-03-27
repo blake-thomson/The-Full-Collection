@@ -1,0 +1,39 @@
+{
+  "name": "The Full Collection Portal",
+  "short_name": "TFC Portal",
+  "description": "Content strategy portal for The Full Collection clients and team.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#E02020",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Open your client dashboard"
+    },
+    {
+      "name": "Team Portal",
+      "short_name": "Team",
+      "url": "/team/portal",
+      "description": "Open the team portal"
+    }
+  ]
+}

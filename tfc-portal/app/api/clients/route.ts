@@ -28,6 +28,15 @@ export async function GET(req: NextRequest) {
       .eq("email", emailParam.toLowerCase());
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Update last_seen_at when a client fetches their own record
+    if (emailParam.toLowerCase() === user.email!.toLowerCase()) {
+      await supabase
+        .from("clients")
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq("email", emailParam.toLowerCase());
+    }
+
     return NextResponse.json(data);
   }
 

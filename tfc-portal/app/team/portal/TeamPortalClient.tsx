@@ -20,6 +20,8 @@ import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { ClientAssignments } from "@/components/ClientAssignments";
 import { TeamMemberDetail } from "@/components/TeamMemberDetail";
+import { TeamMessenger } from "@/components/TeamMessenger";
+import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
 import { COLUMNS } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
 import { TIERS } from "@/lib/tiers";
@@ -84,6 +86,10 @@ const NAV_ITEMS = [
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
   },
   {
+    id: "messenger", label: "Messenger",
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+  },
+  {
     id: "files", label: "Files",
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,
   },
@@ -127,6 +133,7 @@ export default function TeamPortalClient() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showMyProfile, setShowMyProfile] = useState(false);
+  const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -162,6 +169,13 @@ export default function TeamPortalClient() {
   }, []);
 
   useEffect(() => { if (teamUser) loadClients(); }, [teamUser, loadClients]);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/team-members");
+      if (res.ok) setAllTeamMembers(await res.json());
+    })();
+  }, []);
 
   const loadClientDetails = useCallback(async (clientId: string) => {
     try {
@@ -465,6 +479,13 @@ export default function TeamPortalClient() {
             </div>
           )}
 
+          {/* ── MESSENGER TAB ── */}
+          {teamTab === "messenger" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-hidden flex">
+              <TeamMessenger currentUser={teamUser} />
+            </div>
+          )}
+
           {/* ── OVERVIEW TAB ── */}
           {teamTab === "overview" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto">
@@ -486,6 +507,9 @@ export default function TeamPortalClient() {
                 </div>
               </div>
               <AnalyticsDashboard clientId="all" cards={allCards} activity={allActivity} />
+              {["owner", "admin"].includes(teamUser.role) && (
+                <ClientHealthDashboard clients={clients} teamMembers={allTeamMembers} />
+              )}
               <div className="px-5 sm:px-8 pb-8">
                 <h3 className="text-text font-heading text-base font-bold m-0 mb-4">Content by Client</h3>
                 <div className="bg-surface border border-border rounded-xl overflow-hidden overflow-x-auto">
