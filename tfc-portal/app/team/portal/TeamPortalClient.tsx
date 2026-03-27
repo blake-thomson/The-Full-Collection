@@ -439,7 +439,7 @@ export default function TeamPortalClient() {
               {/* Messages */}
               {clientTab === "messages" && (
                 <div className="h-full">
-                  <MessageThread clientId={selected.id} currentUser={currentUser} />
+                  <MessageThread clientId={selected.id} currentUser={currentUser} clientName={selected.name} />
                 </div>
               )}
 
