@@ -146,8 +146,10 @@ export default function DashboardClient() {
       if (!res.ok) { router.push("/login"); return; }
       const clients = await res.json();
       if (clients.length > 0) {
-        setClient(clients[0]);
-        if (!clients[0].onboarding_complete) router.push("/onboarding");
+        const c = clients[0];
+        if (!c.onboarding_complete) { router.push("/onboarding"); return; }
+        if (!c.profile_complete) { router.push("/welcome"); return; }
+        setClient(c);
       }
     })();
   }, []);

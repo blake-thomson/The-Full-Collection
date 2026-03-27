@@ -5,42 +5,27 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { Logo } from "@/components/ui/Logo";
 
-/* ── Role metadata ── */
-const ROLE_COLORS: Record<string, string> = {
-  owner: "#F59E0B",
-  admin: "#FF3B3B",
-  project_manager: "#3B82F6",
-  editor: "#10B981",
-  smm: "#8B5CF6",
-  social_media_manager: "#8B5CF6",
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  project_manager: "Project Manager",
-  editor: "Editor",
-  smm: "Social Media Manager",
-  social_media_manager: "Social Media Manager",
-};
-
-const ROLE_EMOJIS: Record<string, string> = {
-  owner: "👑",
-  admin: "🛡️",
-  project_manager: "📋",
-  editor: "🎬",
-  smm: "📱",
-  social_media_manager: "📱",
-};
-
-const ROLE_WELCOME_LINES: Record<string, string> = {
-  owner: "You're running the show. Let's set up your profile so the team knows who's boss.",
-  admin: "You keep everything running smooth. Let's get your profile set up.",
-  project_manager: "You keep the pipeline moving. Let's get your profile set up so the team knows who's keeping them on track.",
-  editor: "The magic happens in the edit bay. Let's get your profile looking as good as your cuts.",
-  smm: "You're the voice of the brand. Let's make sure your profile matches the energy.",
-  social_media_manager: "You're the voice of the brand. Let's make sure your profile matches the energy.",
-};
+/* ── Industry options ── */
+const INDUSTRIES = [
+  "Real Estate",
+  "E-Commerce",
+  "Health & Wellness",
+  "Beauty & Skincare",
+  "Fitness & Sports",
+  "Food & Beverage",
+  "Fashion & Apparel",
+  "Music & Entertainment",
+  "Tech & SaaS",
+  "Finance & Investing",
+  "Education & Coaching",
+  "Non-Profit",
+  "Construction & Trades",
+  "Automotive",
+  "Travel & Hospitality",
+  "Legal",
+  "Marketing & Advertising",
+  "Other",
+];
 
 /* ── Confetti particles ── */
 function Confetti() {
@@ -128,14 +113,16 @@ function StepDots({ current, total }: { current: number; total: number }) {
   );
 }
 
-export default function WelcomeClient() {
+export default function ClientWelcome() {
   const [step, setStep] = useState(0);
-  const [member, setMember] = useState<{
-    id: string; name: string; email: string; role: string;
-    bio?: string; avatar_url?: string;
+  const [client, setClient] = useState<{
+    id: string; name: string; email: string;
+    bio?: string; avatar_url?: string; industry?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [bio, setBio] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [customIndustry, setCustomIndustry] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -146,23 +133,26 @@ export default function WelcomeClient() {
   const router = useRouter();
   const supabase = createBrowserSupabase();
 
-  // Load current team member
+  const brandColor = "#E02020";
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/team/login"); return; }
+      if (!user) { router.push("/login"); return; }
 
-      const res = await fetch("/api/team-members");
-      if (!res.ok) { router.push("/team/login"); return; }
-      const members = await res.json();
-      const me = members.find((m: { email: string }) => m.email === user.email);
-      if (!me) { router.push("/team/login"); return; }
+      const res = await fetch(`/api/clients?email=${user.email}`);
+      if (!res.ok) { router.push("/login"); return; }
+      const clients = await res.json();
+      if (clients.length === 0) { router.push("/login"); return; }
 
-      setMember(me);
+      const me = clients[0];
+      if (me.profile_complete) { router.push("/dashboard"); return; }
+
+      setClient(me);
       setBio(me.bio || "");
+      setIndustry(me.industry || "");
       if (me.avatar_url) setAvatarPreview(me.avatar_url);
       setLoading(false);
-      // Trigger entrance animation
       setTimeout(() => setFadeIn(true), 50);
     })();
   }, [supabase, router]);
@@ -184,7 +174,7 @@ export default function WelcomeClient() {
   }, [handleFileSelect]);
 
   const uploadAvatar = async (): Promise<string | null> => {
-    if (!avatarFile) return avatarPreview; // Already has a URL
+    if (!avatarFile) return avatarPreview;
     setUploading(true);
     const formData = new FormData();
     formData.append("file", avatarFile);
@@ -195,12 +185,13 @@ export default function WelcomeClient() {
     return data.avatar_url;
   };
 
-  const saveBio = async () => {
+  const saveProfile = async () => {
     setSaving(true);
-    await fetch("/api/team-members", {
+    const finalIndustry = industry === "Other" ? customIndustry.trim() : industry;
+    await fetch("/api/clients", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bio }),
+      body: JSON.stringify({ bio, industry: finalIndustry }),
     });
     setSaving(false);
   };
@@ -209,8 +200,8 @@ export default function WelcomeClient() {
     if (step === 1 && avatarFile) {
       await uploadAvatar();
     }
-    if (step === 2 && bio.trim()) {
-      await saveBio();
+    if (step === 2) {
+      await saveProfile();
     }
     setFadeIn(false);
     setTimeout(() => {
@@ -227,8 +218,13 @@ export default function WelcomeClient() {
     }, 200);
   };
 
-  const goToPortal = () => {
-    router.push("/team/portal");
+  const goToDashboard = async () => {
+    await fetch("/api/clients", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile_complete: true }),
+    });
+    router.push("/dashboard");
   };
 
   if (loading) {
@@ -239,12 +235,7 @@ export default function WelcomeClient() {
     );
   }
 
-  if (!member) return null;
-
-  const roleColor = ROLE_COLORS[member.role] ?? "#A8A49C";
-  const roleLabel = ROLE_LABELS[member.role] ?? member.role;
-  const roleEmoji = ROLE_EMOJIS[member.role] ?? "🚀";
-  const welcomeLine = ROLE_WELCOME_LINES[member.role] ?? "Let's get your profile set up.";
+  if (!client) return null;
 
   return (
     <div style={{ background: "#0A0A0A", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
@@ -252,7 +243,7 @@ export default function WelcomeClient() {
       <div
         style={{
           position: "fixed", inset: 0, pointerEvents: "none",
-          background: `radial-gradient(ellipse 60% 50% at 50% 40%, ${roleColor}08 0%, transparent 60%)`,
+          background: `radial-gradient(ellipse 60% 50% at 50% 40%, ${brandColor}08 0%, transparent 60%)`,
         }}
       />
 
@@ -270,7 +261,7 @@ export default function WelcomeClient() {
       >
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <Logo size={15} sub="Team Portal" />
+          <Logo size={15} sub="Client Portal" />
         </div>
 
         <StepDots current={step} total={4} />
@@ -281,25 +272,25 @@ export default function WelcomeClient() {
             background: "#111111", border: "1px solid #1e1e1e", borderRadius: 20,
             padding: "40px 28px", textAlign: "center",
           }}>
-            <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>{roleEmoji}</div>
+            <div style={{ fontSize: 56, marginBottom: 16, lineHeight: 1 }}>🎬</div>
             <h1 style={{
               color: "#F0EDE6", fontSize: 26, fontWeight: 800, margin: "0 0 8px",
               fontFamily: "'DM Sans', sans-serif",
             }}>
-              Welcome, {member.name.split(" ")[0]}!
+              Welcome, {client.name.split(" ")[0]}!
             </h1>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               padding: "4px 14px", borderRadius: 20, marginBottom: 20,
-              background: `${roleColor}15`, border: `1px solid ${roleColor}30`,
+              background: `${brandColor}15`, border: `1px solid ${brandColor}30`,
             }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: roleColor }} />
-              <span style={{ color: roleColor, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                {roleLabel}
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: brandColor }} />
+              <span style={{ color: brandColor, fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                Client
               </span>
             </div>
             <p style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.7, margin: "0 0 32px", maxWidth: 360, marginLeft: "auto", marginRight: "auto" }}>
-              {welcomeLine}
+              Before we start creating amazing content, let&apos;s set up your profile so our team knows exactly who they&apos;re working with.
             </p>
             <button className="tfc-btn" style={{ width: "100%", fontSize: 14 }} onClick={handleNext}>
               Let&apos;s Go →
@@ -314,10 +305,10 @@ export default function WelcomeClient() {
             padding: "36px 28px", textAlign: "center",
           }}>
             <h2 style={{ color: "#F0EDE6", fontSize: 22, fontWeight: 800, margin: "0 0 6px" }}>
-              Show your face 📸
+              Put a face to the name 📸
             </h2>
             <p style={{ color: "#5A5652", fontSize: 13, margin: "0 0 28px" }}>
-              Upload a profile picture so the team knows who you are
+              Upload a profile picture so our team can recognize you
             </p>
 
             {/* Upload zone */}
@@ -328,8 +319,8 @@ export default function WelcomeClient() {
               onDrop={handleDrop}
               style={{
                 width: 160, height: 160, borderRadius: "50%", margin: "0 auto 24px",
-                border: dragActive ? `3px dashed ${roleColor}` : avatarPreview ? `3px solid ${roleColor}44` : "3px dashed #333",
-                background: avatarPreview ? "transparent" : dragActive ? `${roleColor}08` : "#0D0D0D",
+                border: dragActive ? `3px dashed ${brandColor}` : avatarPreview ? `3px solid ${brandColor}44` : "3px dashed #333",
+                background: avatarPreview ? "transparent" : dragActive ? `${brandColor}08` : "#0D0D0D",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: "pointer", overflow: "hidden", transition: "all 0.2s ease",
                 position: "relative",
@@ -404,7 +395,7 @@ export default function WelcomeClient() {
           </div>
         )}
 
-        {/* ═══ STEP 2: Bio ═══ */}
+        {/* ═══ STEP 2: Bio + Industry ═══ */}
         {step === 2 && (
           <div style={{
             background: "#111111", border: "1px solid #1e1e1e", borderRadius: 20,
@@ -412,49 +403,93 @@ export default function WelcomeClient() {
           }}>
             <div style={{ textAlign: "center" }}>
               <h2 style={{ color: "#F0EDE6", fontSize: 22, fontWeight: 800, margin: "0 0 6px" }}>
-                Tell us about you ✍️
+                Tell us about your brand ✍️
               </h2>
               <p style={{ color: "#5A5652", fontSize: 13, margin: "0 0 28px" }}>
-                A short bio so the team and clients can get to know you
+                Help our team understand you and your business
               </p>
             </div>
 
             {/* Avatar + name preview */}
             <div style={{
-              display: "flex", alignItems: "center", gap: 14, marginBottom: 20,
+              display: "flex", alignItems: "center", gap: 14, marginBottom: 24,
               padding: "14px 18px", background: "#0D0D0D", borderRadius: 12, border: "1px solid #1A1A1A",
             }}>
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
-                  alt={member.name}
-                  style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: `2px solid ${roleColor}33`, flexShrink: 0 }}
+                  alt={client.name}
+                  style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: `2px solid ${brandColor}33`, flexShrink: 0 }}
                 />
               ) : (
                 <div style={{
                   width: 44, height: 44, borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${roleColor}33, ${roleColor}11)`,
-                  border: `2px solid ${roleColor}44`,
+                  background: `linear-gradient(135deg, ${brandColor}33, ${brandColor}11)`,
+                  border: `2px solid ${brandColor}44`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 18, fontWeight: 800, color: roleColor, flexShrink: 0,
+                  fontSize: 18, fontWeight: 800, color: brandColor, flexShrink: 0,
                 }}>
-                  {member.name.charAt(0).toUpperCase()}
+                  {client.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div>
-                <div style={{ color: "#F0EDE6", fontSize: 14, fontWeight: 600 }}>{member.name}</div>
-                <div style={{ color: roleColor, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{roleLabel}</div>
+                <div style={{ color: "#F0EDE6", fontSize: 14, fontWeight: 600 }}>{client.name}</div>
+                <div style={{ color: brandColor, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Client</div>
               </div>
             </div>
 
+            {/* Industry */}
             <label style={{ color: "#5A5652", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 8 }}>
-              Your Bio
+              Your Industry
+            </label>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+              gap: 8,
+              marginBottom: industry === "Other" ? 8 : 24,
+            }}>
+              {INDUSTRIES.map((ind) => (
+                <button
+                  key={ind}
+                  onClick={() => setIndustry(ind)}
+                  style={{
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    border: industry === ind ? `2px solid ${brandColor}` : "1px solid #252525",
+                    background: industry === ind ? `${brandColor}12` : "#0D0D0D",
+                    color: industry === ind ? "#F0EDE6" : "#A8A49C",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {ind}
+                </button>
+              ))}
+            </div>
+
+            {industry === "Other" && (
+              <div style={{ marginBottom: 24 }}>
+                <input
+                  className="tfc-input"
+                  value={customIndustry}
+                  onChange={(e) => setCustomIndustry(e.target.value)}
+                  placeholder="What industry are you in?"
+                />
+              </div>
+            )}
+
+            {/* Bio */}
+            <label style={{ color: "#5A5652", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 8 }}>
+              About You / Your Brand
             </label>
             <textarea
               className="tfc-textarea"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="E.g. Video editor specializing in short-form content. 5 years of experience making brands pop on social media..."
+              placeholder="E.g. We're a luxury real estate team in Miami focused on waterfront properties. We want content that feels premium but approachable..."
               rows={4}
               style={{ marginBottom: 6 }}
             />
@@ -474,7 +509,7 @@ export default function WelcomeClient() {
                 className="tfc-btn"
                 style={{ flex: 1, fontSize: 13 }}
                 onClick={handleNext}
-                disabled={saving || !bio.trim()}
+                disabled={saving || (!industry && !bio.trim())}
               >
                 {saving ? "Saving..." : "Next →"}
               </button>
@@ -493,7 +528,7 @@ export default function WelcomeClient() {
               You&apos;re all set!
             </h2>
             <p style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.7, margin: "0 0 28px", maxWidth: 340, marginLeft: "auto", marginRight: "auto" }}>
-              Your profile is ready. Welcome to The Full Collection team.
+              Your profile is ready. Let&apos;s start creating some amazing content together.
             </p>
 
             {/* Profile preview card */}
@@ -505,31 +540,33 @@ export default function WelcomeClient() {
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
-                  alt={member.name}
-                  style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: `2px solid ${roleColor}33`, flexShrink: 0 }}
+                  alt={client.name}
+                  style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: `2px solid ${brandColor}33`, flexShrink: 0 }}
                 />
               ) : (
                 <div style={{
                   width: 56, height: 56, borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${roleColor}33, ${roleColor}11)`,
-                  border: `2px solid ${roleColor}44`,
+                  background: `linear-gradient(135deg, ${brandColor}33, ${brandColor}11)`,
+                  border: `2px solid ${brandColor}44`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 22, fontWeight: 800, color: roleColor, flexShrink: 0,
+                  fontSize: 22, fontWeight: 800, color: brandColor, flexShrink: 0,
                 }}>
-                  {member.name.charAt(0).toUpperCase()}
+                  {client.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: "#F0EDE6", fontSize: 16, fontWeight: 700, marginBottom: 2 }}>{member.name}</div>
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "2px 10px", borderRadius: 20, marginBottom: 8,
-                  background: `${roleColor}15`, border: `1px solid ${roleColor}30`,
-                }}>
-                  <span style={{ color: roleColor, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                    {roleLabel}
-                  </span>
-                </div>
+                <div style={{ color: "#F0EDE6", fontSize: 16, fontWeight: 700, marginBottom: 2 }}>{client.name}</div>
+                {(industry || customIndustry) && (
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "2px 10px", borderRadius: 20, marginBottom: 8,
+                    background: `${brandColor}15`, border: `1px solid ${brandColor}30`,
+                  }}>
+                    <span style={{ color: brandColor, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      {industry === "Other" ? customIndustry : industry}
+                    </span>
+                  </div>
+                )}
                 {bio && (
                   <p style={{ color: "#A8A49C", fontSize: 12, lineHeight: 1.6, margin: 0, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                     {bio}
@@ -538,8 +575,8 @@ export default function WelcomeClient() {
               </div>
             </div>
 
-            <button className="tfc-btn" style={{ width: "100%", fontSize: 14 }} onClick={goToPortal}>
-              Enter the Portal 🚀
+            <button className="tfc-btn" style={{ width: "100%", fontSize: 14 }} onClick={goToDashboard}>
+              Enter Your Portal 🚀
             </button>
           </div>
         )}

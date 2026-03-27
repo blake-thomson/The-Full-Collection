@@ -33,21 +33,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Send the reset email via Resend
+  // Send the reset email via Resend (best-effort)
+  let emailSent = false;
   try {
     await sendPasswordReset({
       to: emailLower,
       resetLink,
     });
-  } catch (emailError) {
-    return NextResponse.json(
-      { error: "Failed to send reset email" },
-      { status: 500 }
-    );
+    emailSent = true;
+  } catch {
+    // Email send failed — return the link directly so the user can still reset
   }
 
   return NextResponse.json({
     success: true,
-    message: "Password reset email sent",
+    message: emailSent ? "Password reset email sent" : "Email send failed — use the link below to reset your password.",
+    resetLink: emailSent ? undefined : resetLink,
   });
 }
