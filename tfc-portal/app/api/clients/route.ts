@@ -4,7 +4,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { sendClientWelcome } from "@/lib/resend";
 import { requireTeamMember } from "@/lib/auth-helpers";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
   if (!user) {
@@ -12,8 +12,26 @@ export async function GET() {
   }
 
   const supabase = createSupabaseAdmin();
+  const emailParam = req.nextUrl.searchParams.get("email");
 
-  // Only team members can list all clients
+  // Self-lookup: a client fetching their own record by email
+  if (emailParam) {
+    if (emailParam.toLowerCase() !== user.email!.toLowerCase()) {
+      // Querying someone else's record — must be a team member
+      const access = await requireTeamMember(user.email!, supabase);
+      if (!access.ok) return access.response;
+    }
+
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("email", emailParam.toLowerCase());
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
+  // List all clients — team members only
   const access = await requireTeamMember(user.email!, supabase);
   if (!access.ok) return access.response;
 
