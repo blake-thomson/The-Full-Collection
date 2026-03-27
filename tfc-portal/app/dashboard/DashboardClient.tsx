@@ -223,6 +223,7 @@ export default function DashboardClient() {
             </div>
             <Kanban
               clientId={client.id}
+              onCardClick={(card) => setSelectedCard(card as KanbanCard)}
             />
           </div>
         )}

@@ -421,7 +421,7 @@ export default function TeamPortalClient() {
 
               {/* Content Board (Kanban) */}
               {clientTab === "kanban" && (
-                <Kanban clientId={selected.id} clientName={selected.name} />
+                <Kanban clientId={selected.id} clientName={selected.name} onCardClick={(card) => setSelectedCard(card as KanbanCard)} />
               )}
 
               {/* Calendar */}

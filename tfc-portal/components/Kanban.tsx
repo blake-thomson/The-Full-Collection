@@ -33,12 +33,13 @@ interface Props {
   clientId: string;
   editable?: boolean;
   clientName?: string;
+  onCardClick?: (card: Card) => void;
 }
 
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
 
-export function Kanban({ clientId, editable = true, clientName }: Props) {
+export function Kanban({ clientId, editable = true, clientName, onCardClick }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [showCreateModal, setShowCreateModal] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ cardId: string; colId: string } | null>(null);
@@ -271,15 +272,16 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                   <div
                     key={card.id}
                     draggable={editable}
-                    className="kanban-card"
+                    className="kanban-card cursor-pointer"
                     onDragStart={() => setDragging({ cardId: card.id, colId: col.id })}
+                    onClick={() => onCardClick?.(card)}
                   >
                     <div className="flex items-start gap-1.5">
                       <p className="text-text text-xs font-medium leading-[1.45] m-0 flex-1">{card.title}</p>
                       {editable && (
                         <button
                           className="card-del opacity-0 text-[#EF4444] bg-transparent border-none cursor-pointer text-sm p-0 transition-opacity leading-none shrink-0 font-body"
-                          onClick={() => deleteCard(card.id)}
+                          onClick={(e) => { e.stopPropagation(); deleteCard(card.id); }}
                         >
                           ×
                         </button>
