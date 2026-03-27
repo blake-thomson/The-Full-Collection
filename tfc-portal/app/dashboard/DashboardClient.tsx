@@ -17,6 +17,7 @@ import { ContentBrief } from "@/components/ContentBrief";
 import { ClientHome } from "@/components/ClientHome";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
+import { TrashBin } from "@/components/TrashBin";
 import type { OnboardingData } from "@/lib/constants";
 
 interface ClientData {
@@ -200,7 +201,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
-  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "trash"];
 
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
@@ -282,6 +283,18 @@ export default function DashboardClient() {
                   <div className="text-text-3 text-[10px] truncate">{client.email}</div>
                 </div>
               </div>
+              <button
+                onClick={() => switchTab("trash")}
+                className={`w-full mt-1 px-3 py-2 text-left text-[12px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body flex items-center gap-2 ${
+                  tab === "trash" ? "text-red" : "text-text-3 hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+                Recently Deleted
+              </button>
               <button
                 onClick={logout}
                 className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
@@ -374,8 +387,22 @@ export default function DashboardClient() {
               ))}
             </nav>
 
-            {/* Sign Out */}
+            {/* Recently Deleted + Sign Out */}
             <div className="px-3 py-3 border-t border-border">
+              <button
+                onClick={() => switchTab("trash")}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-[14px] font-medium cursor-pointer transition-all border-none font-body text-left ${
+                  tab === "trash"
+                    ? "bg-red/10 text-red"
+                    : "bg-transparent text-text-3 hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+                Recently Deleted
+              </button>
               <button
                 onClick={logout}
                 className="w-full px-3 py-3 text-left text-text-3 hover:text-red text-[14px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
@@ -464,6 +491,13 @@ export default function DashboardClient() {
           {tab === "resources" && (
             <div className="h-full">
               <ResourceLibrary clientId={client.id} currentUser={currentUser} isTeam={false} />
+            </div>
+          )}
+
+          {/* Recently Deleted */}
+          {tab === "trash" && (
+            <div className="h-full">
+              <TrashBin clientId={client.id} />
             </div>
           )}
 

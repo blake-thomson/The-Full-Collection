@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     .from("resources")
     .select("*")
     .eq("client_id", clientId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -84,7 +85,10 @@ export async function DELETE(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
-  const { error } = await supabase.from("resources").delete().eq("id", id);
+  const { error } = await supabase
+    .from("resources")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

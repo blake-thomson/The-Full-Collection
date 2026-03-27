@@ -327,3 +327,18 @@ CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_parent_id);
 -- Allow authenticated users to update messages (for editing)
 CREATE POLICY "Authenticated users can update messages"
   ON messages FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+-- Allow authenticated users to delete messages (for soft-delete)
+CREATE POLICY "Authenticated users can delete messages"
+  ON messages FOR DELETE TO authenticated USING (true);
+
+-- ============================================================
+-- Migration: Add soft-delete (deleted_at) to kanban_cards, messages, resources
+-- ============================================================
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+ALTER TABLE resources ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_deleted_at ON kanban_cards (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_messages_deleted_at ON messages (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_resources_deleted_at ON resources (deleted_at);

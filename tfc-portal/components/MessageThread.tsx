@@ -532,11 +532,13 @@ function MessageRow({
   grouped,
   onReply,
   onViewThread,
+  onDelete,
 }: {
   msg: Message;
   grouped: boolean;
   onReply: (msg: Message) => void;
   onViewThread: (msg: Message) => void;
+  onDelete?: (msg: Message) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const isSupport = msg.message_type === "support";
@@ -627,6 +629,18 @@ function MessageRow({
               </svg>
               Reply
             </button>
+            {onDelete && (
+              <button
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:bg-[#252525] rounded-lg"
+                style={{ color: "#A8A49C", minHeight: 32 }}
+                onClick={() => onDelete(msg)}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -834,6 +848,17 @@ export function MessageThread({ clientId, currentUser, clientName }: Props) {
     setLoading(false);
   }, [clientId]);
 
+  const handleDeleteMessage = useCallback(async (msg: Message) => {
+    try {
+      const res = await fetch(`/api/messages?id=${msg.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      }
+    } catch {
+      setError("Failed to delete message.");
+    }
+  }, []);
+
   const loadTeamMembers = useCallback(async () => {
     try {
       const res = await fetch("/api/team-members");
@@ -953,6 +978,7 @@ export function MessageThread({ clientId, currentUser, clientName }: Props) {
                   grouped={grouped}
                   onReply={openThread}
                   onViewThread={openThread}
+                  onDelete={handleDeleteMessage}
                 />
               </div>
             );

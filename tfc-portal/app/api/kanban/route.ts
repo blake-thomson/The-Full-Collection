@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     .from("kanban_cards")
     .select("*")
     .eq("client_id", clientId)
+    .is("deleted_at", null)
     .order("position", { ascending: true });
 
   if (error) {
@@ -144,7 +145,10 @@ export async function DELETE(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
-  const { error } = await supabase.from("kanban_cards").delete().eq("id", id);
+  const { error } = await supabase
+    .from("kanban_cards")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
