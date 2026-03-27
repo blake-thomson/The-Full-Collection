@@ -79,7 +79,7 @@ export default function AcceptInviteClient() {
     }
 
     setBusy(false);
-    router.push("/team/portal");
+    router.push("/team/welcome");
   };
 
   return (
