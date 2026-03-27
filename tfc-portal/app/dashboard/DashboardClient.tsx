@@ -294,13 +294,18 @@ export default function DashboardClient() {
       </aside>
 
       {/* ============ MOBILE HEADER + MENU ============ */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-border h-[52px] flex items-center justify-between px-4">
-        <div className="font-heading font-bold text-text leading-[1.05]" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-border h-[52px] flex items-center px-4">
+        {/* Left: notification */}
+        <div className="w-10 flex items-center">
+          <NotificationBell userEmail={client.email} userType="client" />
+        </div>
+        {/* Center: stacked logo */}
+        <div className="flex-1 text-center font-heading font-bold text-text leading-[1.05]" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>
           <div>THE FULL</div>
           <div>COLLECTION</div>
         </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell userEmail={client.email} userType="client" />
+        {/* Right: hamburger */}
+        <div className="w-10 flex items-center justify-end">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="w-9 h-9 flex items-center justify-center rounded-lg bg-surface-2 border border-border text-text-2 cursor-pointer"
