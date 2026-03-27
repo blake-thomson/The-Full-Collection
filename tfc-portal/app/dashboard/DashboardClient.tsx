@@ -100,22 +100,6 @@ const TABS = [
     ),
   },
   {
-    id: "billing", label: "Billing",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" />
-      </svg>
-    ),
-  },
-  {
-    id: "intake", label: "My Intake",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
-      </svg>
-    ),
-  },
-  {
     id: "profile", label: "Profile",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -136,6 +120,7 @@ export default function DashboardClient() {
   const [showSearch, setShowSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileTab, setProfileTab] = useState<"account" | "billing" | "intake">("account");
   const [changingPassword, setChangingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -215,7 +200,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
-  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "billing"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources"];
 
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
@@ -461,72 +446,98 @@ export default function DashboardClient() {
             </div>
           )}
 
-          {/* Billing */}
-          {tab === "billing" && (
-            <div className="h-full">
-              <InvoiceSection clientId={client.id} currentUser={currentUser} isTeam={false} />
-            </div>
-          )}
-
-          {/* My Intake */}
-          {tab === "intake" && <IntakeView data={client.onboarding_data} title="My Intake Form" subtitle="Your completed onboarding responses" />}
-
-          {/* Profile */}
+          {/* Profile (with Account, Billing, Intake sub-tabs) */}
           {tab === "profile" && (
-            <div className="p-4 sm:p-8 max-w-[460px] mx-auto">
-              <h2 className="text-text font-heading text-[22px] font-[800] mb-7">Profile</h2>
-              <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7">
-                <div className="flex items-center gap-4 pb-[22px] border-b border-border mb-[22px]">
-                  <Avatar name={client.name} size={52} />
-                  <div>
-                    <div className="text-text text-[17px] font-bold">{client.name}</div>
-                    <div className="text-text-2 text-[13px] mt-0.5">{client.email}</div>
-                  </div>
+            <div className="p-4 sm:p-6 max-w-[600px] mx-auto">
+              {/* Profile Header */}
+              <div className="flex items-center gap-4 mb-6">
+                <Avatar name={client.name} size={52} />
+                <div>
+                  <h2 className="text-text font-heading text-[20px] font-[800] m-0">{client.name}</h2>
+                  <p className="text-text-2 text-[13px] m-0 mt-0.5">{client.email}</p>
                 </div>
-                {[
-                  { l: "Member Since", v: new Date(client.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
-                  { l: "Onboarding", v: client.onboarding_complete ? "Complete" : "Pending", color: client.onboarding_complete ? "#10B981" : "#F59E0B" },
-                ].map((row) => (
-                  <div key={row.l} className="flex justify-between py-2.5 border-b border-border">
-                    <span className="text-text-3 text-[13px]">{row.l}</span>
-                    <span className="text-[13px] font-semibold" style={{ color: row.color || "#F0EDE6" }}>{row.v}</span>
-                  </div>
-                ))}
+              </div>
 
-                <div className="mt-6">
-                  {!changingPassword ? (
-                    <button className="tfc-btn-ghost w-full text-center" onClick={() => setChangingPassword(true)}>
-                      Change Password
-                    </button>
-                  ) : (
-                    <div className="bg-surface-2 border border-border rounded-xl p-4">
-                      <h4 className="text-text font-heading text-[14px] font-bold m-0 mb-3">Change Password</h4>
-                      <div className="flex flex-col gap-3">
-                        <div>
-                          <label className="tfc-label">New Password</label>
-                          <input className="tfc-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 6 characters" />
-                        </div>
-                        <div>
-                          <label className="tfc-label">Confirm Password</label>
-                          <input className="tfc-input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" onKeyDown={(e) => e.key === "Enter" && handleChangePassword()} />
-                        </div>
-                        {passwordErr && <p className="text-[#EF4444] text-[12px] m-0">{passwordErr}</p>}
-                        {passwordMsg && <p className="text-[#10B981] text-[12px] m-0">{passwordMsg}</p>}
-                        <div className="flex gap-2">
-                          <button className="tfc-btn flex-1" style={{ fontSize: 12, padding: "8px 16px" }} onClick={handleChangePassword} disabled={passwordBusy}>
-                            {passwordBusy ? "Updating..." : "Update Password"}
-                          </button>
-                          <button className="tfc-btn-ghost flex-1" style={{ fontSize: 12, padding: "8px 16px" }} onClick={() => { setChangingPassword(false); setNewPassword(""); setConfirmPassword(""); setPasswordErr(""); setPasswordMsg(""); }}>
-                            Cancel
-                          </button>
+              {/* Sub-tabs */}
+              <div className="flex gap-1 mb-6 border-b border-border pb-0">
+                {([
+                  { id: "account" as const, label: "Account" },
+                  { id: "billing" as const, label: "Billing" },
+                  { id: "intake" as const, label: "My Intake" },
+                ]).map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setProfileTab(st.id)}
+                    className={`px-4 py-2.5 text-[13px] font-semibold cursor-pointer transition-all border-none bg-transparent font-body -mb-px ${
+                      profileTab === st.id
+                        ? "text-text border-b-2 border-red"
+                        : "text-text-3 hover:text-text-2"
+                    }`}
+                    style={profileTab === st.id ? { borderBottom: "2px solid #E02020" } : {}}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Account sub-tab */}
+              {profileTab === "account" && (
+                <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7">
+                  {[
+                    { l: "Member Since", v: new Date(client.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
+                    { l: "Onboarding", v: client.onboarding_complete ? "Complete" : "Pending", color: client.onboarding_complete ? "#10B981" : "#F59E0B" },
+                  ].map((row) => (
+                    <div key={row.l} className="flex justify-between py-2.5 border-b border-border">
+                      <span className="text-text-3 text-[13px]">{row.l}</span>
+                      <span className="text-[13px] font-semibold" style={{ color: row.color || "#F0EDE6" }}>{row.v}</span>
+                    </div>
+                  ))}
+
+                  <div className="mt-6">
+                    {!changingPassword ? (
+                      <button className="tfc-btn-ghost w-full text-center" onClick={() => setChangingPassword(true)}>
+                        Change Password
+                      </button>
+                    ) : (
+                      <div className="bg-surface-2 border border-border rounded-xl p-4">
+                        <h4 className="text-text font-heading text-[14px] font-bold m-0 mb-3">Change Password</h4>
+                        <div className="flex flex-col gap-3">
+                          <div>
+                            <label className="tfc-label">New Password</label>
+                            <input className="tfc-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 6 characters" />
+                          </div>
+                          <div>
+                            <label className="tfc-label">Confirm Password</label>
+                            <input className="tfc-input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" onKeyDown={(e) => e.key === "Enter" && handleChangePassword()} />
+                          </div>
+                          {passwordErr && <p className="text-[#EF4444] text-[12px] m-0">{passwordErr}</p>}
+                          {passwordMsg && <p className="text-[#10B981] text-[12px] m-0">{passwordMsg}</p>}
+                          <div className="flex gap-2">
+                            <button className="tfc-btn flex-1" style={{ fontSize: 12, padding: "8px 16px" }} onClick={handleChangePassword} disabled={passwordBusy}>
+                              {passwordBusy ? "Updating..." : "Update Password"}
+                            </button>
+                            <button className="tfc-btn-ghost flex-1" style={{ fontSize: 12, padding: "8px 16px" }} onClick={() => { setChangingPassword(false); setNewPassword(""); setConfirmPassword(""); setPasswordErr(""); setPasswordMsg(""); }}>
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <button className="tfc-btn-ghost w-full text-center mt-4" onClick={logout}>Sign Out</button>
-              </div>
+                  <button className="tfc-btn-ghost w-full text-center mt-4" onClick={logout}>Sign Out</button>
+                </div>
+              )}
+
+              {/* Billing sub-tab */}
+              {profileTab === "billing" && (
+                <InvoiceSection clientId={client.id} currentUser={currentUser} isTeam={false} />
+              )}
+
+              {/* Intake sub-tab */}
+              {profileTab === "intake" && (
+                <IntakeView data={client.onboarding_data} title="My Intake Form" subtitle="Your completed onboarding responses" />
+              )}
             </div>
           )}
         </div>
