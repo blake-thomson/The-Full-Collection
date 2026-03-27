@@ -79,7 +79,8 @@ body { margin: 0; background: #0A0A0A; font-family: 'DM Sans', sans-serif; color
 
 .client-row {
   display: grid;
-  grid-template-columns: 1fr 80px 80px 60px 110px 44px;
+  grid-template-columns: 1fr 100px 100px 70px 120px 44px;
+  gap: 16px;
   align-items: center;
   padding: 13px 20px;
   border-bottom: 1px solid #252525;
@@ -186,9 +187,9 @@ body { margin: 0; background: #0A0A0A; font-family: 'DM Sans', sans-serif; color
   }
 
   .client-row {
-    grid-template-columns: 1fr 60px 110px 44px;
+    grid-template-columns: 1fr 70px 120px 44px;
     padding: 12px 14px;
-    gap: 8px;
+    gap: 10px;
   }
 
   /* Hide less-important columns on tablet */

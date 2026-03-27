@@ -515,8 +515,8 @@ export default function TeamPortalClient() {
               {!loading && (
                 <div className="bg-surface border border-border rounded-xl overflow-hidden">
                   <div className="client-row cursor-default border-b border-border-2 hidden sm:grid">
-                    {["Client", "Short Form", "Long Form", "SMM", "Onboarding", ""].map((h, i) => (
-                      <span key={i} className={`text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase${h === "Short Form" ? " col-short" : h === "Long Form" ? " col-long" : ""}`}>{h}</span>
+                    {["Client", "Shorts", "YouTube", "SMM", "Onboarding", ""].map((h, i) => (
+                      <span key={i} className={`text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase${h === "Shorts" ? " col-short" : h === "YouTube" ? " col-long" : ""}`}>{h}</span>
                     ))}
                   </div>
                   {filtered.length === 0 && (
@@ -539,7 +539,7 @@ export default function TeamPortalClient() {
                         {tier ? (tier.shortForm === null ? "∞" : `${tier.shortForm}`) : "—"}
                       </span>
                       <span className="col-long text-text-2 text-[13px] hidden sm:inline font-medium">
-                        {tier ? (tier.longForm === 0 ? "—" : `${tier.longForm}`) : "—"}
+                        {tier ? (tier.youtube === 0 ? "—" : `${tier.youtube}`) : "—"}
                       </span>
                       <span className="text-[11px] font-bold tracking-[0.06em] py-[3px] px-2 rounded-md inline-block"
                         style={tier?.smm
