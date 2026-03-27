@@ -66,6 +66,7 @@ export default function DashboardClient() {
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [kanbanKey, setKanbanKey] = useState(0);
+  const [openCreateCard, setOpenCreateCard] = useState(false);
   const [showBrief, setShowBrief] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -130,7 +131,8 @@ export default function DashboardClient() {
   const handleCardUpdate = (updatedCard: KanbanCard) => {
     setKanbanCards((prev) => prev.map((c) => c.id === updatedCard.id ? updatedCard : c));
     setSelectedCard(null);
-    setKanbanKey((k) => k + 1); // Force Kanban to reload
+    setKanbanKey((k) => k + 1);
+    setOpenCreateCard(false);
   };
 
   const handleCardDelete = (cardId: string) => {
@@ -210,7 +212,7 @@ export default function DashboardClient() {
           <ClientHome
             clientName={client.name}
             cards={kanbanCards}
-            onSubmitIdea={() => setShowBrief(true)}
+            onSubmitIdea={() => { setTab("kanban"); setOpenCreateCard(true); setKanbanKey((k) => k + 1); }}
             onViewCalendar={() => setTab("calendar")}
             onMessageTeam={() => setTab("messages")}
             onCardClick={(card) => setSelectedCard(card as KanbanCard)}
@@ -227,6 +229,7 @@ export default function DashboardClient() {
               key={kanbanKey}
               clientId={client.id}
               onCardClick={(card) => setSelectedCard(card as KanbanCard)}
+              autoOpenCreate={openCreateCard}
             />
           </div>
         )}

@@ -34,12 +34,13 @@ interface Props {
   editable?: boolean;
   clientName?: string;
   onCardClick?: (card: Card) => void;
+  autoOpenCreate?: boolean;
 }
 
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
 
-export function Kanban({ clientId, editable = true, clientName, onCardClick }: Props) {
+export function Kanban({ clientId, editable = true, clientName, onCardClick, autoOpenCreate }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [showCreateModal, setShowCreateModal] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ cardId: string; colId: string } | null>(null);
@@ -151,6 +152,14 @@ export function Kanban({ clientId, editable = true, clientName, onCardClick }: P
   }, []);
 
   useEffect(() => { loadCards(); loadTeamMembers(); }, [loadCards, loadTeamMembers]);
+
+  // Auto-open create modal for "idea" column when triggered from home page
+  useEffect(() => {
+    if (autoOpenCreate) {
+      resetForm();
+      setShowCreateModal("idea");
+    }
+  }, [autoOpenCreate]);
 
   const addCard = async (colId: string) => {
     if (!newTitle.trim()) return;
