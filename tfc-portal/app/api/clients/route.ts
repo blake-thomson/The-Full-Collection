@@ -55,9 +55,19 @@ export async function POST(req: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  // Only team members can create clients
+  // Only owner/admin can create clients
   const access = await requireTeamMember(user.email!, supabase);
   if (!access.ok) return access.response;
+
+  const { data: actor } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("email", user.email!)
+    .single();
+
+  if (!actor || !["owner", "admin"].includes(actor.role)) {
+    return NextResponse.json({ error: "Only owners and admins can create clients" }, { status: 403 });
+  }
 
   const { name, email, createdBy } = await req.json();
   if (!name || !email) {
