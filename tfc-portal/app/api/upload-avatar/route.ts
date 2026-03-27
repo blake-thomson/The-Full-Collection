@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { requireTeamMember } from "@/lib/auth-helpers";
 
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
@@ -9,8 +8,16 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = createSupabaseAdmin();
-  const access = await requireTeamMember(user.email!, supabase);
-  if (!access.ok) return access.response;
+
+  // Determine if user is a team member or a client
+  const [teamRes, clientRes] = await Promise.all([
+    supabase.from("team_members").select("id").eq("email", user.email!).maybeSingle(),
+    supabase.from("clients").select("id").eq("email", user.email!).maybeSingle(),
+  ]);
+
+  if (!teamRes.data && !clientRes.data) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -45,9 +52,10 @@ export async function POST(req: NextRequest) {
   const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(fileName);
   const avatarUrl = urlData.publicUrl;
 
-  // Update team member's avatar_url
+  // Update the correct table based on user type
+  const table = teamRes.data ? "team_members" : "clients";
   const { error: updateError } = await supabase
-    .from("team_members")
+    .from(table)
     .update({ avatar_url: avatarUrl })
     .eq("email", user.email!);
 

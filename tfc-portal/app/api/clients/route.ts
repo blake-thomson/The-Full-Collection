@@ -46,6 +46,37 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data);
 }
 
+// PATCH /api/clients — client updates own profile (bio, industry, profile_complete)
+export async function PATCH(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const supabase = createSupabaseAdmin();
+
+  const body = await req.json();
+  const updates: Record<string, unknown> = {};
+  if (body.bio !== undefined) updates.bio = body.bio;
+  if (body.industry !== undefined) updates.industry = body.industry;
+  if (body.avatar_url !== undefined) updates.avatar_url = body.avatar_url;
+  if (body.profile_complete !== undefined) updates.profile_complete = body.profile_complete;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+  }
+
+  // Clients can only update their own record
+  const { data, error } = await supabase
+    .from("clients")
+    .update(updates)
+    .eq("email", user.email!)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();

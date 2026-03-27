@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (!name || !email || !role) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
-  if (!["admin", "editor", "social_media_manager"].includes(role)) {
+  if (!["admin", "project_manager", "editor", "social_media_manager"].includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
