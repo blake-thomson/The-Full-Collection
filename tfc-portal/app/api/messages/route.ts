@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/messages?client_id=xxx
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const clientId = req.nextUrl.searchParams.get("client_id");
   if (!clientId) {
     return NextResponse.json({ error: "client_id required" }, { status: 400 });
@@ -23,6 +30,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/messages — send a message
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { client_id, sender_email, sender_name, sender_type, content } =
     await req.json();
 

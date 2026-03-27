@@ -5,9 +5,10 @@ import { useState, useEffect, useCallback } from "react";
 interface Invoice {
   id: string;
   client_id: string;
-  description: string;
+  title: string;
+  description?: string;
   amount: number;
-  status: "draft" | "sent" | "paid" | "overdue";
+  status: "pending" | "sent" | "paid" | "overdue";
   due_date: string;
   created_at: string;
 }
@@ -24,7 +25,8 @@ interface Props {
   isTeam: boolean;
 }
 
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  pending: { label: "Pending", color: "#6B7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.25)" },
   draft: { label: "Draft", color: "#6B7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.25)" },
   sent: { label: "Sent", color: "#3B82F6", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.25)" },
   paid: { label: "Paid", color: "#10B981", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.25)" },
@@ -35,8 +37,9 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ description: "", amount: "", due_date: "" });
+  const [formData, setFormData] = useState({ title: "", description: "", amount: "", due_date: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [filter, setFilter] = useState("all");
 
   const loadInvoices = useCallback(async () => {
@@ -46,8 +49,8 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
       if (res.ok) {
         setInvoices(await res.json());
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      setError("Failed to load invoices.");
     }
     setLoading(false);
   }, [clientId]);
@@ -61,7 +64,7 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
     : invoices.filter((inv) => inv.status === filter);
 
   const totalOwed = invoices
-    .filter((inv) => inv.status === "sent" || inv.status === "overdue")
+    .filter((inv) => inv.status === "pending" || inv.status === "sent" || inv.status === "overdue")
     .reduce((acc, inv) => acc + inv.amount, 0);
 
   const totalPaid = invoices
@@ -69,29 +72,33 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
     .reduce((acc, inv) => acc + inv.amount, 0);
 
   const handleCreateInvoice = async () => {
-    if (!formData.description.trim() || !formData.amount || !formData.due_date) return;
+    if (!formData.title.trim() || !formData.amount || !formData.due_date) return;
 
     setSubmitting(true);
+    setError("");
     try {
       const res = await fetch("/api/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: clientId,
-          description: formData.description.trim(),
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
           amount: parseFloat(formData.amount),
           due_date: formData.due_date,
-          status: "draft",
         }),
       });
       if (res.ok) {
         const invoice = await res.json();
         setInvoices((prev) => [invoice, ...prev]);
-        setFormData({ description: "", amount: "", due_date: "" });
+        setFormData({ title: "", description: "", amount: "", due_date: "" });
         setShowForm(false);
+      } else {
+        const errData = await res.json();
+        setError(errData.error || "Failed to create invoice.");
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      setError("Failed to create invoice.");
     }
     setSubmitting(false);
   };
@@ -106,8 +113,8 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
       if (res.ok) {
         setInvoices((prev) => prev.map((inv) => inv.id === id ? { ...inv, status } : inv));
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      setError("Failed to update invoice status.");
     }
   };
 
@@ -171,12 +178,21 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
           <h4 className="text-text font-heading text-[13px] font-bold m-0 mb-3">Create Invoice</h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
             <div className="sm:col-span-3">
-              <label className="tfc-label">Description</label>
+              <label className="tfc-label">Title</label>
+              <input
+                className="tfc-input"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Invoice title..."
+              />
+            </div>
+            <div className="sm:col-span-3">
+              <label className="tfc-label">Description (optional)</label>
               <input
                 className="tfc-input"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Invoice description..."
+                placeholder="Additional details..."
               />
             </div>
             <div>
@@ -206,7 +222,7 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
                 className="tfc-btn w-full"
                 style={{ padding: "10px 16px", fontSize: 12 }}
                 onClick={handleCreateInvoice}
-                disabled={submitting || !formData.description.trim() || !formData.amount || !formData.due_date}
+                disabled={submitting || !formData.title.trim() || !formData.amount || !formData.due_date}
               >
                 {submitting ? "Creating..." : "Create Invoice"}
               </button>
@@ -215,11 +231,18 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
         </div>
       )}
 
+      {/* Error */}
+      {error && (
+        <div className="px-5 py-2 shrink-0">
+          <p className="text-[#EF4444] text-[12px] m-0">{error}</p>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <div className="px-5 py-2.5 border-b border-border flex gap-1.5 overflow-x-auto shrink-0">
         {[
           { id: "all", label: "All" },
-          { id: "draft", label: "Draft" },
+          { id: "pending", label: "Pending" },
           { id: "sent", label: "Sent" },
           { id: "paid", label: "Paid" },
           { id: "overdue", label: "Overdue" },
@@ -259,7 +282,7 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2.5 mb-1">
-                  <p className="text-text text-[14px] font-semibold m-0 truncate">{inv.description}</p>
+                  <p className="text-text text-[14px] font-semibold m-0 truncate">{inv.title}</p>
                   <span
                     className="text-[10px] font-bold tracking-[0.06em] uppercase py-[3px] px-[8px] rounded-md shrink-0"
                     style={{
@@ -284,7 +307,7 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
 
               {/* Actions */}
               <div className="flex gap-1.5 shrink-0">
-                {isTeam && inv.status === "draft" && (
+                {isTeam && inv.status === "pending" && (
                   <button
                     className="text-[11px] font-semibold py-1.5 px-3 rounded-md cursor-pointer font-body transition-colors bg-surface-3 border border-border text-text-2 hover:text-text hover:border-border-2"
                     onClick={() => updateStatus(inv.id, "sent")}

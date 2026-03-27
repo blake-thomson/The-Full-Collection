@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/invoices?client_id=xxx
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const clientId = req.nextUrl.searchParams.get("client_id");
   if (!clientId) {
     return NextResponse.json({ error: "client_id required" }, { status: 400 });
@@ -23,6 +30,12 @@ export async function GET(req: NextRequest) {
 
 // POST /api/invoices — create an invoice
 export async function POST(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const {
     client_id,
     title,
@@ -66,6 +79,12 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/invoices — update invoice status
 export async function PATCH(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id, status, stripe_invoice_id, stripe_payment_url } =
     await req.json();
 

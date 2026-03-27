@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { TeamInviteEmail } from "@/emails/TeamInvite";
 import { ClientWelcomeEmail } from "@/emails/ClientWelcome";
 import { StatusNotificationEmail } from "@/emails/StatusNotification";
+import { PasswordResetEmail } from "@/emails/PasswordReset";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 
@@ -82,6 +83,25 @@ export async function sendStatusNotification({
       contentTitle,
       oldStatus,
       newStatus,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+    }),
+  });
+}
+
+export async function sendPasswordReset({
+  to,
+  resetLink,
+}: {
+  to: string;
+  resetLink: string;
+}) {
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Reset Your Password — The Full Collection",
+    react: PasswordResetEmail({
+      email: to,
+      resetLink,
       appUrl: process.env.NEXT_PUBLIC_APP_URL!,
     }),
   });

@@ -137,8 +137,8 @@ export default function TeamPortalClient() {
         }));
         setClientActivity(items);
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      console.error("Failed to load client details.");
     }
   }, []);
 
@@ -163,8 +163,8 @@ export default function TeamPortalClient() {
       }
       items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setAllActivity(items.slice(0, 30));
-    } catch {
-      // Handle silently
+    } catch (err) {
+      console.error("Failed to load overview activity.");
     }
   }, [clients]);
 

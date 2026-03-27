@@ -13,6 +13,10 @@ import { MessageThread } from "@/components/MessageThread";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
 import { InvoiceSection } from "@/components/InvoiceSection";
+import { ContentDatabase } from "@/components/ContentDatabase";
+import { ContentBrief } from "@/components/ContentBrief";
+import { ClientHome } from "@/components/ClientHome";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import type { OnboardingData } from "@/lib/constants";
 
 interface ClientData {
@@ -33,10 +37,13 @@ interface KanbanCard {
   position: number;
   due_date?: string;
   priority?: "low" | "medium" | "high";
+  created_at?: string;
 }
 
 const TABS = [
-  { id: "kanban", label: "Content Tracker" },
+  { id: "home", label: "Home" },
+  { id: "content", label: "Content" },
+  { id: "kanban", label: "Board" },
   { id: "calendar", label: "Calendar" },
   { id: "messages", label: "Messages" },
   { id: "resources", label: "Resources" },
@@ -46,10 +53,12 @@ const TABS = [
 ];
 
 export default function DashboardClient() {
-  const [tab, setTab] = useState("kanban");
+  const [tab, setTab] = useState("home");
   const [client, setClient] = useState<ClientData | null>(null);
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
+  const [showBrief, setShowBrief] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -58,6 +67,18 @@ export default function DashboardClient() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const router = useRouter();
   const supabase = createBrowserSupabase();
+
+  // Cmd+K global search shortcut
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowSearch((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -83,8 +104,8 @@ export default function DashboardClient() {
       if (res.ok) {
         setKanbanCards(await res.json());
       }
-    } catch {
-      // Handle silently
+    } catch (err) {
+      console.error("Failed to load kanban cards.");
     }
   }, [client]);
 
@@ -134,6 +155,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
+  const overflowTabs = ["home", "kanban", "content", "messages", "calendar", "resources", "billing"];
 
   return (
     <div className="bg-bg h-screen flex flex-col overflow-hidden">
@@ -148,6 +170,18 @@ export default function DashboardClient() {
           ))}
         </div>
         <div className="flex items-center gap-3.5">
+          {/* Search Button */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className="text-text-3 hover:text-text bg-transparent border border-border rounded-lg py-1.5 px-2.5 cursor-pointer font-body text-[11px] transition-colors flex items-center gap-1.5"
+            title="Search (Cmd+K)"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span className="hidden sm:inline">Search</span>
+            <kbd className="hidden sm:inline text-[9px] bg-surface-3 py-0.5 px-1 rounded ml-1">&#8984;K</kbd>
+          </button>
           <NotificationBell userEmail={client.email} userType="client" />
           <div className="hidden sm:flex items-center gap-2.5">
             <Avatar name={client.name} />
@@ -160,7 +194,43 @@ export default function DashboardClient() {
       </div>
 
       {/* Content */}
-      <div className={`flex-1 ${tab === "kanban" || tab === "messages" || tab === "calendar" || tab === "resources" || tab === "billing" ? "overflow-hidden" : "overflow-auto"}`}>
+      <div className={`flex-1 ${overflowTabs.includes(tab) ? "overflow-hidden" : "overflow-auto"}`}>
+        {/* Home */}
+        {tab === "home" && (
+          <ClientHome
+            clientName={client.name}
+            cards={kanbanCards}
+            onSubmitIdea={() => setShowBrief(true)}
+            onViewCalendar={() => setTab("calendar")}
+            onMessageTeam={() => setTab("messages")}
+            onCardClick={(card) => setSelectedCard(card as KanbanCard)}
+          />
+        )}
+
+        {/* Content Database (Notion-style multi-view) */}
+        {tab === "content" && (
+          <div className="h-full flex flex-col">
+            <div className="px-4 sm:px-6 py-3.5 border-b border-border flex items-center justify-between shrink-0">
+              <h2 className="text-text font-heading text-[17px] font-bold m-0">Content Database</h2>
+              <button
+                className="tfc-btn"
+                style={{ padding: "7px 16px", fontSize: 12 }}
+                onClick={() => setShowBrief(true)}
+              >
+                + New Content
+              </button>
+            </div>
+            <ContentDatabase
+              clientId={client.id}
+              cards={kanbanCards}
+              onCardClick={(card) => setSelectedCard(card as KanbanCard)}
+              onCardsChange={loadKanbanCards}
+              editable
+              clientName={client.name}
+            />
+          </div>
+        )}
+
         {/* Content Tracker (Kanban) */}
         {tab === "kanban" && (
           <div className="h-full flex flex-col">
@@ -303,6 +373,26 @@ export default function DashboardClient() {
           onClose={() => setSelectedCard(null)}
           onUpdate={handleCardUpdate}
           onDelete={handleCardDelete}
+        />
+      )}
+
+      {/* Content Brief Slide-over */}
+      {showBrief && (
+        <ContentBrief
+          clientId={client.id}
+          onClose={() => setShowBrief(false)}
+          onCreated={loadKanbanCards}
+        />
+      )}
+
+      {/* Global Search */}
+      {showSearch && (
+        <GlobalSearch
+          cards={kanbanCards}
+          onSelectCard={(card) => setSelectedCard(card as KanbanCard)}
+          onSelectMessage={() => { setShowSearch(false); setTab("messages"); }}
+          onSelectResource={() => { setShowSearch(false); setTab("resources"); }}
+          onClose={() => setShowSearch(false)}
         />
       )}
     </div>

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 // GET /api/kanban?client_id=...
 export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const clientId = req.nextUrl.searchParams.get("client_id");
   if (!clientId) {
     return NextResponse.json({ error: "client_id required" }, { status: 400 });
@@ -23,16 +30,14 @@ export async function GET(req: NextRequest) {
 
 // POST /api/kanban — add a card
 export async function POST(req: NextRequest) {
-  const {
-    client_id,
-    column_id,
-    title,
-    platform,
-    description,
-    due_date,
-    priority,
-    created_by,
-  } = await req.json();
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { client_id, column_id, title } = body;
 
   if (!client_id || !column_id || !title) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
@@ -57,12 +62,19 @@ export async function POST(req: NextRequest) {
       client_id,
       column_id,
       title,
-      platform: platform || null,
+      platform: body.platform || null,
       position: nextPos,
-      description: description || null,
-      due_date: due_date || null,
-      priority: priority || null,
-      created_by: created_by || null,
+      description: body.description || null,
+      due_date: body.due_date || null,
+      priority: body.priority || null,
+      created_by: body.created_by || null,
+      content_style: body.content_style || null,
+      content_type: body.content_type || null,
+      reference_url: body.reference_url || null,
+      assigned_editor: body.assigned_editor || null,
+      shoot_date: body.shoot_date || null,
+      edit_deadline: body.edit_deadline || null,
+      publish_date: body.publish_date || null,
     })
     .select()
     .single();
@@ -75,8 +87,14 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/kanban — update a card
 export async function PATCH(req: NextRequest) {
-  const { id, column_id, position, title, description, due_date, priority } =
-    await req.json();
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { id } = body;
 
   if (!id) {
     return NextResponse.json({ error: "Card id required" }, { status: 400 });
@@ -84,12 +102,14 @@ export async function PATCH(req: NextRequest) {
 
   const supabase = createSupabaseAdmin();
   const updates: Record<string, any> = {};
-  if (column_id !== undefined) updates.column_id = column_id;
-  if (position !== undefined) updates.position = position;
-  if (title !== undefined) updates.title = title;
-  if (description !== undefined) updates.description = description;
-  if (due_date !== undefined) updates.due_date = due_date;
-  if (priority !== undefined) updates.priority = priority;
+  const fields = [
+    "column_id", "position", "title", "description", "platform",
+    "due_date", "priority", "content_style", "content_type",
+    "reference_url", "assigned_editor", "shoot_date", "edit_deadline", "publish_date",
+  ];
+  for (const f of fields) {
+    if (body[f] !== undefined) updates[f] = body[f];
+  }
   updates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase
@@ -107,6 +127,12 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/kanban?id=...
 export async function DELETE(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const id = req.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "Card id required" }, { status: 400 });
