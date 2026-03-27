@@ -20,6 +20,8 @@ import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { COLUMNS } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
+import { TIERS } from "@/lib/tiers";
+import type { TierKey } from "@/lib/tiers";
 
 interface TeamMember {
   id: string;
@@ -47,6 +49,7 @@ interface Client {
   onboarding_complete: boolean;
   onboarding_data: OnboardingData | null;
   created_at: string;
+  subscription_tier?: string | null;
   kanbanCards?: KanbanCard[];
 }
 
@@ -512,8 +515,8 @@ export default function TeamPortalClient() {
               {!loading && (
                 <div className="bg-surface border border-border rounded-xl overflow-hidden">
                   <div className="client-row cursor-default border-b border-border-2 hidden sm:grid">
-                    {["Client", "Email", "Joined", "Onboarding", ""].map((h, i) => (
-                      <span key={i} className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase">{h}</span>
+                    {["Client", "Short Form", "Long Form", "SMM", "Onboarding", ""].map((h, i) => (
+                      <span key={i} className={`text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase${h === "Short Form" ? " col-short" : h === "Long Form" ? " col-long" : ""}`}>{h}</span>
                     ))}
                   </div>
                   {filtered.length === 0 && (
@@ -521,16 +524,32 @@ export default function TeamPortalClient() {
                       {clients.length === 0 ? "No clients have signed up yet." : "No clients match your search."}
                     </div>
                   )}
-                  {filtered.map((c) => (
+                  {filtered.map((c) => {
+                    const tier = c.subscription_tier && c.subscription_tier in TIERS ? TIERS[c.subscription_tier as TierKey] : null;
+                    return (
                     <div key={c.id} className="client-row" onClick={() => { setSelected(c); setClientTab("intake"); }}>
                       <div className="flex items-center gap-2.5">
                         <Avatar name={c.name} />
-                        <span className="text-text text-sm font-medium">{c.name}</span>
+                        <div>
+                          <span className="text-text text-sm font-medium block">{c.name}</span>
+                          <span className="text-text-3 text-[11px] hidden sm:block">{c.email}</span>
+                        </div>
                       </div>
-                      <span className="text-text-2 text-[13px] hidden sm:inline">{c.email}</span>
-                      <span className="text-text-2 text-[13px] hidden sm:inline">{c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</span>
+                      <span className="col-short text-text-2 text-[13px] hidden sm:inline font-medium">
+                        {tier ? (tier.shortForm === null ? "∞" : `${tier.shortForm}`) : "—"}
+                      </span>
+                      <span className="col-long text-text-2 text-[13px] hidden sm:inline font-medium">
+                        {tier ? (tier.longForm === 0 ? "—" : `${tier.longForm}`) : "—"}
+                      </span>
+                      <span className="text-[11px] font-bold tracking-[0.06em] py-[3px] px-2 rounded-md inline-block"
+                        style={tier?.smm
+                          ? { background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }
+                          : { background: "rgba(168,164,156,0.08)", color: "#6B6763", border: "1px solid rgba(168,164,156,0.12)" }
+                        }>
+                        {tier?.smm ? "Yes" : "—"}
+                      </span>
                       <span
-                        className="text-[11px] font-bold tracking-[0.06em] py-[3px] px-2.5 rounded-md inline-block"
+                        className="col-status text-[11px] font-bold tracking-[0.06em] py-[3px] px-2.5 rounded-md inline-block"
                         style={{
                           background: c.onboarding_complete ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)",
                           color: c.onboarding_complete ? "#10B981" : "#F59E0B",
@@ -541,7 +560,8 @@ export default function TeamPortalClient() {
                       </span>
                       <span className="text-text-3 text-base">›</span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
