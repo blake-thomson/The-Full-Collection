@@ -13,7 +13,6 @@ import { MessageThread } from "@/components/MessageThread";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
 import { InvoiceSection } from "@/components/InvoiceSection";
-import { ContentDatabase } from "@/components/ContentDatabase";
 import { ContentBrief } from "@/components/ContentBrief";
 import { ClientHome } from "@/components/ClientHome";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -38,12 +37,21 @@ interface KanbanCard {
   due_date?: string;
   priority?: "low" | "medium" | "high";
   created_at?: string;
+  content_style?: string;
+  content_type?: string;
+  reference_url?: string;
+  unedited_url?: string;
+  edited_video_url?: string;
+  assigned_editor?: string;
+  shoot_date?: string;
+  edit_deadline?: string;
+  publish_date?: string;
+  shoot_location?: string;
 }
 
 const TABS = [
   { id: "home", label: "Home" },
-  { id: "content", label: "Content" },
-  { id: "kanban", label: "Board" },
+  { id: "kanban", label: "Content Tracker" },
   { id: "calendar", label: "Calendar" },
   { id: "messages", label: "Messages" },
   { id: "resources", label: "Resources" },
@@ -155,7 +163,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
-  const overflowTabs = ["home", "kanban", "content", "messages", "calendar", "resources", "billing"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "resources", "billing"];
 
   return (
     <div className="bg-bg h-screen flex flex-col overflow-hidden">
@@ -205,30 +213,6 @@ export default function DashboardClient() {
             onMessageTeam={() => setTab("messages")}
             onCardClick={(card) => setSelectedCard(card as KanbanCard)}
           />
-        )}
-
-        {/* Content Database (Notion-style multi-view) */}
-        {tab === "content" && (
-          <div className="h-full flex flex-col">
-            <div className="px-4 sm:px-6 py-3.5 border-b border-border flex items-center justify-between shrink-0">
-              <h2 className="text-text font-heading text-[17px] font-bold m-0">Content Database</h2>
-              <button
-                className="tfc-btn"
-                style={{ padding: "7px 16px", fontSize: 12 }}
-                onClick={() => setShowBrief(true)}
-              >
-                + New Content
-              </button>
-            </div>
-            <ContentDatabase
-              clientId={client.id}
-              cards={kanbanCards}
-              onCardClick={(card) => setSelectedCard(card as KanbanCard)}
-              onCardsChange={loadKanbanCards}
-              editable
-              clientName={client.name}
-            />
-          </div>
         )}
 
         {/* Content Tracker (Kanban) */}

@@ -75,6 +75,9 @@ export async function POST(req: NextRequest) {
       shoot_date: body.shoot_date || null,
       edit_deadline: body.edit_deadline || null,
       publish_date: body.publish_date || null,
+      unedited_url: body.unedited_url || null,
+      edited_video_url: body.edited_video_url || null,
+      shoot_location: body.shoot_location || null,
     })
     .select()
     .single();
@@ -105,7 +108,8 @@ export async function PATCH(req: NextRequest) {
   const fields = [
     "column_id", "position", "title", "description", "platform",
     "due_date", "priority", "content_style", "content_type",
-    "reference_url", "assigned_editor", "shoot_date", "edit_deadline", "publish_date",
+    "reference_url", "unedited_url", "edited_video_url",
+    "assigned_editor", "shoot_date", "edit_deadline", "publish_date", "shoot_location",
   ];
   for (const f of fields) {
     if (body[f] !== undefined) updates[f] = body[f];

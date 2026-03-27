@@ -9,6 +9,17 @@ interface Card {
   platform?: string;
   column_id: string;
   position: number;
+  content_style?: string;
+  content_type?: string;
+  reference_url?: string;
+  unedited_url?: string;
+  edited_video_url?: string;
+  assigned_editor?: string;
+  shoot_date?: string;
+  edit_deadline?: string;
+  publish_date?: string;
+  shoot_location?: string;
+  priority?: string;
 }
 
 interface Props {
@@ -17,13 +28,46 @@ interface Props {
   clientName?: string;
 }
 
+const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
+const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
+const PLATFORMS = [
+  "Instagram", "TikTok", "YouTube", "LinkedIn", "Twitter / X", "Facebook", "Podcast", "Blog",
+];
+
 export function Kanban({ clientId, editable = true, clientName }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
-  const [addingTo, setAddingTo] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ cardId: string; colId: string } | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // New card form state
+  const [newTitle, setNewTitle] = useState("");
+  const [newContentStyle, setNewContentStyle] = useState("");
+  const [newContentType, setNewContentType] = useState("");
+  const [newReferenceUrl, setNewReferenceUrl] = useState("");
+  const [newEditor, setNewEditor] = useState("");
+  const [newShootDate, setNewShootDate] = useState("");
+  const [newEditDeadline, setNewEditDeadline] = useState("");
+  const [newPublishDate, setNewPublishDate] = useState("");
+  const [newShootLocation, setNewShootLocation] = useState("");
+  const [newPlatform, setNewPlatform] = useState("");
+  const [newPriority, setNewPriority] = useState("medium");
+  const [creating, setCreating] = useState(false);
+
+  const resetForm = () => {
+    setNewTitle("");
+    setNewContentStyle("");
+    setNewContentType("");
+    setNewReferenceUrl("");
+    setNewEditor("");
+    setNewShootDate("");
+    setNewEditDeadline("");
+    setNewPublishDate("");
+    setNewShootLocation("");
+    setNewPlatform("");
+    setNewPriority("medium");
+  };
 
   const loadCards = useCallback(async () => {
     setLoading(true);
@@ -38,17 +82,33 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
 
   const addCard = async (colId: string) => {
     if (!newTitle.trim()) return;
+    setCreating(true);
     const res = await fetch("/api/kanban", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ client_id: clientId, column_id: colId, title: newTitle.trim() }),
+      body: JSON.stringify({
+        client_id: clientId,
+        column_id: colId,
+        title: newTitle.trim(),
+        content_style: newContentStyle || null,
+        content_type: newContentType || null,
+        reference_url: newReferenceUrl.trim() || null,
+        assigned_editor: newEditor.trim() || null,
+        shoot_date: newShootDate || null,
+        edit_deadline: newEditDeadline || null,
+        publish_date: newPublishDate || null,
+        shoot_location: newShootLocation.trim() || null,
+        platform: newPlatform || null,
+        priority: newPriority || null,
+      }),
     });
     if (res.ok) {
       const card = await res.json();
       setCards((prev) => [...prev, card]);
     }
-    setNewTitle("");
-    setAddingTo(null);
+    resetForm();
+    setShowCreateModal(null);
+    setCreating(false);
   };
 
   const deleteCard = async (cardId: string) => {
@@ -147,38 +207,172 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                         </button>
                       )}
                     </div>
-                    {card.platform && <span className="text-[10px] text-text-3 mt-[5px] block">{card.platform}</span>}
+                    {card.content_style && (
+                      <span className="text-[10px] text-text-3 mt-[3px] block">{card.content_style}</span>
+                    )}
+                    {card.platform && <span className="text-[10px] text-text-3 mt-[2px] block">{card.platform}</span>}
                   </div>
                 ))}
                 {editable && (
-                  addingTo === col.id ? (
-                    <div>
-                      <textarea
-                        autoFocus
-                        className="tfc-textarea"
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addCard(col.id); }
-                          if (e.key === "Escape") { setAddingTo(null); setNewTitle(""); }
-                        }}
-                        placeholder="Content title..."
-                        style={{ minHeight: 60, resize: "none", fontSize: 12, marginBottom: 6 }}
-                      />
-                      <div className="flex gap-[5px]">
-                        <button className="tfc-btn" style={{ padding: "5px 12px", fontSize: 11 }} onClick={() => addCard(col.id)}>Add</button>
-                        <button className="tfc-btn-ghost" style={{ padding: "5px 12px", fontSize: 11 }} onClick={() => { setAddingTo(null); setNewTitle(""); }}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button className="kanban-add-btn" onClick={() => { setAddingTo(col.id); setNewTitle(""); }}>+ Add card</button>
-                  )
+                  <button className="kanban-add-btn" onClick={() => { setShowCreateModal(col.id); resetForm(); }}>+ Add card</button>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* New Card Creation Modal */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateModal(null); resetForm(); } }}
+        >
+          <div
+            className="bg-surface border border-border rounded-2xl w-full max-w-[540px] max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-text font-heading text-[16px] font-bold m-0">New Content</h3>
+                <p className="text-text-3 text-[11px] m-0 mt-0.5">
+                  Adding to <span className="text-text-2 font-semibold">{COLUMNS.find((c) => c.id === showCreateModal)?.label}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowCreateModal(null); resetForm(); }}
+                className="text-text-3 hover:text-text bg-transparent border-none cursor-pointer text-xl leading-none font-body transition-colors"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Content Name */}
+              <div className="mb-4">
+                <label className="tfc-label">Content Name</label>
+                <input
+                  autoFocus
+                  className="tfc-input"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Day in the life vlog, Top 5 tips..."
+                  onKeyDown={(e) => { if (e.key === "Enter" && newTitle.trim()) addCard(showCreateModal); }}
+                />
+              </div>
+
+              {/* Row: Content Style, Content Type */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="tfc-label">Content Style</label>
+                  <select className="tfc-input" value={newContentStyle} onChange={(e) => setNewContentStyle(e.target.value)} style={{ cursor: "pointer" }}>
+                    <option value="">Select...</option>
+                    {CONTENT_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="tfc-label">Content Type</label>
+                  <select className="tfc-input" value={newContentType} onChange={(e) => setNewContentType(e.target.value)} style={{ cursor: "pointer" }}>
+                    <option value="">Select...</option>
+                    {CONTENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row: Platform, Priority */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="tfc-label">Platform</label>
+                  <select className="tfc-input" value={newPlatform} onChange={(e) => setNewPlatform(e.target.value)} style={{ cursor: "pointer" }}>
+                    <option value="">Select...</option>
+                    {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="tfc-label">Priority</label>
+                  <select className="tfc-input" value={newPriority} onChange={(e) => setNewPriority(e.target.value)} style={{ cursor: "pointer" }}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Reference URL */}
+              <div className="mb-4">
+                <label className="tfc-label">Reference URL</label>
+                <input
+                  type="url"
+                  className="tfc-input"
+                  value={newReferenceUrl}
+                  onChange={(e) => setNewReferenceUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+
+              {/* Editor & Shoot Location */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="tfc-label">Editor</label>
+                  <input
+                    className="tfc-input"
+                    value={newEditor}
+                    onChange={(e) => setNewEditor(e.target.value)}
+                    placeholder="Editor name"
+                  />
+                </div>
+                <div>
+                  <label className="tfc-label">Shoot Location</label>
+                  <input
+                    className="tfc-input"
+                    value={newShootLocation}
+                    onChange={(e) => setNewShootLocation(e.target.value)}
+                    placeholder="Location"
+                  />
+                </div>
+              </div>
+
+              {/* Dates row */}
+              <div className="grid grid-cols-3 gap-3 mb-2">
+                <div>
+                  <label className="tfc-label">Shoot Date</label>
+                  <input type="date" className="tfc-input" value={newShootDate} onChange={(e) => setNewShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
+                </div>
+                <div>
+                  <label className="tfc-label">Edit Deadline</label>
+                  <input type="date" className="tfc-input" value={newEditDeadline} onChange={(e) => setNewEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
+                </div>
+                <div>
+                  <label className="tfc-label">Publish Date</label>
+                  <input type="date" className="tfc-input" value={newPublishDate} onChange={(e) => setNewPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-2 shrink-0">
+              <button
+                className="tfc-btn-ghost"
+                style={{ padding: "8px 18px", fontSize: 12 }}
+                onClick={() => { setShowCreateModal(null); resetForm(); }}
+              >
+                Cancel
+              </button>
+              <button
+                className="tfc-btn"
+                style={{ padding: "8px 18px", fontSize: 12 }}
+                onClick={() => addCard(showCreateModal)}
+                disabled={!newTitle.trim() || creating}
+              >
+                {creating ? "Creating..." : "Create Content"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

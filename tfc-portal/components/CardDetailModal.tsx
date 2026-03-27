@@ -30,10 +30,13 @@ interface Card {
   content_style?: string;
   content_type?: string;
   reference_url?: string;
+  unedited_url?: string;
+  edited_video_url?: string;
   assigned_editor?: string;
   shoot_date?: string;
   edit_deadline?: string;
   publish_date?: string;
+  shoot_location?: string;
 }
 
 interface CurrentUser {
@@ -70,31 +73,9 @@ const PLATFORMS = [
   "Blog",
 ];
 
-const CONTENT_STYLES = [
-  "Talking-head (direct to camera)",
-  "Interview-style conversational",
-  "Voiceover + b-roll",
-  "On-screen text / story reels",
-  "Framework reels (drawn, whiteboard)",
-  "Street interviews (public Q&A)",
-  "Green screen / screen share",
-  "Carousel / static images",
-  "Behind the scenes",
-  "Testimonial / case study",
-];
+const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 
-const CONTENT_TYPES = [
-  "Reel / Short",
-  "Long-form video",
-  "Carousel",
-  "Static post",
-  "Story",
-  "Blog post",
-  "Podcast episode",
-  "YouTube video",
-  "Live stream",
-  "Newsletter",
-];
+const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
 
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "#6B7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.25)" },
@@ -118,10 +99,13 @@ export function CardDetailModal({ card, clientId, currentUser, teamMembers = [],
   const [contentStyle, setContentStyle] = useState(card.content_style || "");
   const [contentType, setContentType] = useState(card.content_type || "");
   const [referenceUrl, setReferenceUrl] = useState(card.reference_url || "");
+  const [uneditedUrl, setUneditedUrl] = useState(card.unedited_url || "");
+  const [editedVideoUrl, setEditedVideoUrl] = useState(card.edited_video_url || "");
   const [assignedEditor, setAssignedEditor] = useState(card.assigned_editor || "");
   const [shootDate, setShootDate] = useState(card.shoot_date || "");
   const [editDeadline, setEditDeadline] = useState(card.edit_deadline || "");
   const [publishDate, setPublishDate] = useState(card.publish_date || "");
+  const [shootLocation, setShootLocation] = useState(card.shoot_location || "");
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [saving, setSaving] = useState(false);
@@ -195,10 +179,13 @@ export function CardDetailModal({ card, clientId, currentUser, teamMembers = [],
           content_style: contentStyle || null,
           content_type: contentType || null,
           reference_url: referenceUrl.trim() || null,
+          unedited_url: uneditedUrl.trim() || null,
+          edited_video_url: editedVideoUrl.trim() || null,
           assigned_editor: assignedEditor || null,
           shoot_date: shootDate || null,
           edit_deadline: editDeadline || null,
           publish_date: publishDate || null,
+          shoot_location: shootLocation.trim() || null,
         }),
       });
       if (res.ok) {
@@ -212,10 +199,13 @@ export function CardDetailModal({ card, clientId, currentUser, teamMembers = [],
           content_style: contentStyle || undefined,
           content_type: contentType || undefined,
           reference_url: referenceUrl.trim() || undefined,
+          unedited_url: uneditedUrl.trim() || undefined,
+          edited_video_url: editedVideoUrl.trim() || undefined,
           assigned_editor: assignedEditor || undefined,
           shoot_date: shootDate || undefined,
           edit_deadline: editDeadline || undefined,
           publish_date: publishDate || undefined,
+          shoot_location: shootLocation.trim() || undefined,
         });
       }
     } catch {
@@ -524,6 +514,36 @@ export function CardDetailModal({ card, clientId, currentUser, teamMembers = [],
                   />
                 </div>
 
+                {/* Unedited (raw footage) URL */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                  </svg>
+                  <input
+                    type="url"
+                    className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                    style={{ color: uneditedUrl ? "#F0EDE6" : "#5A5652" }}
+                    placeholder="Unedited / Raw Footage URL"
+                    value={uneditedUrl}
+                    onChange={(e) => setUneditedUrl(e.target.value)}
+                  />
+                </div>
+
+                {/* Edited Video URL */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <input
+                    type="url"
+                    className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                    style={{ color: editedVideoUrl ? "#F0EDE6" : "#5A5652" }}
+                    placeholder="Edited Video URL"
+                    value={editedVideoUrl}
+                    onChange={(e) => setEditedVideoUrl(e.target.value)}
+                  />
+                </div>
+
                 {/* Editor */}
                 <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -604,6 +624,21 @@ export function CardDetailModal({ card, clientId, currentUser, teamMembers = [],
                       onChange={(e) => setPublishDate(e.target.value)}
                     />
                   </div>
+                </div>
+
+                {/* Shoot Location */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <input
+                    type="text"
+                    className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                    style={{ color: shootLocation ? "#F0EDE6" : "#5A5652" }}
+                    placeholder="Add Shoot Location"
+                    value={shootLocation}
+                    onChange={(e) => setShootLocation(e.target.value)}
+                  />
                 </div>
               </div>
 
