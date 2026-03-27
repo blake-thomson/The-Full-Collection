@@ -12,7 +12,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { MessageThread } from "@/components/MessageThread";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
-import { InvoiceSection } from "@/components/InvoiceSection";
+import { SubscriptionSection } from "@/components/SubscriptionSection";
 import { ContentBrief } from "@/components/ContentBrief";
 import { ClientHome } from "@/components/ClientHome";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -586,7 +586,7 @@ export default function DashboardClient() {
 
               {/* Billing sub-tab */}
               {profileTab === "billing" && (
-                <InvoiceSection clientId={client.id} currentUser={currentUser} isTeam={false} />
+                <SubscriptionSection clientId={client.id} />
               )}
 
               {/* Intake sub-tab */}

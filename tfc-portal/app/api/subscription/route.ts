@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from "next/server";
+import { stripe } from "@/lib/stripe";
+import { createSupabaseAdmin } from "@/lib/supabase";
+import { createServerSupabase } from "@/lib/supabase-server";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const {
+    data: { user },
+  } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const admin = createSupabaseAdmin();
+
+  // Team members can pass a client_id to view any client's subscription
+  const clientId = req.nextUrl.searchParams.get("client_id");
+
+  let clientQuery = admin
+    .from("clients")
+    .select(
+      "stripe_subscription_id, stripe_customer_id, subscription_status, subscription_tier"
+    );
+
+  if (clientId) {
+    // Verify the requester is a team member
+    const { data: teamMember } = await admin
+      .from("team_members")
+      .select("id")
+      .eq("email", user.email!)
+      .single();
+    if (!teamMember) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    clientQuery = clientQuery.eq("id", clientId);
+  } else {
+    clientQuery = clientQuery.eq("email", user.email!);
+  }
+
+  const { data: client, error } = await clientQuery.single();
+
+  if (error || !client) {
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  }
+
+  if (!client.stripe_subscription_id) {
+    return NextResponse.json({
+      subscription: null,
+      tier: client.subscription_tier,
+      status: client.subscription_status,
+    });
+  }
+
+  try {
+    // Fetch live subscription from Stripe
+    const subscription = await stripe.subscriptions.retrieve(
+      client.stripe_subscription_id,
+      { expand: ["latest_invoice"] }
+    );
+
+    // Fetch all paid invoices to compute total paid
+    const invoices = await stripe.invoices.list({
+      customer: client.stripe_customer_id,
+      status: "paid",
+      limit: 100,
+    });
+    const totalPaid = invoices.data.reduce(
+      (sum, inv) => sum + (inv.amount_paid ?? 0),
+      0
+    );
+
+    // If past_due, find how many days since the most recent failed invoice due date
+    let daysOverdue: number | null = null;
+    if (subscription.status === "past_due") {
+      const failedInvoices = await stripe.invoices.list({
+        customer: client.stripe_customer_id,
+        status: "open",
+        limit: 1,
+      });
+      if (failedInvoices.data.length > 0) {
+        const failedInv = failedInvoices.data[0];
+        const dueTs = failedInv.due_date
+          ? failedInv.due_date * 1000
+          : failedInv.created * 1000;
+        daysOverdue = Math.max(
+          0,
+          Math.floor((Date.now() - dueTs) / (1000 * 60 * 60 * 24))
+        );
+      }
+    }
+
+    return NextResponse.json({
+      tier: client.subscription_tier,
+      status: subscription.status,
+      currentPeriodEnd: subscription.current_period_end,
+      currentPeriodStart: subscription.current_period_start,
+      totalPaid,
+      daysOverdue,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    });
+  } catch (err) {
+    console.error("Stripe subscription fetch error:", err);
+    // Fall back to DB data if Stripe call fails
+    return NextResponse.json({
+      subscription: null,
+      tier: client.subscription_tier,
+      status: client.subscription_status,
+    });
+  }
+}

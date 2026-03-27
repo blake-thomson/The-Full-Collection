@@ -13,7 +13,7 @@ import { CardDetailModal } from "@/components/CardDetailModal";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { MessageThread } from "@/components/MessageThread";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
-import { InvoiceSection } from "@/components/InvoiceSection";
+import { SubscriptionSection } from "@/components/SubscriptionSection";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
@@ -625,7 +625,7 @@ export default function TeamPortalClient() {
                 {/* Billing */}
                 {clientTab === "billing" && (
                   <div className="h-full">
-                    <InvoiceSection clientId={selected.id} currentUser={currentUser} isTeam={true} />
+                    <SubscriptionSection clientId={selected.id} isTeam={true} />
                   </div>
                 )}
 
