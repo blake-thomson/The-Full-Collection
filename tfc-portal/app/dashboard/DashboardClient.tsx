@@ -300,7 +300,7 @@ export default function DashboardClient() {
           <NotificationBell userEmail={client.email} userType="client" />
         </div>
         {/* Center: stacked logo */}
-        <div className="flex-1 text-center font-heading font-bold text-text leading-[1.05]" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+        <div className="flex-1 text-center font-heading font-bold text-red leading-[1.05]" style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>
           <div>THE FULL</div>
           <div>COLLECTION</div>
         </div>
