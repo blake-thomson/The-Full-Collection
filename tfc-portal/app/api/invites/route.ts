@@ -14,9 +14,19 @@ export async function POST(req: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  // Only team members can send invites
+  // Only owner/admin can send invites
   const access = await requireTeamMember(user.email!, supabase);
   if (!access.ok) return access.response;
+
+  const { data: actor } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("email", user.email!)
+    .single();
+
+  if (!actor || !["owner", "admin"].includes(actor.role)) {
+    return NextResponse.json({ error: "Only owners and admins can send invites" }, { status: 403 });
+  }
 
   const { name, email, role, inviterName } = await req.json();
   if (!name || !email || !role) {
@@ -55,4 +65,37 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ code, name, email, role });
+}
+
+// DELETE /api/invites — revoke a pending invite (owner/admin only)
+export async function DELETE(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const supabase = createSupabaseAdmin();
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
+
+  // Only owner/admin can delete invites
+  const { data: actor } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("email", user.email!)
+    .single();
+
+  if (!actor || !["owner", "admin"].includes(actor.role)) {
+    return NextResponse.json({ error: "Only owners and admins can revoke invites" }, { status: 403 });
+  }
+
+  const { id } = await req.json();
+  if (!id) return NextResponse.json({ error: "Missing invite id" }, { status: 400 });
+
+  const { error } = await supabase
+    .from("team_invites")
+    .delete()
+    .eq("id", id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
 }
