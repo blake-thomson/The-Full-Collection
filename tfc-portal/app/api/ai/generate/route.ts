@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireClientAccess } from "@/lib/auth-helpers";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
@@ -161,8 +162,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch client's onboarding data
+  // Verify the requesting user can access this client
   const admin = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, client_id, admin);
+  if (!access.ok) return access.response;
+
+  // Fetch client's onboarding data
   const { data: client, error: clientError } = await admin
     .from("clients")
     .select("name, email, onboarding_data")

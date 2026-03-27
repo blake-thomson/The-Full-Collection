@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { sendTeamInvite } from "@/lib/resend";
+import { requireTeamMember } from "@/lib/auth-helpers";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -11,16 +12,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const supabase = createSupabaseAdmin();
+
+  // Only team members can send invites
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
+
   const { name, email, role, inviterName } = await req.json();
   if (!name || !email || !role) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
-  if (!["admin", "editor"].includes(role)) {
+  if (!["admin", "editor", "social_media_manager"].includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 
-  const code = crypto.randomBytes(4).toString("hex").toUpperCase();
-  const supabase = createSupabaseAdmin();
+  // 8 bytes = 64-bit entropy — brute force infeasible even without rate limiting
+  const code = crypto.randomBytes(8).toString("hex").toUpperCase();
 
   const { error } = await supabase.from("team_invites").insert({
     code,

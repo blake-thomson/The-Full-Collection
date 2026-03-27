@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireTeamMember } from "@/lib/auth-helpers";
 
 // GET /api/notifications?email=xxx&type=client
 export async function GET(req: NextRequest) {
@@ -18,6 +19,13 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+
+  // Users can only read their own notifications; team members can read any
+  if (user.email !== email) {
+    const teamCheck = await requireTeamMember(user.email!, supabase);
+    if (!teamCheck.ok) return teamCheck.response;
+  }
+
   let query = supabase
     .from("notifications")
     .select("*")
@@ -37,13 +45,19 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data);
 }
 
-// POST /api/notifications — create a notification
+// POST /api/notifications — create a notification (team members only)
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = createSupabaseAdmin();
+
+  // Only team members can create notifications
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
 
   const { recipient_email, recipient_type, title, message, link, type } =
     await req.json();
@@ -55,7 +69,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = createSupabaseAdmin();
   const { data, error } = await supabase
     .from("notifications")
     .insert({
@@ -95,7 +108,22 @@ export async function PATCH(req: NextRequest) {
   const supabase = createSupabaseAdmin();
 
   if (id) {
-    // Mark a single notification as read
+    // Mark a single notification as read — fetch it first to verify ownership
+    const { data: notif } = await supabase
+      .from("notifications")
+      .select("recipient_email")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!notif) {
+      return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+
+    if (notif.recipient_email !== user.email) {
+      const teamCheck = await requireTeamMember(user.email!, supabase);
+      if (!teamCheck.ok) return teamCheck.response;
+    }
+
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })
@@ -105,7 +133,12 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
   } else {
-    // Mark all notifications as read for a user
+    // Mark all notifications as read — only allowed for own email or team member
+    if (user.email !== email) {
+      const teamCheck = await requireTeamMember(user.email!, supabase);
+      if (!teamCheck.ok) return teamCheck.response;
+    }
+
     const { error } = await supabase
       .from("notifications")
       .update({ read: true })

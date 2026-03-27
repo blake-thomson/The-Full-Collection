@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireClientAccess, requireTeamMember } from "@/lib/auth-helpers";
 
 // GET /api/invoices?client_id=xxx
 export async function GET(req: NextRequest) {
@@ -16,6 +17,11 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+
+  // Verify the requesting user can access this client's invoices
+  const access = await requireClientAccess(user.email!, clientId, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("invoices")
     .select("*")
@@ -28,13 +34,19 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data);
 }
 
-// POST /api/invoices — create an invoice
+// POST /api/invoices — create an invoice (team members only)
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = createSupabaseAdmin();
+
+  // Only team members can create invoices
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
 
   const {
     client_id,
@@ -54,7 +66,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = createSupabaseAdmin();
+  if (typeof amount !== "number" || amount < 0) {
+    return NextResponse.json({ error: "amount must be a non-negative number" }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("invoices")
     .insert({
@@ -77,13 +92,19 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data);
 }
 
-// PATCH /api/invoices — update invoice status
+// PATCH /api/invoices — update invoice status (team members only)
 export async function PATCH(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const supabase = createSupabaseAdmin();
+
+  // Only team members can modify invoices
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
 
   const { id, status, stripe_invoice_id, stripe_payment_url } =
     await req.json();
@@ -95,13 +116,10 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const supabase = createSupabaseAdmin();
-  const updates: Record<string, any> = {};
+  const updates: Record<string, unknown> = {};
   if (status !== undefined) updates.status = status;
-  if (stripe_invoice_id !== undefined)
-    updates.stripe_invoice_id = stripe_invoice_id;
-  if (stripe_payment_url !== undefined)
-    updates.stripe_payment_url = stripe_payment_url;
+  if (stripe_invoice_id !== undefined) updates.stripe_invoice_id = stripe_invoice_id;
+  if (stripe_payment_url !== undefined) updates.stripe_payment_url = stripe_payment_url;
   updates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase

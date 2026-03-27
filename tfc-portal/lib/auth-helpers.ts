@@ -4,6 +4,27 @@ import { createSupabaseAdmin } from "./supabase";
 type AdminClient = ReturnType<typeof createSupabaseAdmin>;
 
 /**
+ * Verifies the requesting user is a team member.
+ * Returns { ok: true } or a ready-to-return 403 NextResponse.
+ */
+export async function requireTeamMember(
+  email: string,
+  admin: AdminClient
+): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const { data } = await admin
+    .from("team_members")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (data) return { ok: true };
+  return {
+    ok: false,
+    response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+  };
+}
+
+/**
  * Verifies the requesting user (by email) can access the given clientId.
  * - Team members can access any client.
  * - Clients can only access their own record (email must match AND id must match).

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireClientAccess } from "@/lib/auth-helpers";
 
 // GET /api/kanban/comments?card_id=...
 export async function GET(req: NextRequest) {
@@ -16,6 +17,21 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+
+  // Look up the card to get its client_id, then verify access
+  const { data: card } = await supabase
+    .from("kanban_cards")
+    .select("client_id")
+    .eq("id", cardId)
+    .maybeSingle();
+
+  if (!card) {
+    return NextResponse.json({ error: "Card not found" }, { status: 404 });
+  }
+
+  const access = await requireClientAccess(user.email!, card.client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("card_comments")
     .select("*")
@@ -36,24 +52,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { card_id, author_email, author_name, author_type, content } =
-    await req.json();
+  const { card_id, author_name, author_type, content } = await req.json();
 
-  if (!card_id || !author_email || !content) {
+  if (!card_id || !content) {
     return NextResponse.json(
-      { error: "card_id, author_email, and content are required" },
+      { error: "card_id and content are required" },
       { status: 400 }
     );
   }
 
   const supabase = createSupabaseAdmin();
+
+  // Look up the card to get its client_id, then verify access
+  const { data: card } = await supabase
+    .from("kanban_cards")
+    .select("client_id")
+    .eq("id", card_id)
+    .maybeSingle();
+
+  if (!card) {
+    return NextResponse.json({ error: "Card not found" }, { status: 404 });
+  }
+
+  const access = await requireClientAccess(user.email!, card.client_id, supabase);
+  if (!access.ok) return access.response;
+
+  // Determine author_type from verified team membership (don't trust client input)
+  const resolvedAuthorType = access.isTeam ? (author_type || "team") : "client";
+
   const { data, error } = await supabase
     .from("card_comments")
     .insert({
       card_id,
-      author_email,
+      author_email: user.email,   // always use the authenticated user's email
       author_name: author_name || null,
-      author_type: author_type || "team",
+      author_type: resolvedAuthorType,
       content,
     })
     .select()
