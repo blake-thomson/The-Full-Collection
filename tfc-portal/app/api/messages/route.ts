@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       .select("*")
       .eq("client_id", clientId)
       .eq("thread_parent_id", threadParentId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
     .select("*")
     .eq("client_id", clientId)
     .is("thread_parent_id", null)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -148,4 +150,29 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json(data);
+}
+
+// DELETE /api/messages?id=...
+export async function DELETE(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "Message id required" }, { status: 400 });
+  }
+
+  const supabase = createSupabaseAdmin();
+  const { error } = await supabase
+    .from("messages")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ success: true });
 }
