@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { Avatar } from "@/components/ui/Avatar";
+import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 
 interface TeamMember {
   id: string;
   name: string;
   email: string;
   role: string;
+  bio?: string;
+  avatar_url?: string;
   created_at: string;
 }
 
@@ -38,6 +41,7 @@ export function TeamManagement({ teamUser }: Props) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [tab, setTab] = useState("team");
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [invName, setInvName] = useState("");
   const [invEmail, setInvEmail] = useState("");
@@ -47,9 +51,8 @@ export function TeamManagement({ teamUser }: Props) {
   const [showNewClient, setShowNewClient] = useState(false);
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
-  const [cPass, setCPass] = useState("");
   const [cErr, setCErr] = useState("");
-  const [lastClient, setLastClient] = useState<{ name: string; email: string; pass: string } | null>(null);
+  const [lastClient, setLastClient] = useState<{ name: string; email: string } | null>(null);
   const supabase = createBrowserSupabase();
   const canManage = ["owner", "admin"].includes(teamUser.role);
 
@@ -90,25 +93,35 @@ export function TeamManagement({ teamUser }: Props) {
     setCErr("");
     const name = cName.trim();
     const email = cEmail.trim().toLowerCase();
-    const pass = cPass.trim();
-    if (!name || !email || !pass) { setCErr("All fields are required."); return; }
+    if (!name || !email) { setCErr("Name and email are required."); return; }
 
     const res = await fetch("/api/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password: pass, createdBy: teamUser.name }),
+      body: JSON.stringify({ name, email, createdBy: teamUser.name }),
     });
     const data = await res.json();
     if (!res.ok) { setCErr(data.error || "Failed to create client."); return; }
 
-    setCName(""); setCEmail(""); setCPass("");
+    setCName(""); setCEmail("");
     setShowNewClient(false);
-    setLastClient({ name, email, pass });
+    setLastClient({ name, email });
     load();
   };
 
   const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", editor: "#10B981", smm: "#8B5CF6" };
   const pendingInvites = invites.filter((i) => !i.used);
+
+  if (selectedMemberId) {
+    return (
+      <TeamMemberDetail
+        memberId={selectedMemberId}
+        currentUserEmail={teamUser.email}
+        currentUserRole={teamUser.role}
+        onBack={() => setSelectedMemberId(null)}
+      />
+    );
+  }
 
   return (
     <div className="max-w-[760px]">
@@ -184,26 +197,36 @@ export function TeamManagement({ teamUser }: Props) {
             </div>
             {members.length === 0 && <div className="p-7 text-center text-text-3 text-[13px]">No team members yet.</div>}
             {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between py-3.5 px-5 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <Avatar name={m.name} size={34} />
-                  <div>
-                    <div className="text-text text-sm font-semibold">
-                      {m.name} {m.email === teamUser.email && <span className="text-text-3 text-[11px] font-normal">(you)</span>}
-                    </div>
-                    <div className="text-text-2 text-xs mt-px">{m.email}</div>
+              <button
+                key={m.id}
+                onClick={() => setSelectedMemberId(m.id)}
+                className="flex items-center gap-3.5 py-4 px-5 border-b border-border w-full text-left bg-transparent hover:bg-surface-2 transition-colors cursor-pointer"
+                style={{ border: "none", borderBottom: "1px solid var(--border)" }}
+              >
+                <Avatar name={m.name} size={44} src={m.avatar_url} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-text text-sm font-semibold">
+                      {m.name}
+                    </span>
+                    {m.email === teamUser.email && <span className="text-text-3 text-[11px] font-normal">(you)</span>}
+                    <span
+                      className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md"
+                      style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
+                    >
+                      {m.role === "smm" ? "SMM" : m.role}
+                    </span>
                   </div>
+                  {m.bio ? (
+                    <p className="text-text-3 text-xs m-0 mt-1 line-clamp-1">{m.bio}</p>
+                  ) : (
+                    <p className="text-text-3 text-xs m-0 mt-1">{m.email}</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="text-[11px] font-bold tracking-[0.08em] uppercase py-[3px] px-[9px] rounded-md"
-                    style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
-                  >
-                    {m.role === "smm" ? "Social Media Manager" : m.role}
-                  </span>
-                  <span className="text-text-3 text-xs">{m.created_at ? new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span>
-                </div>
-              </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3 shrink-0">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
             ))}
           </div>
 
@@ -259,7 +282,7 @@ export function TeamManagement({ teamUser }: Props) {
                 <div>
                   <p className="text-[#10B981] text-sm font-bold m-0 mb-1.5">Client account created for {lastClient.name}</p>
                   <p className="text-text-2 text-[13px] m-0 mb-1">{lastClient.email}</p>
-                  <p className="text-text-3 text-xs m-0 mt-1">Welcome email sending in background. Temporary password: <span className="text-text font-semibold font-mono">{lastClient.pass}</span></p>
+                  <p className="text-text-3 text-xs m-0 mt-1">A welcome email with a password setup link is being sent to the client.</p>
                 </div>
                 <button onClick={() => setLastClient(null)} className="text-text-3 bg-transparent border-none cursor-pointer text-lg leading-none pl-3">×</button>
               </div>
@@ -270,14 +293,10 @@ export function TeamManagement({ teamUser }: Props) {
           {showNewClient && (
             <div className="bg-surface-2 border border-border-2 rounded-xl p-[22px] mb-6">
               <h3 className="text-text font-heading text-[15px] font-bold m-0 mb-1.5">New Client Account</h3>
-              <p className="text-text-2 text-[13px] m-0 mb-[18px] leading-relaxed">Fill in the client&apos;s details. They&apos;ll receive a welcome email with their login credentials.</p>
-              <div className="grid grid-cols-2 gap-3.5 mb-3.5">
+              <p className="text-text-2 text-[13px] m-0 mb-[18px] leading-relaxed">The client will receive a welcome email with a link to set their own password.</p>
+              <div className="grid grid-cols-2 gap-3.5 mb-[18px]">
                 <div><label className="tfc-label">Client Name</label><input className="tfc-input" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Their full name" /></div>
                 <div><label className="tfc-label">Email Address</label><input className="tfc-input" type="email" value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="their@email.com" /></div>
-              </div>
-              <div className="mb-[18px]">
-                <label className="tfc-label">Temporary Password</label>
-                <input className="tfc-input" value={cPass} onChange={(e) => setCPass(e.target.value)} placeholder="Create a temporary password for them" />
               </div>
               {cErr && <div className="text-[#FCA5A5] text-[13px] mb-3 bg-[rgba(239,68,68,0.08)] py-2 px-3 rounded-[7px]">{cErr}</div>}
               <div className="flex gap-2.5">
