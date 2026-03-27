@@ -109,3 +109,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+// DELETE — disconnect Google Drive (clear stored token)
+export async function DELETE(req: NextRequest) {
+  const supabase = createServerSupabase();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const admin = createSupabaseAdmin();
+  const { error } = await admin
+    .from("clients")
+    .update({ google_drive_token: null })
+    .eq("email", user.email);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}

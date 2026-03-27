@@ -75,6 +75,8 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [previewFile, setPreviewFile] = useState<DriveFile | null>(null);
   const [connected, setConnected] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -138,6 +140,19 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
       setFolderStack((s) => s.slice(0, -1));
       setSearch("");
     }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/drive", { method: "DELETE" });
+      if (res.ok) {
+        setConnected(false);
+        setFiles([]);
+        setConfirmDisconnect(false);
+      }
+    } catch {}
+    setDisconnecting(false);
   };
 
   const openFile = (file: DriveFile) => {
@@ -233,11 +248,40 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
         <button
           onClick={loadFiles}
           className="p-2 rounded-lg bg-surface border border-border hover:border-border-2 cursor-pointer transition-colors text-text-2 hover:text-text"
+          title="Refresh"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
         </button>
+
+        {/* Disconnect */}
+        {confirmDisconnect ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-text-3 text-[11px] whitespace-nowrap">Disconnect Drive?</span>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-[#EF4444]/10 text-[#EF4444] border-none cursor-pointer font-body hover:bg-[#EF4444]/20 transition-colors whitespace-nowrap"
+            >
+              {disconnecting ? "..." : "Yes, disconnect"}
+            </button>
+            <button
+              onClick={() => setConfirmDisconnect(false)}
+              className="text-[11px] px-2.5 py-1.5 rounded-lg bg-surface-2 text-text-3 border-none cursor-pointer font-body hover:text-text transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDisconnect(true)}
+            className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-surface border border-border text-text-3 hover:text-[#EF4444] hover:border-[#EF4444]/30 cursor-pointer font-body transition-colors whitespace-nowrap"
+            title="Disconnect Google Drive"
+          >
+            Disconnect
+          </button>
+        )}
       </div>
 
       {/* Breadcrumb */}
