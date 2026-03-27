@@ -287,6 +287,11 @@ CREATE POLICY "Authenticated users can insert activity_log"
 -- ============================================================
 -- Migration: Add new Notion-style fields to kanban_cards
 -- ============================================================
+-- ============================================================
+-- Migration: Add Google Drive OAuth token storage to clients
+-- ============================================================
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_drive_token jsonb;
+
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS content_style text;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS content_type text;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS reference_url text;

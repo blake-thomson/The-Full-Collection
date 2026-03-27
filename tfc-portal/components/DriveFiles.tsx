@@ -74,6 +74,7 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
   const [currentFolder, setCurrentFolder] = useState(folderId || "");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [previewFile, setPreviewFile] = useState<DriveFile | null>(null);
+  const [connected, setConnected] = useState(true);
 
   // Debounce search
   useEffect(() => {
@@ -91,6 +92,16 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
 
       const res = await fetch(`/api/drive?${params}`);
       const data = await res.json();
+
+      // Handle disconnected state
+      if (data.connected === false) {
+        setConnected(false);
+        setFiles([]);
+        setLoading(false);
+        return;
+      }
+
+      setConnected(true);
 
       if (!res.ok) {
         setError(data.error || "Failed to load files");
@@ -138,6 +149,33 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
       window.open(file.webViewLink, "_blank");
     }
   };
+
+  if (!connected && !loading) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">
+          <svg className="mx-auto" width="48" height="48" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H1.2c0 1.55.4 3.1 1.2 4.5l4.2 9.35z" fill="#0066DA"/>
+            <path d="M43.65 25.15L29.9 1.35c-1.35.8-2.5 1.9-3.3 3.3L1.2 52.95c-.8 1.4-1.2 2.95-1.2 4.5h27.5l16.15-32.3z" fill="#00AC47"/>
+            <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.85L53.5 64.85l-3.75 11.95h10.4c4.95 0 9.55-2.55 13.4-0z" fill="#EA4335"/>
+            <path d="M43.65 25.15L57.4 1.35C56.05.55 54.5 0 52.85 0H34.45c-1.65 0-3.2.55-4.55 1.35l13.75 23.8z" fill="#00832D"/>
+            <path d="M59.85 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.55 1.2h36.7c1.65 0 3.2-.4 4.55-1.2L59.85 53z" fill="#2684FC"/>
+            <path d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25.15 59.85 53h27.45c0-1.55-.4-3.1-1.2-4.5L73.4 26.5z" fill="#FFBA00"/>
+          </svg>
+        </div>
+        <h3 className="text-text font-heading font-bold text-lg mb-2">Connect Google Drive</h3>
+        <p className="text-text-3 text-sm mb-6 max-w-md mx-auto">
+          Link your Google Drive to browse and access your files directly from the portal.
+        </p>
+        <a
+          href="/api/drive/connect"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-red text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+        >
+          Connect Google Drive
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
