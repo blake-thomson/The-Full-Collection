@@ -100,14 +100,6 @@ const TABS = [
       </svg>
     ),
   },
-  {
-    id: "profile", label: "Profile",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
-  },
 ];
 
 export default function DashboardClient() {
@@ -273,18 +265,27 @@ export default function DashboardClient() {
         {/* User Footer */}
         <div className={`py-3 border-t border-border ${sidebarCollapsed ? "px-2" : "px-3"}`}>
           {sidebarCollapsed ? (
-            <div className="flex justify-center py-2">
+            <button
+              onClick={() => switchTab("profile")}
+              className="flex justify-center py-2 bg-transparent border-none cursor-pointer w-full rounded-lg hover:bg-surface-2 transition-colors"
+              title="Profile"
+            >
               <Avatar name={client.name} size={32} />
-            </div>
+            </button>
           ) : (
             <>
-              <div className="flex items-center gap-2.5 px-3 py-2">
+              <button
+                onClick={() => switchTab("profile")}
+                className={`flex items-center gap-2.5 px-3 py-2 w-full bg-transparent border-none cursor-pointer rounded-lg transition-colors ${
+                  tab === "profile" ? "bg-red/10" : "hover:bg-surface-2"
+                }`}
+              >
                 <Avatar name={client.name} size={32} />
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 text-left">
                   <div className="text-text text-[12px] font-semibold truncate">{client.name}</div>
                   <div className="text-text-3 text-[10px] truncate">{client.email}</div>
                 </div>
-              </div>
+              </button>
               <button
                 onClick={() => switchTab("trash")}
                 className={`w-full mt-1 px-3 py-2 text-left text-[12px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body flex items-center gap-2 ${
@@ -345,8 +346,11 @@ export default function DashboardClient() {
             className="absolute top-[52px] right-0 w-[260px] h-[calc(100vh-52px)] bg-surface border-l border-border flex flex-col overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* User Info */}
-            <div className="px-4 py-4 border-b border-border">
+            {/* User Info — tap to open profile */}
+            <button
+              onClick={() => switchTab("profile")}
+              className="w-full px-4 py-4 border-b border-border bg-transparent border-x-0 border-t-0 cursor-pointer text-left"
+            >
               <div className="flex items-center gap-3">
                 <Avatar name={client.name} size={36} />
                 <div className="min-w-0">
@@ -354,7 +358,7 @@ export default function DashboardClient() {
                   <div className="text-text-3 text-[11px] truncate">{client.email}</div>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Search Bar */}
             <div className="px-3 pt-3">
@@ -421,7 +425,7 @@ export default function DashboardClient() {
         {/* Desktop Top Bar */}
         <div className="hidden md:flex h-[52px] border-b border-border px-6 items-center justify-between shrink-0">
           <h2 className="text-text font-heading text-[16px] font-bold m-0 shrink-0 w-[120px]">
-            {TABS.find((t) => t.id === tab)?.label || "Dashboard"}
+            {TABS.find((t) => t.id === tab)?.label || (tab === "profile" ? "Profile" : tab === "trash" ? "Recently Deleted" : "Dashboard")}
           </h2>
           <button
             onClick={() => setShowSearch(true)}
