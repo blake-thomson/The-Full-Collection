@@ -388,7 +388,7 @@ export default function DashboardClient() {
             </nav>
 
             {/* Recently Deleted + Sign Out */}
-            <div className="px-3 py-3 border-t border-border">
+            <div className="px-3 py-3 border-t border-border" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
               <button
                 onClick={() => switchTab("trash")}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-[14px] font-medium cursor-pointer transition-all border-none font-body text-left ${
