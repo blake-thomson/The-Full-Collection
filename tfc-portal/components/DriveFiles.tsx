@@ -202,7 +202,8 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search files..."
-            className="tfc-input w-full !pl-9"
+            className="tfc-input w-full"
+            style={{ paddingLeft: 36 }}
           />
         </div>
 

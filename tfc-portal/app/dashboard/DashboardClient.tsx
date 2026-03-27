@@ -135,6 +135,7 @@ export default function DashboardClient() {
   const [showBrief, setShowBrief] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -219,19 +220,39 @@ export default function DashboardClient() {
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
       {/* ============ SIDEBAR (Desktop) ============ */}
-      <aside className="hidden md:flex flex-col w-[220px] border-r border-border bg-surface shrink-0">
-        {/* Logo */}
-        <div className="px-5 h-[58px] flex items-center shrink-0">
-          <Logo size={13} />
+      <aside
+        className={`hidden md:flex flex-col border-r border-border bg-surface shrink-0 transition-all duration-200 ${
+          sidebarCollapsed ? "w-[68px]" : "w-[220px]"
+        }`}
+      >
+        {/* Logo + Collapse Toggle */}
+        <div className={`pt-6 pb-4 flex items-center shrink-0 ${sidebarCollapsed ? "px-4 justify-center" : "px-5 justify-between"}`}>
+          {!sidebarCollapsed && <Logo size={13} />}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent border-none text-text-3 hover:text-text hover:bg-surface-2 cursor-pointer transition-colors"
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {sidebarCollapsed ? (
+                <><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>
+              ) : (
+                <><polyline points="11 17 6 12 11 7" /><line x1="6" y1="12" x2="18" y2="12" /></>
+              )}
+            </svg>
+          </button>
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+        <nav className={`flex-1 py-2 space-y-0.5 overflow-y-auto ${sidebarCollapsed ? "px-2" : "px-3"}`}>
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => switchTab(t.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium cursor-pointer transition-all border-none font-body text-left ${
+              title={sidebarCollapsed ? t.label : undefined}
+              className={`w-full flex items-center rounded-lg text-[13px] font-medium cursor-pointer transition-all border-none font-body text-left ${
+                sidebarCollapsed ? "justify-center py-2.5 px-0" : "gap-3 px-3 py-2.5"
+              } ${
                 tab === t.id
                   ? "bg-red/10 text-red"
                   : "bg-transparent text-text-2 hover:text-text hover:bg-surface-2"
@@ -240,26 +261,34 @@ export default function DashboardClient() {
               <span className={`shrink-0 ${tab === t.id ? "text-red" : "text-text-3"}`}>
                 {t.icon}
               </span>
-              {t.label}
+              {!sidebarCollapsed && t.label}
             </button>
           ))}
         </nav>
 
         {/* User Footer */}
-        <div className="px-3 py-3 border-t border-border">
-          <div className="flex items-center gap-2.5 px-3 py-2">
-            <Avatar name={client.name} size={32} />
-            <div className="flex-1 min-w-0">
-              <div className="text-text text-[12px] font-semibold truncate">{client.name}</div>
-              <div className="text-text-3 text-[10px] truncate">{client.email}</div>
+        <div className={`py-3 border-t border-border ${sidebarCollapsed ? "px-2" : "px-3"}`}>
+          {sidebarCollapsed ? (
+            <div className="flex justify-center py-2">
+              <Avatar name={client.name} size={32} />
             </div>
-          </div>
-          <button
-            onClick={logout}
-            className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
-          >
-            Sign out
-          </button>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5 px-3 py-2">
+                <Avatar name={client.name} size={32} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-text text-[12px] font-semibold truncate">{client.name}</div>
+                  <div className="text-text-3 text-[10px] truncate">{client.email}</div>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
+              >
+                Sign out
+              </button>
+            </>
+          )}
         </div>
       </aside>
 
@@ -340,21 +369,21 @@ export default function DashboardClient() {
       <div className="flex-1 flex flex-col min-w-0 md:h-screen">
         {/* Desktop Top Bar */}
         <div className="hidden md:flex h-[52px] border-b border-border px-6 items-center justify-between shrink-0">
-          <h2 className="text-text font-heading text-[16px] font-bold m-0">
+          <h2 className="text-text font-heading text-[16px] font-bold m-0 shrink-0 w-[120px]">
             {TABS.find((t) => t.id === tab)?.label || "Dashboard"}
           </h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSearch(true)}
-              className="text-text-3 hover:text-text bg-transparent border border-border rounded-lg py-1.5 px-2.5 cursor-pointer font-body text-[11px] transition-colors flex items-center gap-1.5"
-              title="Search (Cmd+K)"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <span>Search</span>
-              <kbd className="text-[9px] bg-surface-3 py-0.5 px-1 rounded ml-1">&#8984;K</kbd>
-            </button>
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex-1 max-w-[520px] mx-auto text-text-3 hover:text-text-2 bg-surface border border-border hover:border-border-2 rounded-xl py-2 px-4 cursor-pointer font-body text-[13px] transition-all flex items-center gap-2"
+            title="Search (Cmd+K)"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span className="flex-1 text-left">Search content, messages, files...</span>
+            <kbd className="text-[10px] bg-surface-3 py-0.5 px-1.5 rounded text-text-3">⌘K</kbd>
+          </button>
+          <div className="flex items-center gap-3 shrink-0 w-[120px] justify-end">
             <NotificationBell userEmail={client.email} userType="client" />
           </div>
         </div>
