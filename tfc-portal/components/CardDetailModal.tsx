@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { COLUMNS } from "@/lib/constants";
 
 interface Comment {
   id: string;
@@ -59,6 +60,7 @@ const PRIORITY_CONFIG = {
 
 export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate, onDelete }: Props) {
   const [title, setTitle] = useState(card.title);
+  const [status, setStatus] = useState(card.column_id);
   const [description, setDescription] = useState(card.description || "");
   const [dueDate, setDueDate] = useState(card.due_date || "");
   const [priority, setPriority] = useState<"low" | "medium" | "high">(card.priority || "medium");
@@ -172,7 +174,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: card.id, title: title.trim(), description: description.trim(),
+          id: card.id, column_id: status, title: title.trim(), description: description.trim(),
           due_date: dueDate || null, priority,
           content_style: contentStyle || null, content_type: contentType || null,
           reference_url: referenceUrl.trim() || null, unedited_url: uneditedUrl.trim() || null,
@@ -183,7 +185,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
         }),
       });
       if (res.ok) {
-        onUpdate({ ...card, title: title.trim(), description: description.trim(),
+        onUpdate({ ...card, column_id: status, title: title.trim(), description: description.trim(),
           due_date: dueDate || undefined, priority,
           content_style: contentStyle || undefined, content_type: contentType || undefined,
           reference_url: referenceUrl.trim() || undefined, unedited_url: uneditedUrl.trim() || undefined,
@@ -259,6 +261,28 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           <div className="mb-5">
             <label className="tfc-label">Title</label>
             <input className="tfc-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Content title..." />
+          </div>
+
+          {/* Status */}
+          <div className="mb-5">
+            <label className="tfc-label">Status</label>
+            <div className="flex flex-wrap gap-1.5">
+              {COLUMNS.map((col) => {
+                const active = status === col.id;
+                return (
+                  <button key={col.id} onClick={() => setStatus(col.id)}
+                    className="py-1.5 px-3 rounded-lg text-[11px] font-semibold cursor-pointer transition-all border"
+                    style={{
+                      background: active ? `${col.color}18` : "transparent",
+                      color: active ? col.color : "#5A5652",
+                      borderColor: active ? `${col.color}40` : "#252525",
+                    }}>
+                    <span className="inline-block w-[6px] h-[6px] rounded-full mr-1.5" style={{ background: col.color }} />
+                    {col.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Description with inline AI */}
