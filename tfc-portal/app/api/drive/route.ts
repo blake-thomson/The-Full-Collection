@@ -1,35 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { createSupabaseAdmin } from "@/lib/supabase";
 
-function getDriveClient() {
-  const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-  if (!credentials) {
-    throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY not configured");
-  }
-
-  const parsed = JSON.parse(credentials);
-  const auth = new google.auth.GoogleAuth({
-    credentials: parsed,
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-  });
-
-  return google.drive({ version: "v3", auth });
+function getOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  );
 }
 
-// GET — list files in a folder or search
+// GET — list files using per-user OAuth token
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Look up the user's stored Google token
+  const admin = createSupabaseAdmin();
+  const { data: client } = await admin
+    .from("clients")
+    .select("google_drive_token")
+    .eq("email", user.email)
+    .single();
+
+  if (!client?.google_drive_token) {
+    return NextResponse.json({ connected: false });
+  }
+
+  const token = client.google_drive_token as {
+    access_token: string;
+    refresh_token: string;
+    expiry_date?: number;
+  };
+
+  const oauth2 = getOAuth2Client();
+  oauth2.setCredentials(token);
+
+  // Listen for token refresh so we persist the new access_token
+  oauth2.on("tokens", async (newTokens) => {
+    const merged = { ...token, ...newTokens };
+    await admin
+      .from("clients")
+      .update({ google_drive_token: merged })
+      .eq("email", user.email);
+  });
+
   const { searchParams } = new URL(req.url);
-  const folderId = searchParams.get("folder_id") || process.env.GOOGLE_DRIVE_ROOT_FOLDER || "root";
+  const folderId = searchParams.get("folder_id") || "root";
   const search = searchParams.get("search");
   const pageToken = searchParams.get("page_token");
 
   try {
-    const drive = getDriveClient();
+    const drive = google.drive({ version: "v3", auth: oauth2 });
 
     let query = `'${folderId}' in parents and trashed = false`;
     if (search) {
@@ -38,7 +61,8 @@ export async function GET(req: NextRequest) {
 
     const response = await drive.files.list({
       q: query,
-      fields: "nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, webContentLink, iconLink, thumbnailLink, parents, owners)",
+      fields:
+        "nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, webContentLink, iconLink, thumbnailLink, parents, owners)",
       orderBy: "modifiedTime desc",
       pageSize: 50,
       pageToken: pageToken || undefined,
@@ -63,12 +87,24 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
+      connected: true,
       files,
       nextPageToken: response.data.nextPageToken || null,
       folderId,
     });
   } catch (err: unknown) {
     console.error("Drive API error:", err);
+    // If token is invalid/revoked, signal disconnected
+    if (
+      err instanceof Error &&
+      (err.message.includes("invalid_grant") || err.message.includes("Token has been expired or revoked"))
+    ) {
+      await admin
+        .from("clients")
+        .update({ google_drive_token: null })
+        .eq("email", user.email);
+      return NextResponse.json({ connected: false });
+    }
     const message = err instanceof Error ? err.message : "Failed to access Google Drive";
     return NextResponse.json({ error: message }, { status: 500 });
   }
