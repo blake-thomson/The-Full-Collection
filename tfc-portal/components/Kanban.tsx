@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { COLUMNS } from "@/lib/constants";
 
 interface Card {
@@ -22,6 +22,13 @@ interface Card {
   priority?: string;
 }
 
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface Props {
   clientId: string;
   editable?: boolean;
@@ -30,8 +37,17 @@ interface Props {
 
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
-const PLATFORMS = [
-  "Instagram", "TikTok", "YouTube", "LinkedIn", "Twitter / X", "Facebook", "Podcast", "Blog",
+
+// Common shoot locations — will show as suggestions
+const LOCATION_SUGGESTIONS = [
+  "Studio",
+  "Office",
+  "Home",
+  "Outdoor / On-Location",
+  "Gym",
+  "Coffee Shop",
+  "Client's Location",
+  "Remote / Virtual",
 ];
 
 export function Kanban({ clientId, editable = true, clientName }: Props) {
@@ -40,6 +56,9 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
   const [dragging, setDragging] = useState<{ cardId: string; colId: string } | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const locationRef = useRef<HTMLDivElement>(null);
 
   // New card form state
   const [newTitle, setNewTitle] = useState("");
@@ -51,9 +70,9 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
   const [newEditDeadline, setNewEditDeadline] = useState("");
   const [newPublishDate, setNewPublishDate] = useState("");
   const [newShootLocation, setNewShootLocation] = useState("");
-  const [newPlatform, setNewPlatform] = useState("");
   const [newPriority, setNewPriority] = useState("medium");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const resetForm = () => {
     setNewTitle("");
@@ -65,9 +84,25 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
     setNewEditDeadline("");
     setNewPublishDate("");
     setNewShootLocation("");
-    setNewPlatform("");
     setNewPriority("medium");
+    setCreateError("");
   };
+
+  // Filter location suggestions based on input
+  const filteredLocations = LOCATION_SUGGESTIONS.filter((loc) =>
+    loc.toLowerCase().includes(newShootLocation.toLowerCase())
+  );
+
+  // Close location dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
+        setShowLocationSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const loadCards = useCallback(async () => {
     setLoading(true);
@@ -78,36 +113,60 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
     setLoading(false);
   }, [clientId]);
 
-  useEffect(() => { loadCards(); }, [loadCards]);
+  // Load team members (editors)
+  const loadTeamMembers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clients");
+      if (!res.ok) return;
+      // Try to get team members from a dedicated endpoint or fall back
+    } catch { /* ignore */ }
+    // Fetch team members via Supabase admin - use the invites endpoint pattern
+    try {
+      const res = await fetch("/api/team-members");
+      if (res.ok) {
+        const members = await res.json();
+        setTeamMembers(members);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadCards(); loadTeamMembers(); }, [loadCards, loadTeamMembers]);
 
   const addCard = async (colId: string) => {
     if (!newTitle.trim()) return;
     setCreating(true);
-    const res = await fetch("/api/kanban", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: clientId,
-        column_id: colId,
-        title: newTitle.trim(),
-        content_style: newContentStyle || null,
-        content_type: newContentType || null,
-        reference_url: newReferenceUrl.trim() || null,
-        assigned_editor: newEditor.trim() || null,
-        shoot_date: newShootDate || null,
-        edit_deadline: newEditDeadline || null,
-        publish_date: newPublishDate || null,
-        shoot_location: newShootLocation.trim() || null,
-        platform: newPlatform || null,
-        priority: newPriority || null,
-      }),
-    });
-    if (res.ok) {
-      const card = await res.json();
-      setCards((prev) => [...prev, card]);
+    setCreateError("");
+    try {
+      const res = await fetch("/api/kanban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          column_id: colId,
+          title: newTitle.trim(),
+          content_style: newContentStyle || null,
+          content_type: newContentType || null,
+          reference_url: newReferenceUrl.trim() || null,
+          assigned_editor: newEditor || null,
+          shoot_date: newShootDate || null,
+          edit_deadline: newEditDeadline || null,
+          publish_date: newPublishDate || null,
+          shoot_location: newShootLocation.trim() || null,
+          priority: newPriority || null,
+        }),
+      });
+      if (res.ok) {
+        const card = await res.json();
+        setCards((prev) => [...prev, card]);
+        resetForm();
+        setShowCreateModal(null);
+      } else {
+        const data = await res.json();
+        setCreateError(data.error || "Failed to create card. Please try again.");
+      }
+    } catch {
+      setCreateError("Network error. Please try again.");
     }
-    resetForm();
-    setShowCreateModal(null);
     setCreating(false);
   };
 
@@ -207,10 +266,11 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                         </button>
                       )}
                     </div>
-                    {card.content_style && (
-                      <span className="text-[10px] text-text-3 mt-[3px] block">{card.content_style}</span>
+                    {(card.content_style || card.content_type) && (
+                      <span className="text-[10px] text-text-3 mt-[3px] block">
+                        {[card.content_style, card.content_type].filter(Boolean).join(" · ")}
+                      </span>
                     )}
-                    {card.platform && <span className="text-[10px] text-text-3 mt-[2px] block">{card.platform}</span>}
                   </div>
                 ))}
                 {editable && (
@@ -253,19 +313,19 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
             <div className="flex-1 overflow-y-auto p-6">
               {/* Content Name */}
               <div className="mb-4">
-                <label className="tfc-label">Content Name</label>
+                <label className="tfc-label">Content Name *</label>
                 <input
                   autoFocus
                   className="tfc-input"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Day in the life vlog, Top 5 tips..."
-                  onKeyDown={(e) => { if (e.key === "Enter" && newTitle.trim()) addCard(showCreateModal); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newTitle.trim()) addCard(showCreateModal!); }}
                 />
               </div>
 
-              {/* Row: Content Style, Content Type */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Row: Content Style, Content Type, Priority */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
                 <div>
                   <label className="tfc-label">Content Style</label>
                   <select className="tfc-input" value={newContentStyle} onChange={(e) => setNewContentStyle(e.target.value)} style={{ cursor: "pointer" }}>
@@ -278,17 +338,6 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                   <select className="tfc-input" value={newContentType} onChange={(e) => setNewContentType(e.target.value)} style={{ cursor: "pointer" }}>
                     <option value="">Select...</option>
                     {CONTENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Row: Platform, Priority */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                  <label className="tfc-label">Platform</label>
-                  <select className="tfc-input" value={newPlatform} onChange={(e) => setNewPlatform(e.target.value)} style={{ cursor: "pointer" }}>
-                    <option value="">Select...</option>
-                    {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
@@ -309,29 +358,64 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                   className="tfc-input"
                   value={newReferenceUrl}
                   onChange={(e) => setNewReferenceUrl(e.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://instagram.com/reel/..."
                 />
               </div>
 
-              {/* Editor & Shoot Location */}
+              {/* Editor (dropdown from team members) & Shoot Location (autocomplete) */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div>
                   <label className="tfc-label">Editor</label>
-                  <input
+                  <select
                     className="tfc-input"
                     value={newEditor}
                     onChange={(e) => setNewEditor(e.target.value)}
-                    placeholder="Editor name"
-                  />
+                    style={{ cursor: "pointer" }}
+                  >
+                    <option value="">Select editor...</option>
+                    {teamMembers
+                      .filter((m) => m.role === "editor" || m.role === "admin" || m.role === "owner")
+                      .map((m) => (
+                        <option key={m.id} value={m.name}>{m.name}</option>
+                      ))
+                    }
+                    {teamMembers.length === 0 && (
+                      <option value="" disabled>No team members found</option>
+                    )}
+                  </select>
                 </div>
-                <div>
+                <div ref={locationRef} className="relative">
                   <label className="tfc-label">Shoot Location</label>
                   <input
                     className="tfc-input"
                     value={newShootLocation}
-                    onChange={(e) => setNewShootLocation(e.target.value)}
-                    placeholder="Location"
+                    onChange={(e) => {
+                      setNewShootLocation(e.target.value);
+                      setShowLocationSuggestions(true);
+                    }}
+                    onFocus={() => setShowLocationSuggestions(true)}
+                    placeholder="Start typing..."
                   />
+                  {showLocationSuggestions && (newShootLocation === "" || filteredLocations.length > 0) && (
+                    <div
+                      className="absolute top-full left-0 right-0 mt-1 bg-surface-2 border border-border rounded-lg overflow-hidden z-10 shadow-lg"
+                      style={{ maxHeight: 180, overflowY: "auto" }}
+                    >
+                      {(newShootLocation === "" ? LOCATION_SUGGESTIONS : filteredLocations).map((loc) => (
+                        <button
+                          key={loc}
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-xs text-text-2 hover:bg-surface-3 hover:text-text cursor-pointer border-none bg-transparent font-body transition-colors"
+                          onClick={() => {
+                            setNewShootLocation(loc);
+                            setShowLocationSuggestions(false);
+                          }}
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -350,6 +434,11 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                   <input type="date" className="tfc-input" value={newPublishDate} onChange={(e) => setNewPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
                 </div>
               </div>
+
+              {/* Error */}
+              {createError && (
+                <p className="text-[#EF4444] text-[12px] mt-3 mb-0">{createError}</p>
+              )}
             </div>
 
             {/* Modal Footer */}
