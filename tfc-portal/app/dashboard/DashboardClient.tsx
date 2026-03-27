@@ -341,6 +341,19 @@ export default function DashboardClient() {
               </div>
             </div>
 
+            {/* Search Bar */}
+            <div className="px-3 pt-3">
+              <button
+                onClick={() => { setMobileMenuOpen(false); setShowSearch(true); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-surface-2 border border-border text-text-3 text-[13px] font-body cursor-pointer transition-all hover:border-border-2 hover:text-text-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span className="flex-1 text-left">Search...</span>
+              </button>
+            </div>
+
             {/* Nav Items */}
             <nav className="flex-1 px-3 py-3 space-y-0.5">
               {TABS.map((t) => (
