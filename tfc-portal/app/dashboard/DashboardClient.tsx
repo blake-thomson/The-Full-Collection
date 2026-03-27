@@ -65,6 +65,7 @@ export default function DashboardClient() {
   const [client, setClient] = useState<ClientData | null>(null);
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
+  const [kanbanKey, setKanbanKey] = useState(0);
   const [showBrief, setShowBrief] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -129,6 +130,7 @@ export default function DashboardClient() {
   const handleCardUpdate = (updatedCard: KanbanCard) => {
     setKanbanCards((prev) => prev.map((c) => c.id === updatedCard.id ? updatedCard : c));
     setSelectedCard(null);
+    setKanbanKey((k) => k + 1); // Force Kanban to reload
   };
 
   const handleCardDelete = (cardId: string) => {
@@ -222,6 +224,7 @@ export default function DashboardClient() {
               <h2 className="text-text font-heading text-[17px] font-bold m-0">Content Tracker</h2>
             </div>
             <Kanban
+              key={kanbanKey}
               clientId={client.id}
               onCardClick={(card) => setSelectedCard(card as KanbanCard)}
             />

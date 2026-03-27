@@ -64,6 +64,7 @@ export default function TeamPortalClient() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
+  const [kanbanKey, setKanbanKey] = useState(0);
   const [clientCards, setClientCards] = useState<KanbanCard[]>([]);
   const [clientActivity, setClientActivity] = useState<ActivityItem[]>([]);
   const [allCards, setAllCards] = useState<KanbanCard[]>([]);
@@ -188,6 +189,7 @@ export default function TeamPortalClient() {
   const handleCardUpdate = (updatedCard: KanbanCard) => {
     setClientCards((prev) => prev.map((c) => c.id === updatedCard.id ? updatedCard : c));
     setSelectedCard(null);
+    setKanbanKey((k) => k + 1);
   };
 
   const handleCardDelete = (cardId: string) => {
@@ -421,7 +423,7 @@ export default function TeamPortalClient() {
 
               {/* Content Board (Kanban) */}
               {clientTab === "kanban" && (
-                <Kanban clientId={selected.id} clientName={selected.name} onCardClick={(card) => setSelectedCard(card as KanbanCard)} />
+                <Kanban key={kanbanKey} clientId={selected.id} clientName={selected.name} onCardClick={(card) => setSelectedCard(card as KanbanCard)} />
               )}
 
               {/* Calendar */}
