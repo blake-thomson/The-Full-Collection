@@ -57,9 +57,10 @@ export async function GET(req: NextRequest) {
   try {
     // Fetch live subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(
-      client.stripe_subscription_id,
-      { expand: ["latest_invoice"] }
+      client.stripe_subscription_id
     );
+    // In Stripe SDK v17+, period dates live on the first subscription item
+    const item = subscription.items?.data?.[0] as any;
 
     // Fetch all paid invoices to compute total paid
     const invoices = await stripe.invoices.list({
@@ -92,11 +93,18 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Period dates: try subscription level first, fall back to item level (SDK v17+)
+    const subAny = subscription as any;
+    const currentPeriodEnd =
+      subAny.current_period_end ?? item?.current_period_end ?? null;
+    const currentPeriodStart =
+      subAny.current_period_start ?? item?.current_period_start ?? null;
+
     return NextResponse.json({
       tier: client.subscription_tier,
       status: subscription.status,
-      currentPeriodEnd: subscription.current_period_end,
-      currentPeriodStart: subscription.current_period_start,
+      currentPeriodEnd,
+      currentPeriodStart,
       totalPaid,
       daysOverdue,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
