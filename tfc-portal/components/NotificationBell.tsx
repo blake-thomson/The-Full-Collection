@@ -128,7 +128,7 @@ export function NotificationBell({ userEmail, userType }: Props) {
       {/* Dropdown Panel */}
       {open && (
         <div
-          className="absolute right-0 top-[calc(100%+8px)] w-[340px] sm:w-[380px] bg-surface border border-border rounded-xl overflow-hidden z-50"
+          className="fixed sm:absolute right-2 left-2 sm:left-auto sm:right-0 top-[56px] sm:top-[calc(100%+8px)] sm:w-[380px] bg-surface border border-border rounded-xl overflow-hidden z-50"
           style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}
         >
           {/* Panel Header */}
