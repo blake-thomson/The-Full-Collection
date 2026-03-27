@@ -17,6 +17,7 @@ export default function TeamLoginClient() {
   const [resetBusy, setResetBusy] = useState(false);
   const [resetMsg, setResetMsg] = useState("");
   const [resetErr, setResetErr] = useState("");
+  const [resetLink, setResetLink] = useState("");
   const router = useRouter();
   const supabase = createBrowserSupabase();
 
@@ -76,11 +77,12 @@ export default function TeamLoginClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
       });
+      const data = await res.json();
       if (res.ok) {
-        setResetMsg("If an account exists with that email, a password reset link has been sent.");
+        setResetMsg(data.message || "Password reset link sent.");
+        setResetLink(data.resetLink || "");
         setResetEmail("");
       } else {
-        const data = await res.json();
         setResetErr(data.error || "Something went wrong. Please try again.");
       }
     } catch {
@@ -190,8 +192,16 @@ export default function TeamLoginClient() {
                 </div>
                 {resetErr && <ErrBox msg={resetErr} />}
                 {resetMsg && (
-                  <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] rounded-lg py-2.5 px-3.5">
+                  <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.2)] rounded-lg py-2.5 px-3.5 flex flex-col gap-2">
                     <p className="text-[#10B981] text-[12px] m-0">{resetMsg}</p>
+                    {resetLink && (
+                      <a
+                        href={resetLink}
+                        className="text-[#10B981] text-[12px] font-semibold underline break-all"
+                      >
+                        Click here to reset your password →
+                      </a>
+                    )}
                   </div>
                 )}
                 <button className="tfc-btn w-full mt-1" onClick={handleResetPassword} disabled={resetBusy}>

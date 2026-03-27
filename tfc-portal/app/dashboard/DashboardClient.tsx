@@ -27,6 +27,9 @@ interface ClientData {
   onboarding_complete: boolean;
   onboarding_data: OnboardingData | null;
   created_at: string;
+  bio?: string;
+  avatar_url?: string;
+  industry?: string;
 }
 
 interface KanbanCard {
@@ -100,14 +103,6 @@ const TABS = [
       </svg>
     ),
   },
-  {
-    id: "profile", label: "Profile",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
-  },
 ];
 
 export default function DashboardClient() {
@@ -128,6 +123,12 @@ export default function DashboardClient() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordErr, setPasswordErr] = useState("");
   const [passwordMsg, setPasswordMsg] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editBio, setEditBio] = useState("");
+  const [editIndustry, setEditIndustry] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaveErr, setProfileSaveErr] = useState("");
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -146,8 +147,10 @@ export default function DashboardClient() {
       if (!res.ok) { router.push("/login"); return; }
       const clients = await res.json();
       if (clients.length > 0) {
-        setClient(clients[0]);
-        if (!clients[0].onboarding_complete) router.push("/onboarding");
+        const c = clients[0];
+        if (!c.onboarding_complete) { router.push("/onboarding"); return; }
+        if (!c.profile_complete) { router.push("/welcome"); return; }
+        setClient(c);
       }
     })();
   }, []);
@@ -191,6 +194,40 @@ export default function DashboardClient() {
       setNewPassword(""); setConfirmPassword(""); setChangingPassword(false);
     }
     setPasswordBusy(false);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!client) return;
+    setUploadingAvatar(true);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("userId", client.id);
+    const res = await fetch("/api/upload-avatar", { method: "POST", body: form });
+    if (res.ok) {
+      const { url } = await res.json();
+      setClient((prev) => prev ? { ...prev, avatar_url: url } : prev);
+    }
+    setUploadingAvatar(false);
+  };
+
+  const saveProfile = async () => {
+    if (!client) return;
+    setSavingProfile(true);
+    setProfileSaveErr("");
+    const res = await fetch("/api/clients", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bio: editBio, industry: editIndustry }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setClient((prev) => prev ? { ...prev, ...updated } : prev);
+      setEditingProfile(false);
+    } else {
+      const d = await res.json();
+      setProfileSaveErr(d.error || "Failed to save");
+    }
+    setSavingProfile(false);
   };
 
   const switchTab = (id: string) => {
@@ -271,18 +308,27 @@ export default function DashboardClient() {
         {/* User Footer */}
         <div className={`py-3 border-t border-border ${sidebarCollapsed ? "px-2" : "px-3"}`}>
           {sidebarCollapsed ? (
-            <div className="flex justify-center py-2">
-              <Avatar name={client.name} size={32} />
-            </div>
+            <button
+              onClick={() => switchTab("profile")}
+              className="flex justify-center py-2 bg-transparent border-none cursor-pointer w-full rounded-lg hover:bg-surface-2 transition-colors"
+              title="Profile"
+            >
+              <Avatar name={client.name} size={32} src={client.avatar_url} />
+            </button>
           ) : (
             <>
-              <div className="flex items-center gap-2.5 px-3 py-2">
-                <Avatar name={client.name} size={32} />
-                <div className="flex-1 min-w-0">
+              <button
+                onClick={() => switchTab("profile")}
+                className={`flex items-center gap-2.5 px-3 py-2 w-full bg-transparent border-none cursor-pointer rounded-lg transition-colors ${
+                  tab === "profile" ? "bg-red/10" : "hover:bg-surface-2"
+                }`}
+              >
+                <Avatar name={client.name} size={32} src={client.avatar_url} />
+                <div className="flex-1 min-w-0 text-left">
                   <div className="text-text text-[12px] font-semibold truncate">{client.name}</div>
                   <div className="text-text-3 text-[10px] truncate">{client.email}</div>
                 </div>
-              </div>
+              </button>
               <button
                 onClick={() => switchTab("trash")}
                 className={`w-full mt-1 px-3 py-2 text-left text-[12px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body flex items-center gap-2 ${
@@ -343,16 +389,19 @@ export default function DashboardClient() {
             className="absolute top-[52px] right-0 w-[260px] h-[calc(100vh-52px)] bg-surface border-l border-border flex flex-col overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* User Info */}
-            <div className="px-4 py-4 border-b border-border">
+            {/* User Info — tap to open profile */}
+            <button
+              onClick={() => switchTab("profile")}
+              className="w-full px-4 py-4 border-b border-border bg-transparent border-x-0 border-t-0 cursor-pointer text-left"
+            >
               <div className="flex items-center gap-3">
-                <Avatar name={client.name} size={36} />
+                <Avatar name={client.name} size={36} src={client.avatar_url} />
                 <div className="min-w-0">
                   <div className="text-text text-[13px] font-semibold truncate">{client.name}</div>
                   <div className="text-text-3 text-[11px] truncate">{client.email}</div>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Search Bar */}
             <div className="px-3 pt-3">
@@ -419,7 +468,7 @@ export default function DashboardClient() {
         {/* Desktop Top Bar */}
         <div className="hidden md:flex h-[52px] border-b border-border px-6 items-center justify-between shrink-0">
           <h2 className="text-text font-heading text-[16px] font-bold m-0 shrink-0 w-[120px]">
-            {TABS.find((t) => t.id === tab)?.label || "Dashboard"}
+            {TABS.find((t) => t.id === tab)?.label || (tab === "profile" ? "Profile" : tab === "trash" ? "Recently Deleted" : "Dashboard")}
           </h2>
           <button
             onClick={() => setShowSearch(true)}
@@ -506,10 +555,16 @@ export default function DashboardClient() {
             <div className="p-4 sm:p-6 max-w-[600px] mx-auto">
               {/* Profile Header */}
               <div className="flex items-center gap-4 mb-6">
-                <Avatar name={client.name} size={52} />
+                <Avatar name={client.name} size={52} src={client.avatar_url} />
                 <div>
                   <h2 className="text-text font-heading text-[20px] font-[800] m-0">{client.name}</h2>
                   <p className="text-text-2 text-[13px] m-0 mt-0.5">{client.email}</p>
+                  {client.industry && (
+                    <span className="text-[10px] font-bold tracking-[0.06em] uppercase py-[2px] px-[8px] rounded-full inline-block mt-1"
+                      style={{ background: "rgba(224,32,32,0.1)", color: "#E02020", border: "1px solid rgba(224,32,32,0.2)" }}>
+                      {client.industry}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -537,25 +592,147 @@ export default function DashboardClient() {
 
               {/* Account sub-tab */}
               {profileTab === "account" && (
-                <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7">
-                  {[
-                    { l: "Member Since", v: new Date(client.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
-                    { l: "Onboarding", v: client.onboarding_complete ? "Complete" : "Pending", color: client.onboarding_complete ? "#10B981" : "#F59E0B" },
-                  ].map((row) => (
-                    <div key={row.l} className="flex justify-between py-2.5 border-b border-border">
-                      <span className="text-text-3 text-[13px]">{row.l}</span>
-                      <span className="text-[13px] font-semibold" style={{ color: row.color || "#F0EDE6" }}>{row.v}</span>
-                    </div>
-                  ))}
+                <div>
+                  {/* Profile card */}
+                  <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 mb-4">
+                    <div className="flex items-start gap-5 mb-5">
+                      {/* Avatar with upload */}
+                      <label className="relative cursor-pointer shrink-0 group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => { if (e.target.files?.[0]) handleAvatarUpload(e.target.files[0]); }}
+                        />
+                        {client.avatar_url ? (
+                          <img
+                            src={client.avatar_url}
+                            alt={client.name}
+                            style={{ width: 68, height: 68, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(224,32,32,0.3)" }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: 68, height: 68, borderRadius: "50%",
+                            background: "linear-gradient(135deg, rgba(224,32,32,0.2), rgba(224,32,32,0.06))",
+                            border: "2px solid rgba(224,32,32,0.25)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 26, fontWeight: 800, color: "#E02020",
+                          }}>
+                            {client.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          {uploadingAvatar
+                            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                          }
+                        </div>
+                      </label>
 
-                  <div className="mt-6">
+                      {/* Name + industry */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-text font-heading text-[18px] font-[800] m-0 mb-1">{client.name}</h3>
+                        <div className="text-text-3 text-[12px] mb-2">{client.email}</div>
+                        {client.industry && (
+                          <span className="text-[11px] font-bold tracking-[0.06em] uppercase py-[3px] px-[10px] rounded-full inline-block"
+                            style={{ background: "rgba(224,32,32,0.1)", color: "#E02020", border: "1px solid rgba(224,32,32,0.2)" }}>
+                            {client.industry}
+                          </span>
+                        )}
+                        {client.bio && !editingProfile && (
+                          <p className="text-text-2 text-[13px] leading-[1.55] m-0 mt-2">{client.bio}</p>
+                        )}
+                      </div>
+
+                      {!editingProfile && (
+                        <button
+                          onClick={() => { setEditingProfile(true); setEditBio(client.bio || ""); setEditIndustry(client.industry || ""); }}
+                          className="shrink-0 bg-transparent border border-border hover:border-border-2 rounded-lg px-3 py-1.5 text-text-3 hover:text-text text-[12px] cursor-pointer transition-all font-body"
+                        >
+                          Edit Profile
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Inline edit form */}
+                    {editingProfile && (
+                      <div className="bg-surface-2 border border-border rounded-xl p-4 mb-4">
+                        <h4 className="text-text font-heading text-[14px] font-bold m-0 mb-4">Edit Profile</h4>
+
+                        {/* Industry picker */}
+                        <div className="mb-4">
+                          <label className="tfc-label">Industry</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2">
+                            {[
+                              "Fashion & Beauty", "Food & Beverage", "Fitness & Wellness",
+                              "Travel & Lifestyle", "Music & Entertainment", "Real Estate",
+                              "Technology", "Finance", "Education", "Health & Medical",
+                              "Retail & E-commerce", "Automotive", "Sports", "Gaming",
+                              "Photography", "Art & Design", "Non-Profit", "Other",
+                            ].map((ind) => (
+                              <button
+                                key={ind}
+                                onClick={() => setEditIndustry(editIndustry === ind ? "" : ind)}
+                                className={`text-[11px] font-medium py-2 px-3 rounded-lg border cursor-pointer transition-all font-body text-left ${
+                                  editIndustry === ind
+                                    ? "border-red/40 text-red bg-red/8"
+                                    : "border-border text-text-3 hover:border-border-2 hover:text-text-2 bg-surface"
+                                }`}
+                              >
+                                {ind}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Bio */}
+                        <div className="mb-4">
+                          <label className="tfc-label">Bio</label>
+                          <textarea
+                            className="tfc-input mt-2"
+                            value={editBio}
+                            onChange={(e) => setEditBio(e.target.value)}
+                            placeholder="Tell us a bit about yourself and your brand…"
+                            rows={3}
+                            style={{ resize: "vertical", minHeight: 72 }}
+                          />
+                        </div>
+
+                        {profileSaveErr && (
+                          <p className="text-[#EF4444] text-[12px] m-0 mb-3">{profileSaveErr}</p>
+                        )}
+                        <div className="flex gap-2">
+                          <button className="tfc-btn flex-1" style={{ fontSize: 12, padding: "8px 16px" }} onClick={saveProfile} disabled={savingProfile}>
+                            {savingProfile ? "Saving…" : "Save Changes"}
+                          </button>
+                          <button className="tfc-btn-ghost flex-1" style={{ fontSize: 12, padding: "8px 16px" }} onClick={() => { setEditingProfile(false); setProfileSaveErr(""); }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Member stats */}
+                    {[
+                      { l: "Member Since", v: new Date(client.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) },
+                      { l: "Onboarding", v: client.onboarding_complete ? "Complete" : "Pending", color: client.onboarding_complete ? "#10B981" : "#F59E0B" },
+                    ].map((row) => (
+                      <div key={row.l} className="flex justify-between py-2.5 border-b border-border">
+                        <span className="text-text-3 text-[13px]">{row.l}</span>
+                        <span className="text-[13px] font-semibold" style={{ color: row.color || "#F0EDE6" }}>{row.v}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Security */}
+                  <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7">
+                    <h4 className="text-text font-heading text-[14px] font-bold m-0 mb-4">Security</h4>
                     {!changingPassword ? (
                       <button className="tfc-btn-ghost w-full text-center" onClick={() => setChangingPassword(true)}>
                         Change Password
                       </button>
                     ) : (
                       <div className="bg-surface-2 border border-border rounded-xl p-4">
-                        <h4 className="text-text font-heading text-[14px] font-bold m-0 mb-3">Change Password</h4>
                         <div className="flex flex-col gap-3">
                           <div>
                             <label className="tfc-label">New Password</label>
@@ -578,9 +755,8 @@ export default function DashboardClient() {
                         </div>
                       </div>
                     )}
+                    <button className="tfc-btn-ghost w-full text-center mt-3" onClick={logout}>Sign Out</button>
                   </div>
-
-                  <button className="tfc-btn-ghost w-full text-center mt-4" onClick={logout}>Sign Out</button>
                 </div>
               )}
 

@@ -19,6 +19,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { ClientAssignments } from "@/components/ClientAssignments";
+import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 import { COLUMNS } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
 import { TIERS } from "@/lib/tiers";
@@ -29,6 +30,8 @@ interface TeamMember {
   name: string;
   email: string;
   role: string;
+  bio?: string;
+  avatar_url?: string;
 }
 
 interface KanbanCard {
@@ -123,6 +126,7 @@ export default function TeamPortalClient() {
   const [showSearch, setShowSearch] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMyProfile, setShowMyProfile] = useState(false);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -216,7 +220,7 @@ export default function TeamPortalClient() {
     setSelectedCard(null);
   };
 
-  const switchTeamTab = (id: string) => { setTeamTab(id); setSelected(null); setMobileMenuOpen(false); };
+  const switchTeamTab = (id: string) => { setTeamTab(id); setSelected(null); setMobileMenuOpen(false); setShowMyProfile(false); };
 
   if (!teamUser) return null;
 
@@ -283,25 +287,18 @@ export default function TeamPortalClient() {
           {sidebarCollapsed ? (
             <div className="flex flex-col items-center gap-2 py-2">
               <NotificationBell userEmail={teamUser.email} userType="team" />
-              <Avatar name={teamUser.name} size={32} />
+              <button onClick={() => setShowMyProfile(true)} className="bg-transparent border-none cursor-pointer p-0 rounded-full hover:opacity-80 transition-opacity" title="View my profile">
+                <Avatar name={teamUser.name} size={32} src={teamUser.avatar_url} />
+              </button>
             </div>
           ) : (
             <>
-              {/* Search button */}
+              {/* User info — click to open profile */}
               <button
-                onClick={() => setShowSearch(true)}
-                className="w-full flex items-center gap-2 px-3 py-2 mb-1 rounded-lg bg-surface-2 border border-border text-text-3 text-[12px] font-body cursor-pointer transition-all hover:border-border-2 hover:text-text-2"
+                onClick={() => setShowMyProfile(true)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors text-left"
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <span className="flex-1 text-left">Search...</span>
-                <kbd className="text-[10px] bg-surface-3 py-0.5 px-1.5 rounded text-text-3">⌘K</kbd>
-              </button>
-
-              {/* User info */}
-              <div className="flex items-center gap-2.5 px-3 py-2">
-                <Avatar name={teamUser.name} size={32} />
+                <Avatar name={teamUser.name} size={32} src={teamUser.avatar_url} />
                 <div className="flex-1 min-w-0">
                   <div className="text-text text-[12px] font-semibold truncate">{teamUser.name}</div>
                   <span
@@ -312,7 +309,7 @@ export default function TeamPortalClient() {
                   </span>
                 </div>
                 <NotificationBell userEmail={teamUser.email} userType="team" />
-              </div>
+              </button>
               <button
                 onClick={logout}
                 className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
@@ -349,10 +346,13 @@ export default function TeamPortalClient() {
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-black/60" onClick={() => setMobileMenuOpen(false)}>
           <div className="absolute top-[52px] right-0 w-[260px] h-[calc(100vh-52px)] bg-surface border-l border-border flex flex-col overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {/* User info */}
-            <div className="px-4 py-4 border-b border-border">
+            {/* User info — click to open profile */}
+            <button
+              onClick={() => { setMobileMenuOpen(false); setShowMyProfile(true); }}
+              className="w-full px-4 py-4 border-b border-border bg-transparent border-l-0 border-r-0 border-t-0 cursor-pointer hover:bg-surface-2 transition-colors text-left"
+            >
               <div className="flex items-center gap-3">
-                <Avatar name={teamUser.name} size={36} />
+                <Avatar name={teamUser.name} size={36} src={teamUser.avatar_url} />
                 <div className="min-w-0">
                   <div className="text-text text-[13px] font-semibold truncate">{teamUser.name}</div>
                   <span className="text-[10px] font-bold tracking-[0.08em] uppercase py-[1px] px-[5px] rounded"
@@ -361,7 +361,7 @@ export default function TeamPortalClient() {
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Search */}
             <div className="px-3 pt-3">
@@ -410,7 +410,7 @@ export default function TeamPortalClient() {
         {/* Desktop top bar */}
         <div className="hidden md:flex h-[52px] border-b border-border px-6 items-center justify-between shrink-0">
           <h2 className="text-text font-heading text-[16px] font-bold m-0 shrink-0">
-            {selected ? selected.name : navItems.find((n) => n.id === teamTab)?.label || "Team Portal"}
+            {showMyProfile ? "My Profile" : selected ? selected.name : navItems.find((n) => n.id === teamTab)?.label || "Team Portal"}
           </h2>
           <button
             onClick={() => setShowSearch(true)}
@@ -427,8 +427,46 @@ export default function TeamPortalClient() {
 
         <div className="flex-1 overflow-hidden flex flex-col">
 
+          {/* Profile completion nudge */}
+          {teamUser && (!teamUser.bio || !teamUser.avatar_url) && (
+            <div className="mx-4 mt-3 sm:mx-6 sm:mt-4">
+              <div
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all hover:border-[rgba(224,32,32,0.4)]"
+                style={{ background: "rgba(224,32,32,0.06)", borderColor: "rgba(224,32,32,0.15)" }}
+                onClick={() => router.push("/team/welcome")}
+              >
+                <span style={{ fontSize: 20 }}>👋</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-text text-[13px] font-semibold">Complete your profile</div>
+                  <div className="text-text-3 text-[11px]">
+                    {!teamUser.avatar_url && !teamUser.bio
+                      ? "Add a photo and bio so the team knows who you are"
+                      : !teamUser.avatar_url
+                      ? "Add a profile picture"
+                      : "Add a bio so the team can get to know you"}
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </div>
+            </div>
+          )}
+
+          {/* ── MY PROFILE ── */}
+          {showMyProfile && (
+            <div className="flex-1 overflow-y-auto">
+              <TeamMemberDetail
+                memberId={teamUser.id}
+                currentUserEmail={teamUser.email}
+                currentUserRole={teamUser.role}
+                onBack={() => setShowMyProfile(false)}
+              />
+            </div>
+          )}
+
           {/* ── OVERVIEW TAB ── */}
-          {teamTab === "overview" && !selected && (
+          {teamTab === "overview" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto">
               <div className="p-5 sm:p-[36px_32px]">
                 <h2 className="text-text font-heading text-[22px] font-[800] m-0 mb-1.5">Overview</h2>
@@ -480,21 +518,21 @@ export default function TeamPortalClient() {
           )}
 
           {/* ── FILES TAB ── */}
-          {teamTab === "files" && !selected && (
+          {teamTab === "files" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <DriveFiles folderId={process.env.NEXT_PUBLIC_GOOGLE_DRIVE_ROOT_FOLDER} />
             </div>
           )}
 
           {/* ── TEAM TAB ── */}
-          {teamTab === "team" && !selected && (
+          {teamTab === "team" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
               <TeamManagement teamUser={teamUser} />
             </div>
           )}
 
           {/* ── ALL CLIENTS LIST ── */}
-          {teamTab === "clients" && !selected && (
+          {teamTab === "clients" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
                 <div>
@@ -570,7 +608,7 @@ export default function TeamPortalClient() {
           )}
 
           {/* ── CLIENT DETAIL ── */}
-          {selected && (
+          {selected && !showMyProfile && (
             <div className="flex-1 overflow-hidden flex flex-col">
               {/* Client sub-nav */}
               <div className="border-b border-border px-4 sm:px-6 py-2 sm:py-0 sm:h-14 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 gap-2">
