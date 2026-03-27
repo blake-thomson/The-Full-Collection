@@ -98,7 +98,7 @@ const CLIENT_TABS = [
   { id: "info", label: "Account" },
 ];
 
-const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", editor: "#10B981" };
+const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", editor: "#10B981", smm: "#8B5CF6" };
 
 export default function TeamPortalClient() {
   const [teamUser, setTeamUser] = useState<TeamMember | null>(null);
@@ -303,7 +303,7 @@ export default function TeamPortalClient() {
                     className="text-[9px] font-bold tracking-[0.08em] uppercase py-[1px] px-[5px] rounded"
                     style={{ color: ROLE_COLOR[teamUser.role] || "#A8A49C", background: `${ROLE_COLOR[teamUser.role] || "#A8A49C"}18` }}
                   >
-                    {teamUser.role}
+                    {teamUser.role === "smm" ? "Social Media Manager" : teamUser.role}
                   </span>
                 </div>
                 <NotificationBell userEmail={teamUser.email} userType="team" />
@@ -352,7 +352,7 @@ export default function TeamPortalClient() {
                   <div className="text-text text-[13px] font-semibold truncate">{teamUser.name}</div>
                   <span className="text-[10px] font-bold tracking-[0.08em] uppercase py-[1px] px-[5px] rounded"
                     style={{ color: ROLE_COLOR[teamUser.role] || "#A8A49C", background: `${ROLE_COLOR[teamUser.role] || "#A8A49C"}18` }}>
-                    {teamUser.role}
+                    {teamUser.role === "smm" ? "Social Media Manager" : teamUser.role}
                   </span>
                 </div>
               </div>

@@ -107,7 +107,7 @@ export function TeamManagement({ teamUser }: Props) {
     load();
   };
 
-  const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", editor: "#10B981" };
+  const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", editor: "#10B981", smm: "#8B5CF6" };
   const pendingInvites = invites.filter((i) => !i.used);
 
   return (
@@ -164,8 +164,8 @@ export function TeamManagement({ teamUser }: Props) {
               <div className="mb-[18px]">
                 <label className="tfc-label">Role</label>
                 <div className="flex gap-2">
-                  {(teamUser.role === "owner" ? ["admin", "editor"] : ["editor"]).map((r) => (
-                    <button key={r} className={`tfc-pill capitalize${invRole === r ? " active" : ""}`} onClick={() => setInvRole(r)}>{r}</button>
+                  {(teamUser.role === "owner" ? ["admin", "editor", "smm"] : ["editor", "smm"]).map((r) => (
+                    <button key={r} className={`tfc-pill capitalize${invRole === r ? " active" : ""}`} onClick={() => setInvRole(r)}>{r === "smm" ? "Social Media Manager" : r}</button>
                   ))}
                 </div>
               </div>
@@ -199,7 +199,7 @@ export function TeamManagement({ teamUser }: Props) {
                     className="text-[11px] font-bold tracking-[0.08em] uppercase py-[3px] px-[9px] rounded-md"
                     style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
                   >
-                    {m.role}
+                    {m.role === "smm" ? "Social Media Manager" : m.role}
                   </span>
                   <span className="text-text-3 text-xs">{m.created_at ? new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}</span>
                 </div>
@@ -228,7 +228,7 @@ export function TeamManagement({ teamUser }: Props) {
                 </div>
                 <div className="flex items-center gap-2.5">
                   <span className="text-text-3 text-[11px] font-mono tracking-[0.12em] bg-surface-3 py-[3px] px-2.5 rounded-md border border-border-2">{inv.code}</span>
-                  <span className="capitalize text-[11px]" style={{ color: ROLE_COLOR[inv.role] || "#A8A49C" }}>{inv.role}</span>
+                  <span className="capitalize text-[11px]" style={{ color: ROLE_COLOR[inv.role] || "#A8A49C" }}>{inv.role === "smm" ? "Social Media Manager" : inv.role}</span>
                   <span className="text-[11px] font-bold text-[#F59E0B] bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] py-[3px] px-2.5 rounded-md uppercase tracking-[0.06em]">Pending</span>
                 </div>
               </div>
