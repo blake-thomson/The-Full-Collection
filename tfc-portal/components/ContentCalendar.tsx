@@ -9,6 +9,7 @@ interface Card {
   platform?: string;
   column_id: string;
   due_date?: string;
+  publish_date?: string;
   priority?: string;
 }
 
@@ -76,8 +77,9 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
   const cardsByDate = useMemo(() => {
     const map: Record<string, Card[]> = {};
     cards.forEach((card) => {
-      if (card.due_date) {
-        const dateKey = card.due_date.split("T")[0];
+      const date = card.publish_date || card.due_date;
+      if (date) {
+        const dateKey = date.split("T")[0];
         if (!map[dateKey]) map[dateKey] = [];
         map[dateKey].push(card);
       }

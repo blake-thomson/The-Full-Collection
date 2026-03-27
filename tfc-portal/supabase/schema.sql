@@ -65,13 +65,16 @@ CREATE TABLE kanban_cards (
   due_date        date,
   priority        text DEFAULT 'medium',
   created_by      text,
-  content_style   text,
-  content_type    text,
-  reference_url   text,
-  assigned_editor text,
-  shoot_date      date,
-  edit_deadline    date,
-  publish_date    date,
+  content_style     text,
+  content_type      text,
+  reference_url     text,
+  unedited_url      text,
+  edited_video_url  text,
+  assigned_editor   text,
+  shoot_date        date,
+  edit_deadline     date,
+  publish_date      date,
+  shoot_location    text,
   created_at      timestamptz DEFAULT now(),
   updated_at      timestamptz DEFAULT now()
 );
@@ -280,3 +283,17 @@ CREATE POLICY "Authenticated users can read activity_log"
   ON activity_log FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated users can insert activity_log"
   ON activity_log FOR INSERT TO authenticated WITH CHECK (true);
+
+-- ============================================================
+-- Migration: Add new Notion-style fields to kanban_cards
+-- ============================================================
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS content_style text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS content_type text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS reference_url text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS unedited_url text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS edited_video_url text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS assigned_editor text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS shoot_date date;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS edit_deadline date;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS publish_date date;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS shoot_location text;
