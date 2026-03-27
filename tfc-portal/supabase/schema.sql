@@ -313,3 +313,17 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS subscription_tier text;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS phone text;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS address text;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS revision_notes text;
+
+-- ============================================================
+-- Migration: Add messaging fields for threads, voice, mentions
+-- ============================================================
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS thread_parent_id uuid REFERENCES messages(id) ON DELETE CASCADE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type text DEFAULT 'text';
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS mentions jsonb DEFAULT '[]';
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS voice_url text;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS voice_duration real;
+CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_parent_id);
+
+-- Allow authenticated users to update messages (for editing)
+CREATE POLICY "Authenticated users can update messages"
+  ON messages FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
