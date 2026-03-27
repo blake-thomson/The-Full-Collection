@@ -38,18 +38,6 @@ interface Props {
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
 
-// Common shoot locations — will show as suggestions
-const LOCATION_SUGGESTIONS = [
-  "Studio",
-  "Office",
-  "Home",
-  "Outdoor / On-Location",
-  "Gym",
-  "Coffee Shop",
-  "Client's Location",
-  "Remote / Virtual",
-];
-
 export function Kanban({ clientId, editable = true, clientName }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [showCreateModal, setShowCreateModal] = useState<string | null>(null);
@@ -57,8 +45,11 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [locationResults, setLocationResults] = useState<Array<{ display: string; place_id: string }>>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const locationRef = useRef<HTMLDivElement>(null);
+  const locationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // New card form state
   const [newTitle, setNewTitle] = useState("");
@@ -86,18 +77,46 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
     setNewShootLocation("");
     setNewPriority("medium");
     setCreateError("");
+    setLocationResults([]);
   };
 
-  // Filter location suggestions based on input
-  const filteredLocations = LOCATION_SUGGESTIONS.filter((loc) =>
-    loc.toLowerCase().includes(newShootLocation.toLowerCase())
-  );
+  // Debounced address search via OpenStreetMap Nominatim
+  const searchLocations = useCallback((query: string) => {
+    if (locationTimerRef.current) clearTimeout(locationTimerRef.current);
+    if (query.length < 3) {
+      setLocationResults([]);
+      setShowLocationDropdown(false);
+      return;
+    }
+    setLocationLoading(true);
+    locationTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=us`,
+          { headers: { "Accept": "application/json" } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setLocationResults(
+            data.map((r: { display_name: string; place_id: number }) => ({
+              display: r.display_name,
+              place_id: String(r.place_id),
+            }))
+          );
+          setShowLocationDropdown(true);
+        }
+      } catch {
+        // Silent fail — user can still type freely
+      }
+      setLocationLoading(false);
+    }, 400);
+  }, []);
 
   // Close location dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (locationRef.current && !locationRef.current.contains(e.target as Node)) {
-        setShowLocationSuggestions(false);
+        setShowLocationDropdown(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -391,27 +410,32 @@ export function Kanban({ clientId, editable = true, clientName }: Props) {
                     value={newShootLocation}
                     onChange={(e) => {
                       setNewShootLocation(e.target.value);
-                      setShowLocationSuggestions(true);
+                      searchLocations(e.target.value);
                     }}
-                    onFocus={() => setShowLocationSuggestions(true)}
-                    placeholder="Start typing..."
+                    placeholder="Search address..."
                   />
-                  {showLocationSuggestions && (newShootLocation === "" || filteredLocations.length > 0) && (
+                  {locationLoading && (
+                    <div className="absolute right-2 top-[30px] text-text-3">
+                      <span className="inline-block w-3 h-3 border-2 border-text-3/30 border-t-text-3 rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {showLocationDropdown && locationResults.length > 0 && (
                     <div
                       className="absolute top-full left-0 right-0 mt-1 bg-surface-2 border border-border rounded-lg overflow-hidden z-10 shadow-lg"
-                      style={{ maxHeight: 180, overflowY: "auto" }}
+                      style={{ maxHeight: 220, overflowY: "auto" }}
                     >
-                      {(newShootLocation === "" ? LOCATION_SUGGESTIONS : filteredLocations).map((loc) => (
+                      {locationResults.map((loc) => (
                         <button
-                          key={loc}
+                          key={loc.place_id}
                           type="button"
-                          className="w-full text-left px-3 py-2 text-xs text-text-2 hover:bg-surface-3 hover:text-text cursor-pointer border-none bg-transparent font-body transition-colors"
+                          className="w-full text-left px-3 py-2.5 text-xs text-text-2 hover:bg-surface-3 hover:text-text cursor-pointer border-none bg-transparent font-body transition-colors border-b border-border last:border-b-0"
                           onClick={() => {
-                            setNewShootLocation(loc);
-                            setShowLocationSuggestions(false);
+                            setNewShootLocation(loc.display);
+                            setShowLocationDropdown(false);
+                            setLocationResults([]);
                           }}
                         >
-                          {loc}
+                          <span className="line-clamp-2">{loc.display}</span>
                         </button>
                       ))}
                     </div>
