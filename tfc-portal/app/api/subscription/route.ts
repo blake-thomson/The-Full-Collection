@@ -63,19 +63,22 @@ export async function GET(req: NextRequest) {
     const item = subscription.items?.data?.[0] as any;
 
     // Fetch all paid invoices to compute total paid
-    const invoices = await stripe.invoices.list({
-      customer: client.stripe_customer_id,
-      status: "paid",
-      limit: 100,
-    });
-    const totalPaid = invoices.data.reduce(
-      (sum, inv) => sum + (inv.amount_paid ?? 0),
-      0
-    );
+    let totalPaid = 0;
+    if (client.stripe_customer_id) {
+      const invoices = await stripe.invoices.list({
+        customer: client.stripe_customer_id,
+        status: "paid",
+        limit: 100,
+      });
+      totalPaid = invoices.data.reduce(
+        (sum, inv) => sum + (inv.amount_paid ?? 0),
+        0
+      );
+    }
 
     // If past_due, find how many days since the most recent failed invoice due date
     let daysOverdue: number | null = null;
-    if (subscription.status === "past_due") {
+    if (subscription.status === "past_due" && client.stripe_customer_id) {
       const failedInvoices = await stripe.invoices.list({
         customer: client.stripe_customer_id,
         status: "open",

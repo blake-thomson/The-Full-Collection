@@ -70,17 +70,24 @@ const formatDate = (ts: number) =>
 export function SubscriptionSection({ clientId, isTeam }: Props) {
   const [data, setData] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setApiError(null);
     try {
       const url = clientId && isTeam
         ? `/api/subscription?client_id=${clientId}`
         : "/api/subscription";
       const res = await fetch(url);
-      if (res.ok) setData(await res.json());
-    } catch {
-      // silent
+      const json = await res.json();
+      if (res.ok) {
+        setData(json);
+      } else {
+        setApiError(json?.error || `Error ${res.status}`);
+      }
+    } catch (err) {
+      setApiError("Network error — please refresh.");
     }
     setLoading(false);
   }, [clientId, isTeam]);
@@ -97,10 +104,15 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
     );
   }
 
-  if (!data) {
+  if (apiError || !data) {
     return (
-      <div className="flex items-center justify-center h-48">
-        <span className="text-text-3 text-[13px]">Unable to load billing info.</span>
+      <div className="flex items-center justify-center h-48 px-6">
+        <div className="text-center">
+          <p className="text-text-3 text-[13px] m-0">Unable to load billing info.</p>
+          {apiError && (
+            <p className="text-[#EF4444] text-[11px] mt-1 m-0 font-mono">{apiError}</p>
+          )}
+        </div>
       </div>
     );
   }
