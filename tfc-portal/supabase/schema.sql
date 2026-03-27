@@ -55,18 +55,25 @@ CREATE INDEX idx_team_invites_email ON team_invites (email);
 -- 4. kanban_cards
 -- ============================================================
 CREATE TABLE kanban_cards (
-  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  client_id   uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
-  column_id   text NOT NULL,
-  title       text NOT NULL,
-  description text,
-  platform    text,
-  position    integer DEFAULT 0,
-  due_date    date,
-  priority    text DEFAULT 'medium',
-  created_by  text,
-  created_at  timestamptz DEFAULT now(),
-  updated_at  timestamptz DEFAULT now()
+  id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id       uuid NOT NULL REFERENCES clients (id) ON DELETE CASCADE,
+  column_id       text NOT NULL,
+  title           text NOT NULL,
+  description     text,
+  platform        text,
+  position        integer DEFAULT 0,
+  due_date        date,
+  priority        text DEFAULT 'medium',
+  created_by      text,
+  content_style   text,
+  content_type    text,
+  reference_url   text,
+  assigned_editor text,
+  shoot_date      date,
+  edit_deadline    date,
+  publish_date    date,
+  created_at      timestamptz DEFAULT now(),
+  updated_at      timestamptz DEFAULT now()
 );
 
 CREATE INDEX idx_kanban_cards_client_id ON kanban_cards (client_id);

@@ -27,6 +27,13 @@ interface Card {
   position: number;
   due_date?: string;
   priority?: "low" | "medium" | "high";
+  content_style?: string;
+  content_type?: string;
+  reference_url?: string;
+  assigned_editor?: string;
+  shoot_date?: string;
+  edit_deadline?: string;
+  publish_date?: string;
 }
 
 interface CurrentUser {
@@ -35,10 +42,18 @@ interface CurrentUser {
   type: "client" | "team";
 }
 
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface Props {
   card: Card;
   clientId: string;
   currentUser: CurrentUser;
+  teamMembers?: TeamMember[];
   onClose: () => void;
   onUpdate: (card: Card) => void;
   onDelete: (cardId: string) => void;
@@ -55,6 +70,32 @@ const PLATFORMS = [
   "Blog",
 ];
 
+const CONTENT_STYLES = [
+  "Talking-head (direct to camera)",
+  "Interview-style conversational",
+  "Voiceover + b-roll",
+  "On-screen text / story reels",
+  "Framework reels (drawn, whiteboard)",
+  "Street interviews (public Q&A)",
+  "Green screen / screen share",
+  "Carousel / static images",
+  "Behind the scenes",
+  "Testimonial / case study",
+];
+
+const CONTENT_TYPES = [
+  "Reel / Short",
+  "Long-form video",
+  "Carousel",
+  "Static post",
+  "Story",
+  "Blog post",
+  "Podcast episode",
+  "YouTube video",
+  "Live stream",
+  "Newsletter",
+];
+
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "#6B7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.25)" },
   medium: { label: "Medium", color: "#F59E0B", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.25)" },
@@ -68,12 +109,19 @@ const AI_QUICK_ACTIONS = [
   { id: "content_ideas", label: "Brainstorm Ideas", icon: "💡" },
 ];
 
-export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate, onDelete }: Props) {
+export function CardDetailModal({ card, clientId, currentUser, teamMembers = [], onClose, onUpdate, onDelete }: Props) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
   const [platform, setPlatform] = useState(card.platform || "");
   const [dueDate, setDueDate] = useState(card.due_date || "");
   const [priority, setPriority] = useState<"low" | "medium" | "high">(card.priority || "medium");
+  const [contentStyle, setContentStyle] = useState(card.content_style || "");
+  const [contentType, setContentType] = useState(card.content_type || "");
+  const [referenceUrl, setReferenceUrl] = useState(card.reference_url || "");
+  const [assignedEditor, setAssignedEditor] = useState(card.assigned_editor || "");
+  const [shootDate, setShootDate] = useState(card.shoot_date || "");
+  const [editDeadline, setEditDeadline] = useState(card.edit_deadline || "");
+  const [publishDate, setPublishDate] = useState(card.publish_date || "");
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [saving, setSaving] = useState(false);
@@ -144,6 +192,13 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           platform: platform || null,
           due_date: dueDate || null,
           priority,
+          content_style: contentStyle || null,
+          content_type: contentType || null,
+          reference_url: referenceUrl.trim() || null,
+          assigned_editor: assignedEditor || null,
+          shoot_date: shootDate || null,
+          edit_deadline: editDeadline || null,
+          publish_date: publishDate || null,
         }),
       });
       if (res.ok) {
@@ -154,6 +209,13 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           platform: platform || undefined,
           due_date: dueDate || undefined,
           priority,
+          content_style: contentStyle || undefined,
+          content_type: contentType || undefined,
+          reference_url: referenceUrl.trim() || undefined,
+          assigned_editor: assignedEditor || undefined,
+          shoot_date: shootDate || undefined,
+          edit_deadline: editDeadline || undefined,
+          publish_date: publishDate || undefined,
         });
       }
     } catch {
@@ -405,6 +467,142 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
                         </button>
                       );
                     })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Production Brief — Notion-style fields */}
+              <div className="space-y-1 mb-6">
+                {/* Content Style */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+                  </svg>
+                  <select
+                    className="flex-1 bg-transparent border-none text-[13px] font-body cursor-pointer outline-none appearance-none py-1"
+                    style={{ color: contentStyle ? "#F0EDE6" : "#5A5652" }}
+                    value={contentStyle}
+                    onChange={(e) => setContentStyle(e.target.value)}
+                  >
+                    <option value="" style={{ color: "#5A5652" }}>Add Content Style</option>
+                    {CONTENT_STYLES.map((s) => (
+                      <option key={s} value={s} style={{ color: "#F0EDE6", background: "#181818" }}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Content Type */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <select
+                    className="flex-1 bg-transparent border-none text-[13px] font-body cursor-pointer outline-none appearance-none py-1"
+                    style={{ color: contentType ? "#F0EDE6" : "#5A5652" }}
+                    value={contentType}
+                    onChange={(e) => setContentType(e.target.value)}
+                  >
+                    <option value="" style={{ color: "#5A5652" }}>Add Content Type</option>
+                    {CONTENT_TYPES.map((t) => (
+                      <option key={t} value={t} style={{ color: "#F0EDE6", background: "#181818" }}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Reference URL */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                  <input
+                    type="url"
+                    className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                    style={{ color: referenceUrl ? "#F0EDE6" : "#5A5652" }}
+                    placeholder="Add Reference URL"
+                    value={referenceUrl}
+                    onChange={(e) => setReferenceUrl(e.target.value)}
+                  />
+                </div>
+
+                {/* Editor */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  {teamMembers.length > 0 ? (
+                    <select
+                      className="flex-1 bg-transparent border-none text-[13px] font-body cursor-pointer outline-none appearance-none py-1"
+                      style={{ color: assignedEditor ? "#F0EDE6" : "#5A5652" }}
+                      value={assignedEditor}
+                      onChange={(e) => setAssignedEditor(e.target.value)}
+                    >
+                      <option value="" style={{ color: "#5A5652" }}>Add Editor</option>
+                      {teamMembers.map((m) => (
+                        <option key={m.id} value={m.name} style={{ color: "#F0EDE6", background: "#181818" }}>
+                          {m.name} ({m.role})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                      style={{ color: assignedEditor ? "#F0EDE6" : "#5A5652" }}
+                      placeholder="Add Editor"
+                      value={assignedEditor}
+                      onChange={(e) => setAssignedEditor(e.target.value)}
+                    />
+                  )}
+                </div>
+
+                {/* Shoot Date */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-[13px] text-text-3 shrink-0" style={{ minWidth: 90 }}>Shoot Date</span>
+                    <input
+                      type="date"
+                      className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                      style={{ colorScheme: "dark", color: shootDate ? "#F0EDE6" : "#5A5652" }}
+                      value={shootDate}
+                      onChange={(e) => setShootDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Edit Deadline */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-[13px] text-text-3 shrink-0" style={{ minWidth: 90 }}>Edit Deadline</span>
+                    <input
+                      type="date"
+                      className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                      style={{ colorScheme: "dark", color: editDeadline ? "#F0EDE6" : "#5A5652" }}
+                      value={editDeadline}
+                      onChange={(e) => setEditDeadline(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Publish Date */}
+                <div className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-surface-2 transition-colors group">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5652" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-[13px] text-text-3 shrink-0" style={{ minWidth: 90 }}>Publish Date</span>
+                    <input
+                      type="date"
+                      className="flex-1 bg-transparent border-none text-[13px] font-body outline-none py-1"
+                      style={{ colorScheme: "dark", color: publishDate ? "#F0EDE6" : "#5A5652" }}
+                      value={publishDate}
+                      onChange={(e) => setPublishDate(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
