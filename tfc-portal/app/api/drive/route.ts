@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { encryptJson, decryptJson, isEncrypted, type EncryptedValue } from "@/lib/crypto";
+
+interface DriveToken {
+  access_token: string;
+  refresh_token: string;
+  expiry_date?: number;
+}
 
 function getOAuth2Client() {
   return new google.auth.OAuth2(
@@ -16,7 +23,6 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Look up the user's stored Google token
   const admin = createSupabaseAdmin();
   const { data: client } = await admin
     .from("clients")
@@ -28,21 +34,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ connected: false });
   }
 
-  const token = client.google_drive_token as {
-    access_token: string;
-    refresh_token: string;
-    expiry_date?: number;
-  };
+  // Decrypt token — handle both encrypted (new) and legacy plaintext (old) values
+  let token: DriveToken | null;
+  if (isEncrypted(client.google_drive_token)) {
+    token = decryptJson<DriveToken>(client.google_drive_token as EncryptedValue);
+  } else {
+    // Legacy plaintext — decrypt on next write, use as-is for now
+    token = client.google_drive_token as DriveToken;
+  }
+
+  if (!token?.access_token) {
+    return NextResponse.json({ connected: false });
+  }
 
   const oauth2 = getOAuth2Client();
   oauth2.setCredentials(token);
 
-  // Listen for token refresh so we persist the new access_token
+  // Persist refreshed access tokens (encrypted)
   oauth2.on("tokens", async (newTokens) => {
     const merged = { ...token, ...newTokens };
+    const encrypted = encryptJson(merged);
     await admin
       .from("clients")
-      .update({ google_drive_token: merged })
+      .update({ google_drive_token: encrypted })
       .eq("email", user.email);
   });
 
@@ -56,7 +70,9 @@ export async function GET(req: NextRequest) {
 
     let query = `'${folderId}' in parents and trashed = false`;
     if (search) {
-      query = `name contains '${search.replace(/'/g, "\\'")}' and trashed = false`;
+      // Safely escape single quotes in the search term
+      const escaped = search.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+      query = `name contains '${escaped}' and trashed = false`;
     }
 
     const response = await drive.files.list({
@@ -94,10 +110,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: unknown) {
     console.error("Drive API error:", err);
-    // If token is invalid/revoked, signal disconnected
     if (
       err instanceof Error &&
-      (err.message.includes("invalid_grant") || err.message.includes("Token has been expired or revoked"))
+      (err.message.includes("invalid_grant") ||
+        err.message.includes("Token has been expired or revoked"))
     ) {
       await admin
         .from("clients")

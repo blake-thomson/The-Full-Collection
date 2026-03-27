@@ -3,15 +3,9 @@ import { stripe } from "@/lib/stripe";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendClientWelcome } from "@/lib/resend";
 import Stripe from "stripe";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
-
-function generateCode(len = 8): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < len; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -37,11 +31,13 @@ export async function POST(req: NextRequest) {
     const email = meta.client_email || session.customer_email || "";
     const name = meta.client_name || "";
     const phone = meta.client_phone || "";
-    const tier = meta.tier || "growth";
-    const address = [meta.address_line1, meta.address_city, meta.address_state, meta.address_zip].filter(Boolean).join(", ");
+    const tier = meta.tier || "starter";
+    const address = [meta.address_line1, meta.address_city, meta.address_state, meta.address_zip]
+      .filter(Boolean)
+      .join(", ");
 
     if (!email) {
-      console.error("No email in checkout session");
+      console.error("No email in checkout session", { sessionId: session.id });
       return NextResponse.json({ received: true });
     }
 
@@ -50,10 +46,10 @@ export async function POST(req: NextRequest) {
       .from("clients")
       .select("id")
       .eq("email", email)
-      .single();
+      .maybeSingle();
 
     if (!existing) {
-      // Create the client
+      // Create the client record
       const { error: clientErr } = await admin.from("clients").insert({
         name,
         email,
@@ -67,44 +63,62 @@ export async function POST(req: NextRequest) {
       });
 
       if (clientErr) {
-        console.error("Failed to create client:", clientErr);
+        // If the insert failed due to a unique constraint (race condition), just update instead
+        if (clientErr.code === "23505") {
+          await admin
+            .from("clients")
+            .update({
+              stripe_customer_id: session.customer as string,
+              stripe_subscription_id: session.subscription as string,
+              subscription_status: "active",
+              subscription_tier: tier,
+            })
+            .eq("email", email);
+        } else {
+          console.error("Failed to create client:", clientErr);
+          return NextResponse.json({ received: true });
+        }
       }
 
-      // Create auth account for the client (temporary password — they'll reset)
-      const tempPassword = generateCode(12);
-      const { error: authErr } = await admin.auth.admin.createUser({
+      // Create auth account — no password set; user will receive a reset link
+      const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
         email,
-        password: tempPassword,
         email_confirm: true,
         user_metadata: { name, role: "client" },
       });
 
-      if (authErr) {
+      if (authErr && authErr.message !== "User already registered") {
         console.error("Failed to create auth user:", authErr);
       }
 
-      // Generate invite code
-      const code = generateCode();
-      await admin.from("team_invites").insert({
-        email,
-        role: "client",
-        code,
-        accepted: false,
-      });
+      // Generate a secure password reset link so the client sets their own password
+      let resetLink: string | undefined;
+      try {
+        const { data: linkData } = await admin.auth.admin.generateLink({
+          type: "recovery",
+          email,
+          options: {
+            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+          },
+        });
+        resetLink = linkData?.properties?.action_link;
+      } catch (linkErr) {
+        console.error("Failed to generate reset link:", linkErr);
+      }
 
-      // Send welcome email with login details
+      // Send welcome email with the secure set-password link (no plaintext password)
       try {
         await sendClientWelcome({
           to: email,
           name: name || "there",
           email,
-          password: tempPassword,
+          resetLink,
         });
       } catch (emailErr) {
         console.error("Failed to send welcome email:", emailErr);
       }
     } else {
-      // Client exists — just update their Stripe info
+      // Client exists — update Stripe info
       await admin
         .from("clients")
         .update({
@@ -119,33 +133,26 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "invoice.paid") {
     const invoice = event.data.object as Stripe.Invoice;
-    const customerId = invoice.customer as string;
-
-    // Update payment status
     await admin
       .from("clients")
       .update({ subscription_status: "active" })
-      .eq("stripe_customer_id", customerId);
+      .eq("stripe_customer_id", invoice.customer as string);
   }
 
   if (event.type === "customer.subscription.deleted") {
     const subscription = event.data.object as Stripe.Subscription;
-    const customerId = subscription.customer as string;
-
     await admin
       .from("clients")
       .update({ subscription_status: "canceled" })
-      .eq("stripe_customer_id", customerId);
+      .eq("stripe_customer_id", subscription.customer as string);
   }
 
   if (event.type === "invoice.payment_failed") {
     const invoice = event.data.object as Stripe.Invoice;
-    const customerId = invoice.customer as string;
-
     await admin
       .from("clients")
       .update({ subscription_status: "past_due" })
-      .eq("stripe_customer_id", customerId);
+      .eq("stripe_customer_id", invoice.customer as string);
   }
 
   return NextResponse.json({ received: true });

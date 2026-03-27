@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireClientAccess } from "@/lib/auth-helpers";
 
 // GET /api/kanban?client_id=...
 export async function GET(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const clientId = req.nextUrl.searchParams.get("client_id");
-  if (!clientId) {
-    return NextResponse.json({ error: "client_id required" }, { status: 400 });
-  }
+  if (!clientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, clientId, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("kanban_cards")
     .select("*")
@@ -23,9 +23,7 @@ export async function GET(req: NextRequest) {
     .is("deleted_at", null)
     .order("position", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -33,9 +31,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { client_id, column_id, title } = body;
@@ -45,6 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, client_id, supabase);
+  if (!access.ok) return access.response;
 
   // Get next position
   const { data: existing } = await supabase
@@ -83,9 +81,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -93,25 +89,32 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { id } = body;
-
-  if (!id) {
-    return NextResponse.json({ error: "Card id required" }, { status: 400 });
-  }
+  if (!id) return NextResponse.json({ error: "Card id required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
-  const updates: Record<string, any> = {};
+
+  // Verify card ownership before updating
+  const { data: card } = await supabase
+    .from("kanban_cards")
+    .select("client_id")
+    .eq("id", id)
+    .single();
+  if (!card) return NextResponse.json({ error: "Card not found" }, { status: 404 });
+
+  const access = await requireClientAccess(user.email!, card.client_id, supabase);
+  if (!access.ok) return access.response;
+
+  const updates: Record<string, unknown> = {};
   const fields = [
     "column_id", "position", "title", "description", "platform",
     "due_date", "priority", "content_style", "content_type",
     "reference_url", "unedited_url", "edited_video_url",
-    "assigned_editor", "shoot_date", "edit_deadline", "publish_date", "shoot_location",
-    "revision_notes",
+    "assigned_editor", "shoot_date", "edit_deadline", "publish_date",
+    "shoot_location", "revision_notes",
   ];
   for (const f of fields) {
     if (body[f] !== undefined) updates[f] = body[f];
@@ -125,9 +128,7 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -135,23 +136,28 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ error: "Card id required" }, { status: 400 });
-  }
+  if (!id) return NextResponse.json({ error: "Card id required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
+
+  const { data: card } = await supabase
+    .from("kanban_cards")
+    .select("client_id")
+    .eq("id", id)
+    .single();
+  if (!card) return NextResponse.json({ error: "Card not found" }, { status: 404 });
+
+  const access = await requireClientAccess(user.email!, card.client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { error } = await supabase
     .from("kanban_cards")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

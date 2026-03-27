@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireClientAccess } from "@/lib/auth-helpers";
 
 // GET /api/messages?client_id=xxx&thread_parent_id=yyy
 export async function GET(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const clientId = req.nextUrl.searchParams.get("client_id");
-  if (!clientId) {
-    return NextResponse.json({ error: "client_id required" }, { status: 400 });
-  }
+  if (!clientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
+
+  const supabase = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, clientId, supabase);
+  if (!access.ok) return access.response;
 
   const threadParentId = req.nextUrl.searchParams.get("thread_parent_id");
-  const supabase = createSupabaseAdmin();
 
   if (threadParentId) {
-    // Fetch replies for a specific thread
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -28,13 +27,10 @@ export async function GET(req: NextRequest) {
       .is("deleted_at", null)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   }
 
-  // Fetch top-level messages only (thread_parent_id IS NULL)
   const { data, error } = await supabase
     .from("messages")
     .select("*")
@@ -43,26 +39,25 @@ export async function GET(req: NextRequest) {
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Get reply counts for all top-level messages
   if (data && data.length > 0) {
-    const messageIds = data.map((m: Record<string, unknown>) => m.id as string);
-    const { data: replies, error: replyError } = await supabase
+    const messageIds = data.map((m) => m.id as string);
+    const { data: replies } = await supabase
       .from("messages")
       .select("thread_parent_id")
-      .in("thread_parent_id", messageIds);
+      .in("thread_parent_id", messageIds)
+      .is("deleted_at", null);
 
-    if (!replyError && replies) {
+    if (replies) {
       const countMap: Record<string, number> = {};
       for (const r of replies) {
         const pid = r.thread_parent_id as string;
         countMap[pid] = (countMap[pid] || 0) + 1;
       }
       for (const msg of data) {
-        (msg as Record<string, unknown>).reply_count = countMap[(msg as Record<string, unknown>).id as string] || 0;
+        (msg as Record<string, unknown>).reply_count = countMap[msg.id as string] || 0;
       }
     }
   }
@@ -74,9 +69,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const {
     client_id,
@@ -99,6 +92,9 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -116,29 +112,33 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
-// PATCH /api/messages — edit a message (content only)
+// PATCH /api/messages — edit a message
 export async function PATCH(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id, content } = await req.json();
   if (!id || !content) {
-    return NextResponse.json(
-      { error: "id and content are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "id and content are required" }, { status: 400 });
   }
 
   const supabase = createSupabaseAdmin();
+
+  const { data: msg } = await supabase
+    .from("messages")
+    .select("client_id")
+    .eq("id", id)
+    .single();
+  if (!msg) return NextResponse.json({ error: "Message not found" }, { status: 404 });
+
+  const access = await requireClientAccess(user.email!, msg.client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("messages")
     .update({ content })
@@ -146,9 +146,7 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -156,23 +154,28 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get("id");
-  if (!id) {
-    return NextResponse.json({ error: "Message id required" }, { status: 400 });
-  }
+  if (!id) return NextResponse.json({ error: "Message id required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
+
+  const { data: msg } = await supabase
+    .from("messages")
+    .select("client_id")
+    .eq("id", id)
+    .single();
+  if (!msg) return NextResponse.json({ error: "Message not found" }, { status: 404 });
+
+  const access = await requireClientAccess(user.email!, msg.client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { error } = await supabase
     .from("messages")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

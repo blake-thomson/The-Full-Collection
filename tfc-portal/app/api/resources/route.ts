@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { requireClientAccess } from "@/lib/auth-helpers";
 
 // GET /api/resources?client_id=xxx
 export async function GET(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const clientId = req.nextUrl.searchParams.get("client_id");
-  if (!clientId) {
-    return NextResponse.json({ error: "client_id required" }, { status: 400 });
-  }
+  if (!clientId) return NextResponse.json({ error: "client_id required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, clientId, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("resources")
     .select("*")
@@ -23,9 +23,7 @@ export async function GET(req: NextRequest) {
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -33,21 +31,18 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { client_id, name, type, url, file_path, uploaded_by, description } =
-    await req.json();
+  const { client_id, name, type, url, file_path, uploaded_by, description } = await req.json();
 
   if (!client_id || !name) {
-    return NextResponse.json(
-      { error: "client_id and name are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "client_id and name are required" }, { status: 400 });
   }
 
   const supabase = createSupabaseAdmin();
+  const access = await requireClientAccess(user.email!, client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { data, error } = await supabase
     .from("resources")
     .insert({
@@ -62,9 +57,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -72,26 +65,28 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const id = req.nextUrl.searchParams.get("id");
-  if (!id) {
-    return NextResponse.json(
-      { error: "Resource id required" },
-      { status: 400 }
-    );
-  }
+  if (!id) return NextResponse.json({ error: "Resource id required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
+
+  const { data: resource } = await supabase
+    .from("resources")
+    .select("client_id")
+    .eq("id", id)
+    .single();
+  if (!resource) return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+
+  const access = await requireClientAccess(user.email!, resource.client_id, supabase);
+  if (!access.ok) return access.response;
+
   const { error } = await supabase
     .from("resources")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
