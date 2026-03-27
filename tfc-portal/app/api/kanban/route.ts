@@ -110,6 +110,7 @@ export async function PATCH(req: NextRequest) {
     "due_date", "priority", "content_style", "content_type",
     "reference_url", "unedited_url", "edited_video_url",
     "assigned_editor", "shoot_date", "edit_deadline", "publish_date", "shoot_location",
+    "revision_notes",
   ];
   for (const f of fields) {
     if (body[f] !== undefined) updates[f] = body[f];

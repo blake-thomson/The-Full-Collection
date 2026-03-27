@@ -30,6 +30,7 @@ interface Card {
   edit_deadline?: string;
   publish_date?: string;
   shoot_location?: string;
+  revision_notes?: string;
 }
 
 interface CurrentUser {
@@ -71,6 +72,8 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [editDeadline, setEditDeadline] = useState(card.edit_deadline || "");
   const [publishDate, setPublishDate] = useState(card.publish_date || "");
   const [shootLocation, setShootLocation] = useState(card.shoot_location || "");
+  const [revisionNotes, setRevisionNotes] = useState(card.revision_notes || "");
+  const [sendingToRevisions, setSendingToRevisions] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [saving, setSaving] = useState(false);
@@ -176,6 +179,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           edited_video_url: editedVideoUrl.trim() || null, assigned_editor: assignedEditor || null,
           shoot_date: shootDate || null, edit_deadline: editDeadline || null,
           publish_date: publishDate || null, shoot_location: shootLocation.trim() || null,
+          revision_notes: revisionNotes.trim() || null,
         }),
       });
       if (res.ok) {
@@ -186,10 +190,32 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           edited_video_url: editedVideoUrl.trim() || undefined, assigned_editor: assignedEditor || undefined,
           shoot_date: shootDate || undefined, edit_deadline: editDeadline || undefined,
           publish_date: publishDate || undefined, shoot_location: shootLocation.trim() || undefined,
+          revision_notes: revisionNotes.trim() || undefined,
         });
       }
     } catch { setError("Failed to save changes."); }
     setSaving(false);
+  };
+
+  const sendToRevisions = async () => {
+    if (!revisionNotes.trim()) return;
+    setSendingToRevisions(true);
+    try {
+      const res = await fetch("/api/kanban", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: card.id,
+          column_id: "revise",
+          revision_notes: revisionNotes.trim(),
+        }),
+      });
+      if (res.ok) {
+        onUpdate({ ...card, column_id: "revise", revision_notes: revisionNotes.trim() });
+        onClose();
+      }
+    } catch { setError("Failed to send to revisions."); }
+    setSendingToRevisions(false);
   };
 
   const handleDelete = async () => {
@@ -412,6 +438,32 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
               <label className="tfc-label">Publish Date</label>
               <input type="date" className="tfc-input" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
+          </div>
+
+          {/* Revisions */}
+          <div className="mb-5 p-4 rounded-xl border border-border bg-surface-2">
+            <label className="tfc-label flex items-center gap-2 mb-2">
+              <span className="text-[#EF4444]">●</span> Revisions
+              {card.column_id === "revise" && (
+                <span className="text-[9px] font-bold tracking-wider uppercase py-[2px] px-[6px] rounded bg-[#EF4444]/12 text-[#EF4444] border border-[#EF4444]/25">In Revision</span>
+              )}
+            </label>
+            <textarea
+              className="tfc-textarea w-full"
+              value={revisionNotes}
+              onChange={(e) => setRevisionNotes(e.target.value)}
+              placeholder="List any revisions needed (e.g. shorten the intro, change music, add captions)..."
+              style={{ minHeight: 70, resize: "vertical" }}
+            />
+            {revisionNotes.trim() && card.column_id !== "revise" && (
+              <button
+                onClick={sendToRevisions}
+                disabled={sendingToRevisions}
+                className="mt-2 text-[11px] font-semibold py-2 px-4 rounded-lg cursor-pointer transition-all border border-[#EF4444]/30 bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444]/20 disabled:opacity-50"
+              >
+                {sendingToRevisions ? "Moving..." : "Send to Revisions"}
+              </button>
+            )}
           </div>
 
           {/* Error */}
