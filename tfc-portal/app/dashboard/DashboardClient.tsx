@@ -16,6 +16,7 @@ import { InvoiceSection } from "@/components/InvoiceSection";
 import { ContentBrief } from "@/components/ContentBrief";
 import { ClientHome } from "@/components/ClientHome";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { DriveFiles } from "@/components/DriveFiles";
 import type { OnboardingData } from "@/lib/constants";
 
 interface ClientData {
@@ -54,6 +55,7 @@ const TABS = [
   { id: "kanban", label: "Content Tracker" },
   { id: "calendar", label: "Calendar" },
   { id: "messages", label: "Messages" },
+  { id: "files", label: "Files" },
   { id: "resources", label: "Resources" },
   { id: "billing", label: "Billing" },
   { id: "intake", label: "My Intake" },
@@ -167,7 +169,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
-  const overflowTabs = ["home", "kanban", "messages", "calendar", "resources", "billing"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "billing"];
 
   return (
     <div className="bg-bg h-screen flex flex-col overflow-hidden">
@@ -248,6 +250,19 @@ export default function DashboardClient() {
         {tab === "messages" && (
           <div className="h-full">
             <MessageThread clientId={client.id} currentUser={currentUser} />
+          </div>
+        )}
+
+        {/* Files (Google Drive) */}
+        {tab === "files" && (
+          <div className="h-full p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-text font-heading text-[17px] font-bold m-0">Files</h2>
+                <p className="text-text-3 text-xs mt-1">Browse and access your content files from Google Drive</p>
+              </div>
+            </div>
+            <DriveFiles folderId={process.env.NEXT_PUBLIC_GOOGLE_DRIVE_ROOT_FOLDER} />
           </div>
         )}
 
