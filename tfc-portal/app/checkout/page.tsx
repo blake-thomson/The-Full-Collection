@@ -51,7 +51,7 @@ export default function CheckoutPage() {
           The Full <span className="text-red">Collection</span>
         </h1>
         <p className="text-text-2 text-lg max-w-xl mx-auto">
-          Premium content production for creators who are serious about growth.
+          Premium content production for{" "}<br />creators who are serious about growth.
         </p>
       </div>
 
