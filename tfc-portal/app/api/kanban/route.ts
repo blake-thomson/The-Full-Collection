@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
+import { triggerKanbanNotifications } from "@/lib/kanban-notifications";
+import type { ColumnId } from "@/lib/constants";
 
 // GET /api/kanban?client_id=...
 export async function GET(req: NextRequest) {
@@ -100,7 +102,7 @@ export async function PATCH(req: NextRequest) {
   // Verify card ownership before updating
   const { data: card } = await supabase
     .from("kanban_cards")
-    .select("client_id")
+    .select("client_id, column_id, title")
     .eq("id", id)
     .single();
   if (!card) return NextResponse.json({ error: "Card not found" }, { status: 404 });
@@ -129,6 +131,14 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fire notifications when a card moves to a new column (best-effort, non-blocking)
+  const newColumnId = body.column_id as ColumnId | undefined;
+  if (newColumnId && newColumnId !== card.column_id) {
+    const cardTitle = (body.title as string | undefined) || card.title;
+    triggerKanbanNotifications(card.client_id, cardTitle, newColumnId, id);
+  }
+
   return NextResponse.json(data);
 }
 

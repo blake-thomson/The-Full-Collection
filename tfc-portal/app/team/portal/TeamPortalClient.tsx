@@ -18,6 +18,7 @@ import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
+import { ClientAssignments } from "@/components/ClientAssignments";
 import { COLUMNS } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
 import { TIERS } from "@/lib/tiers";
@@ -96,6 +97,7 @@ const CLIENT_TABS = [
   { id: "messages", label: "Messages" },
   { id: "resources", label: "Resources" },
   { id: "billing", label: "Billing" },
+  { id: "assignments", label: "Assignments" },
   { id: "activity", label: "Activity" },
   { id: "trash", label: "Trash" },
   { id: "info", label: "Account" },
@@ -661,6 +663,13 @@ export default function TeamPortalClient() {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Assignments */}
+                {clientTab === "assignments" && (
+                  <div style={{ padding: "24px 0" }}>
+                    <ClientAssignments clientId={selected.id} />
                   </div>
                 )}
 
