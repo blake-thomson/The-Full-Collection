@@ -302,3 +302,14 @@ ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS shoot_date date;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS edit_deadline date;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS publish_date date;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS shoot_location text;
+
+-- ============================================================
+-- Migration: Add Stripe billing fields to clients
+-- ============================================================
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_customer_id text;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS stripe_subscription_id text;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'active';
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS subscription_tier text;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS address text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS revision_notes text;
