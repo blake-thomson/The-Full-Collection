@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public pages — no auth required
-  const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout"];
+  const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout", "/reset-password"];
   if (publicPaths.some((p) => path.startsWith(p))) {
     return response;
   }
