@@ -199,6 +199,7 @@ export function TrashBin({ clientId }: Props) {
             <button
               key={f}
               onClick={() => setFilter(f)}
+              aria-label={`Filter by ${f}`}
               className={`px-3 py-1.5 rounded-lg text-[12px] font-medium border-none cursor-pointer font-body transition-all whitespace-nowrap ${
                 filter === f
                   ? "bg-red/10 text-red"
@@ -289,6 +290,7 @@ export function TrashBin({ clientId }: Props) {
                           onClick={() => handleRestore(id, item.kind === "card" ? "card" : item.kind === "message" ? "message" : "resource")}
                           disabled={isBusy}
                           title="Restore item"
+                          aria-label="Restore item"
                         >
                           {isBusy ? "..." : "Restore"}
                         </button>
@@ -296,6 +298,7 @@ export function TrashBin({ clientId }: Props) {
                           className="text-[11px] px-2 py-1.5 rounded-lg bg-transparent text-text-3 border-none cursor-pointer font-body hover:text-[#EF4444] transition-colors"
                           onClick={() => setConfirmDelete(id)}
                           title="Delete permanently"
+                          aria-label="Delete permanently"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

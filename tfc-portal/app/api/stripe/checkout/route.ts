@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { TIERS, TierKey } from "@/lib/tiers";
+import { checkRateLimit, getClientIp, CHECKOUT_RATE_LIMIT, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`checkout:${ip}`, CHECKOUT_RATE_LIMIT);
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const body = await req.json();
   const { tier, name, email, phone, address } = body;
 

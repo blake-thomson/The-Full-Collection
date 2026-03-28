@@ -27,6 +27,7 @@ interface Props {
   cards: Card[];
   activities?: Activity[];
   onSubmitIdea: () => void;
+  onGenerateIdeas?: () => void;
   onViewCalendar: () => void;
   onMessageTeam: () => void;
   onCardClick?: (card: Card) => void;
@@ -47,7 +48,7 @@ const ACTIVITY_ICONS: Record<string, string> = {
   card_updated: "\u270E",
 };
 
-export function ClientHome({ clientName, cards, activities = [], onSubmitIdea, onViewCalendar, onMessageTeam, onCardClick }: Props) {
+export function ClientHome({ clientName, cards, activities = [], onSubmitIdea, onGenerateIdeas, onViewCalendar, onMessageTeam, onCardClick }: Props) {
   const today = new Date();
   const greeting = today.getHours() < 12 ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
   const dateStr = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -143,7 +144,7 @@ export function ClientHome({ clientName, cards, activities = [], onSubmitIdea, o
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
           <button
             onClick={onSubmitIdea}
             className="bg-surface border border-border rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all hover:border-red hover:bg-[rgba(224,32,32,0.04)] text-left font-body group"
@@ -158,6 +159,23 @@ export function ClientHome({ clientName, cards, activities = [], onSubmitIdea, o
               <p className="text-text-3 text-[11px] m-0 mt-0.5">Create a new content brief</p>
             </div>
           </button>
+
+          {onGenerateIdeas && (
+            <button
+              onClick={onGenerateIdeas}
+              className="bg-surface border border-border rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all hover:border-[#8B5CF6] hover:bg-[rgba(139,92,246,0.04)] text-left font-body group"
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(139,92,246,0.12)" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-text text-[13px] font-semibold m-0 group-hover:text-[#8B5CF6] transition-colors">Generate Ideas</p>
+                <p className="text-text-3 text-[11px] m-0 mt-0.5">AI-powered content ideation</p>
+              </div>
+            </button>
+          )}
 
           <button
             onClick={onViewCalendar}

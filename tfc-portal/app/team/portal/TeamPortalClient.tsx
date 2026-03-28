@@ -19,6 +19,8 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { ClientAssignments } from "@/components/ClientAssignments";
+import { FAQ } from "@/components/FAQ";
+import { IdeaSwiper } from "@/components/IdeaSwiper";
 import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 import { TeamMessenger } from "@/components/TeamMessenger";
 import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
@@ -97,6 +99,10 @@ const NAV_ITEMS = [
     id: "team", label: "Team", ownerOnly: true,
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   },
+  {
+    id: "help", label: "Help",
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  },
 ];
 
 const CLIENT_TABS = [
@@ -134,6 +140,7 @@ export default function TeamPortalClient() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
+  const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -190,7 +197,7 @@ export default function TeamPortalClient() {
           id: a.id, description: a.action, timestamp: a.created_at, type: a.actor_type || "system",
         })));
       }
-    } catch {}
+    } catch (err) { console.error("Failed to load client details:", err); }
   }, []);
 
   const loadOverviewActivity = useCallback(async () => {
@@ -207,7 +214,7 @@ export default function TeamPortalClient() {
       }
       items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setAllActivity(items.slice(0, 30));
-    } catch {}
+    } catch (err) { console.error("Failed to load overview activity:", err); }
   }, [clients]);
 
   useEffect(() => { if (selected) loadClientDetails(selected.id); }, [selected, loadClientDetails]);
@@ -232,6 +239,33 @@ export default function TeamPortalClient() {
   const handleCardDelete = (cardId: string) => {
     setClientCards((prev) => prev.filter((c) => c.id !== cardId));
     setSelectedCard(null);
+  };
+
+  const handleAcceptIdea = async (idea: { title: string; description: string; platform: string; content_style: string; content_type: string; priority: string; hook: string; cta: string }) => {
+    if (!selected) return;
+    try {
+      const res = await fetch("/api/kanban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: selected.id,
+          column_id: "idea",
+          title: idea.title,
+          description: `${idea.description}\n\nHook: "${idea.hook}"${idea.cta ? `\n\nCTA: ${idea.cta}` : ""}`,
+          platform: idea.platform,
+          content_style: idea.content_style,
+          content_type: idea.content_type,
+          priority: idea.priority || "medium",
+        }),
+      });
+      if (res.ok) {
+        const newCard = await res.json();
+        setClientCards((prev) => [...prev, newCard]);
+        setKanbanKey((k) => k + 1);
+      }
+    } catch (err) {
+      console.error("Failed to create card from idea:", err);
+    }
   };
 
   const switchTeamTab = (id: string) => { setTeamTab(id); setSelected(null); setMobileMenuOpen(false); setShowMyProfile(false); };
@@ -573,6 +607,13 @@ export default function TeamPortalClient() {
             </div>
           )}
 
+          {/* ── HELP / FAQ ── */}
+          {teamTab === "help" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
+              <FAQ userType="team" />
+            </div>
+          )}
+
           {/* ── ALL CLIENTS LIST ── */}
           {teamTab === "clients" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
@@ -680,6 +721,16 @@ export default function TeamPortalClient() {
                       {t.label}
                     </button>
                   ))}
+                  <button
+                    onClick={() => setShowIdeaSwiper(true)}
+                    className="nav-tab whitespace-nowrap flex items-center gap-1.5 text-[#8B5CF6]"
+                    title="AI Idea Generator"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    Generate Ideas
+                  </button>
                 </div>
               </div>
 
@@ -826,6 +877,15 @@ export default function TeamPortalClient() {
           onSelectMessage={() => { setShowSearch(false); }}
           onSelectResource={() => { setShowSearch(false); }}
           onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {showIdeaSwiper && selected && (
+        <IdeaSwiper
+          clientId={selected.id}
+          clientPillars={(selected.onboarding_data as OnboardingData | null)?.pillars?.filter(Boolean)}
+          onAcceptIdea={handleAcceptIdea}
+          onClose={() => setShowIdeaSwiper(false)}
         />
       )}
     </div>

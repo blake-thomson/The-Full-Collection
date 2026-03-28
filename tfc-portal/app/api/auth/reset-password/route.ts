@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendPasswordReset } from "@/lib/resend";
+import { checkRateLimit, getClientIp, AUTH_RATE_LIMIT, rateLimitResponse } from "@/lib/rate-limit";
 
 // POST /api/auth/reset-password — send a password reset email
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`reset-password:${ip}`, AUTH_RATE_LIMIT);
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const { email } = await req.json();
 
   if (!email) {

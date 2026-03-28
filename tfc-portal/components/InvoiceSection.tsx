@@ -335,9 +335,23 @@ export function InvoiceSection({ clientId, currentUser, isTeam }: Props) {
                   <button
                     className="tfc-btn"
                     style={{ padding: "7px 16px", fontSize: 11 }}
-                    onClick={() => {
-                      // Payment placeholder - would integrate with Stripe
-                      alert("Payment processing would be integrated here (e.g., Stripe Checkout).");
+                    onClick={async () => {
+                      try {
+                        const res = await fetch("/api/invoices/pay", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ invoice_id: inv.id }),
+                        });
+                        if (res.ok) {
+                          const { url } = await res.json();
+                          if (url) window.location.href = url;
+                        } else {
+                          const data = await res.json();
+                          setError(data.error || "Failed to initiate payment.");
+                        }
+                      } catch {
+                        setError("Failed to initiate payment. Please try again.");
+                      }
                     }}
                   >
                     Pay Now

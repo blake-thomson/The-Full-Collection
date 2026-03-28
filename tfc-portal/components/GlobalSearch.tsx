@@ -224,6 +224,8 @@ export function GlobalSearch({ cards, messages = [], resources = [], onSelectCar
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search content, messages, resources..."
+            aria-label="Search"
+            aria-activedescendant={flatResults[activeIndex] ? `search-result-${flatResults[activeIndex].id}` : undefined}
           />
           <kbd className="text-text-3 text-[10px] font-bold bg-surface-3 py-1 px-1.5 rounded border border-border font-body">
             ESC
@@ -231,7 +233,7 @@ export function GlobalSearch({ cards, messages = [], resources = [], onSelectCar
         </div>
 
         {/* Results */}
-        <div ref={resultsRef} className="flex-1 overflow-y-auto">
+        <div ref={resultsRef} className="flex-1 overflow-y-auto" role="listbox">
           {/* Empty state: no query */}
           {!debouncedQuery && (
             <div className="p-8 text-center">
@@ -287,7 +289,10 @@ export function GlobalSearch({ cards, messages = [], resources = [], onSelectCar
                   return (
                     <div
                       key={result.id}
+                      id={`search-result-${result.id}`}
                       data-index={globalIndex}
+                      role="option"
+                      aria-selected={isActive}
                       className="px-5 py-2.5 flex items-center gap-3 cursor-pointer transition-colors"
                       style={{ background: isActive ? "rgba(224,32,32,0.06)" : "transparent" }}
                       onClick={() => selectResult(result)}

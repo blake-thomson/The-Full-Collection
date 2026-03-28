@@ -18,6 +18,9 @@ import { ClientHome } from "@/components/ClientHome";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
+import { FAQ } from "@/components/FAQ";
+import { IdeaSwiper } from "@/components/IdeaSwiper";
+import { useRealtimeKanban, useRealtimeMessages, useRealtimeNotifications } from "@/lib/use-realtime";
 import type { OnboardingData } from "@/lib/constants";
 
 interface ClientData {
@@ -103,6 +106,14 @@ const TABS = [
       </svg>
     ),
   },
+  {
+    id: "help", label: "Help",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+  },
 ];
 
 export default function DashboardClient() {
@@ -129,6 +140,7 @@ export default function DashboardClient() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaveErr, setProfileSaveErr] = useState("");
+  const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -157,6 +169,11 @@ export default function DashboardClient() {
 
   useEffect(() => { loadKanbanCards(); }, [loadKanbanCards]);
 
+  // Real-time subscriptions
+  useRealtimeKanban(client?.id || "", () => { loadKanbanCards(); setKanbanKey((k) => k + 1); });
+  useRealtimeMessages(client?.id || "", () => { /* triggers re-render for message tab badge */ });
+  useRealtimeNotifications(client?.email || "", () => { /* NotificationBell polls, but this gives instant updates */ });
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setShowSearch(true); }
@@ -180,6 +197,33 @@ export default function DashboardClient() {
   const handleCardDelete = (cardId: string) => {
     setKanbanCards((prev) => prev.filter((c) => c.id !== cardId));
     setSelectedCard(null);
+  };
+
+  const handleAcceptIdea = async (idea: { title: string; description: string; platform: string; content_style: string; content_type: string; priority: string; hook: string; cta: string }) => {
+    if (!client) return;
+    try {
+      const res = await fetch("/api/kanban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: client.id,
+          column_id: "idea",
+          title: idea.title,
+          description: `${idea.description}\n\nHook: "${idea.hook}"${idea.cta ? `\n\nCTA: ${idea.cta}` : ""}`,
+          platform: idea.platform,
+          content_style: idea.content_style,
+          content_type: idea.content_type,
+          priority: idea.priority || "medium",
+        }),
+      });
+      if (res.ok) {
+        const newCard = await res.json();
+        setKanbanCards((prev) => [...prev, newCard]);
+        setKanbanKey((k) => k + 1);
+      }
+    } catch (err) {
+      console.error("Failed to create card from idea:", err);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -238,7 +282,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
-  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "trash"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "help", "trash"];
 
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
@@ -497,6 +541,7 @@ export default function DashboardClient() {
               clientName={client.name}
               cards={kanbanCards}
               onSubmitIdea={() => { setTab("kanban"); setOpenCreateCard(true); setKanbanKey((k) => k + 1); }}
+              onGenerateIdeas={() => setShowIdeaSwiper(true)}
               onViewCalendar={() => setTab("calendar")}
               onMessageTeam={() => setTab("messages")}
               onCardClick={(card) => setSelectedCard(card as KanbanCard)}
@@ -540,6 +585,13 @@ export default function DashboardClient() {
           {tab === "resources" && (
             <div className="h-full">
               <ResourceLibrary clientId={client.id} currentUser={currentUser} isTeam={false} />
+            </div>
+          )}
+
+          {/* Help / FAQ */}
+          {tab === "help" && (
+            <div className="h-full overflow-y-auto">
+              <FAQ userType="client" />
             </div>
           )}
 
@@ -799,6 +851,15 @@ export default function DashboardClient() {
           onSelectMessage={() => { setShowSearch(false); setTab("messages"); }}
           onSelectResource={() => { setShowSearch(false); setTab("resources"); }}
           onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {showIdeaSwiper && (
+        <IdeaSwiper
+          clientId={client.id}
+          clientPillars={(client.onboarding_data as OnboardingData | null)?.pillars?.filter(Boolean)}
+          onAcceptIdea={handleAcceptIdea}
+          onClose={() => setShowIdeaSwiper(false)}
         />
       )}
     </div>

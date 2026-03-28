@@ -287,12 +287,13 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
       style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}>
       <div className="bg-surface border border-border rounded-2xl w-full max-w-[680px] max-h-[90vh] overflow-hidden flex flex-col"
+        role="dialog" aria-modal="true"
         onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
           <h3 className="text-text font-heading text-[17px] font-bold m-0">Card Details</h3>
-          <button onClick={onClose} className="text-text-3 hover:text-text bg-transparent border-none cursor-pointer text-xl leading-none font-body transition-colors">&times;</button>
+          <button onClick={onClose} aria-label="Close" className="text-text-3 hover:text-text bg-transparent border-none cursor-pointer text-xl leading-none font-body transition-colors">&times;</button>
         </div>
 
         {/* Body */}
@@ -429,14 +430,14 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           <div className="grid grid-cols-3 gap-3 mb-5">
             <div>
               <label className="tfc-label">Content Style</label>
-              <select className="tfc-input" value={contentStyle} onChange={(e) => setContentStyle(e.target.value)} style={{ cursor: "pointer" }}>
+              <select className="tfc-input" aria-label="Content Style" value={contentStyle} onChange={(e) => setContentStyle(e.target.value)} style={{ cursor: "pointer" }}>
                 <option value="">Select...</option>
                 {CONTENT_STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <label className="tfc-label">Content Type</label>
-              <select className="tfc-input" value={contentType} onChange={(e) => setContentType(e.target.value)} style={{ cursor: "pointer" }}>
+              <select className="tfc-input" aria-label="Content Type" value={contentType} onChange={(e) => setContentType(e.target.value)} style={{ cursor: "pointer" }}>
                 <option value="">Select...</option>
                 {CONTENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -448,6 +449,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
                   const cfg = PRIORITY_CONFIG[p]; const active = priority === p;
                   return (
                     <button key={p} onClick={() => setPriority(p)}
+                      aria-label={`Priority: ${cfg.label}`}
                       className="flex-1 py-[7px] px-2 rounded-lg text-[11px] font-bold tracking-[0.04em] uppercase cursor-pointer transition-all border"
                       style={{ background: active ? cfg.bg : "transparent", color: active ? cfg.color : "#5A5652", borderColor: active ? cfg.border : "#252525" }}>
                       {cfg.label}
@@ -517,15 +519,15 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div>
               <label className="tfc-label">Shoot Date</label>
-              <input type="date" className="tfc-input" value={shootDate} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <input type="date" className="tfc-input" aria-label="Shoot Date" value={shootDate} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
               <label className="tfc-label">Edit Deadline</label>
-              <input type="date" className="tfc-input" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
+              <input type="date" className="tfc-input" aria-label="Edit Deadline" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
               <label className="tfc-label">Publish Date</label>
-              <input type="date" className="tfc-input" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <input type="date" className="tfc-input" aria-label="Publish Date" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
           </div>
 

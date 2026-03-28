@@ -44,7 +44,7 @@ export function OnboardingWizard({ onComplete }: Props) {
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
     if (step < 7) { setStep((s) => s + 1); }
-    else { setSaving(true); try { await onComplete(data); } catch { setSaving(false); } }
+    else { setSaving(true); try { await onComplete(data); } catch (err) { console.error("Onboarding save failed:", err); setSaving(false); } }
   };
 
   const Pill = ({ options, field, active, onChange }: { options: string[]; field: string; active: string; onChange: (v: string) => void }) => (

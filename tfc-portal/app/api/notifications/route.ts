@@ -69,6 +69,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const validTypes = ["general", "content_update", "message", "billing", "system"];
+  if (type && !validTypes.includes(type)) {
+    return NextResponse.json(
+      { error: `Invalid type. Must be one of: ${validTypes.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
   const { data, error } = await supabase
     .from("notifications")
     .insert({

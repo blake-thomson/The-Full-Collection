@@ -42,6 +42,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
+  // Validate optional enum fields
+  const validPlatforms = ["instagram", "tiktok", "youtube", "linkedin", "twitter", "facebook", "podcast", "blog", "other"];
+  if (body.platform && !validPlatforms.includes(String(body.platform).toLowerCase())) {
+    return NextResponse.json({ error: `Invalid platform. Must be one of: ${validPlatforms.join(", ")}` }, { status: 400 });
+  }
+  if (body.platform) body.platform = String(body.platform).toLowerCase();
+
+  const validPriorities = ["low", "medium", "high"];
+  if (body.priority && !validPriorities.includes(body.priority)) {
+    return NextResponse.json({ error: `Invalid priority. Must be one of: ${validPriorities.join(", ")}` }, { status: 400 });
+  }
+
+  const validContentTypes = ["short_form", "long_form", "carousel", "story", "live", "podcast", "blog", "other"];
+  if (body.content_type && !validContentTypes.includes(body.content_type)) {
+    return NextResponse.json({ error: `Invalid content_type. Must be one of: ${validContentTypes.join(", ")}` }, { status: 400 });
+  }
+
+  const dateFields = ["due_date", "shoot_date", "edit_deadline", "publish_date"] as const;
+  for (const df of dateFields) {
+    if (body[df] && isNaN(Date.parse(body[df]))) {
+      return NextResponse.json({ error: `Invalid ${df}. Must be a valid ISO date string.` }, { status: 400 });
+    }
+  }
+
   const supabase = createSupabaseAdmin();
   const access = await requireClientAccess(user.email!, client_id, supabase);
   if (!access.ok) return access.response;
@@ -109,6 +133,30 @@ export async function PATCH(req: NextRequest) {
 
   const access = await requireClientAccess(user.email!, card.client_id, supabase);
   if (!access.ok) return access.response;
+
+  // Validate optional enum fields
+  const validPlatforms = ["instagram", "tiktok", "youtube", "linkedin", "twitter", "facebook", "podcast", "blog", "other"];
+  if (body.platform !== undefined && body.platform && !validPlatforms.includes(String(body.platform).toLowerCase())) {
+    return NextResponse.json({ error: `Invalid platform. Must be one of: ${validPlatforms.join(", ")}` }, { status: 400 });
+  }
+  if (body.platform) body.platform = String(body.platform).toLowerCase();
+
+  const validPriorities = ["low", "medium", "high"];
+  if (body.priority !== undefined && body.priority && !validPriorities.includes(body.priority)) {
+    return NextResponse.json({ error: `Invalid priority. Must be one of: ${validPriorities.join(", ")}` }, { status: 400 });
+  }
+
+  const validContentTypes = ["short_form", "long_form", "carousel", "story", "live", "podcast", "blog", "other"];
+  if (body.content_type !== undefined && body.content_type && !validContentTypes.includes(body.content_type)) {
+    return NextResponse.json({ error: `Invalid content_type. Must be one of: ${validContentTypes.join(", ")}` }, { status: 400 });
+  }
+
+  const dateFields = ["due_date", "shoot_date", "edit_deadline", "publish_date"] as const;
+  for (const df of dateFields) {
+    if (body[df] !== undefined && body[df] && isNaN(Date.parse(body[df]))) {
+      return NextResponse.json({ error: `Invalid ${df}. Must be a valid ISO date string.` }, { status: 400 });
+    }
+  }
 
   const updates: Record<string, unknown> = {};
   const fields = [
