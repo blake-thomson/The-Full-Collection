@@ -56,6 +56,8 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
   const [lastClient, setLastClient] = useState<{ name: string; email: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ type: "invite" | "member"; id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
+  const [savingRole, setSavingRole] = useState(false);
   const supabase = createBrowserSupabase();
   const canManage = ["owner", "admin"].includes(teamUser.role);
 
@@ -123,6 +125,18 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
     });
     setDeleting(false);
     setConfirmDelete(null);
+    if (res.ok) load();
+  };
+
+  const changeRole = async (memberId: string, newRole: string) => {
+    setSavingRole(true);
+    const res = await fetch(`/api/team-members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    });
+    setSavingRole(false);
+    setChangingRoleId(null);
     if (res.ok) load();
   };
 
@@ -233,12 +247,45 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                         {m.name}
                       </span>
                       {m.email === teamUser.email && <span className="text-text-3 text-[11px] font-normal">(you)</span>}
-                      <span
-                        className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md"
-                        style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
-                      >
-                        {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
-                      </span>
+                      {canManage && m.email !== teamUser.email && m.role !== "owner" ? (
+                        <div className="relative">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setChangingRoleId(changingRoleId === m.id ? null : m.id); }}
+                            className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md cursor-pointer border-none flex items-center gap-1"
+                            style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
+                            title="Change role"
+                          >
+                            {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                          </button>
+                          {changingRoleId === m.id && (
+                            <div
+                              className="absolute left-0 top-full mt-1 z-20 bg-surface border border-border rounded-xl shadow-xl py-1 min-w-[160px]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {(teamUser.role === "owner" ? ["admin", "project_manager", "editor", "videographer", "smm"] : ["editor", "videographer", "smm"]).map((r) => (
+                                <button
+                                  key={r}
+                                  disabled={savingRole || m.role === r}
+                                  onClick={() => changeRole(m.id, r)}
+                                  className="w-full text-left px-4 py-2 text-[12px] font-medium bg-transparent border-none cursor-pointer hover:bg-surface-2 transition-colors flex items-center justify-between"
+                                  style={{ color: m.role === r ? ROLE_COLOR[r] || "#A8A49C" : "var(--text-2)" }}
+                                >
+                                  {r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r === "videographer" ? "Videographer" : r.charAt(0).toUpperCase() + r.slice(1)}
+                                  {m.role === r && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span
+                          className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md"
+                          style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
+                        >
+                          {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
+                        </span>
+                      )}
                     </div>
                     {m.bio ? (
                       <p className="text-text-3 text-xs m-0 mt-1 line-clamp-1">{m.bio}</p>
