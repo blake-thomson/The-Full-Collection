@@ -334,7 +334,6 @@ export default function TeamPortalClient() {
         <div className={`py-3 border-t border-border ${sidebarCollapsed ? "px-2" : "px-3"}`}>
           {sidebarCollapsed ? (
             <div className="flex flex-col items-center gap-2 py-2">
-              <NotificationBell userEmail={teamUser.email} userType="team" />
               <button onClick={() => setShowMyProfile(true)} className="bg-transparent border-none cursor-pointer p-0 rounded-full hover:opacity-80 transition-opacity" title="View my profile">
                 <Avatar name={teamUser.name} size={32} src={teamUser.avatar_url} />
               </button>
@@ -356,8 +355,16 @@ export default function TeamPortalClient() {
                     {teamUser.role === "smm" ? "Social Media Manager" : teamUser.role}
                   </span>
                 </div>
-                <NotificationBell userEmail={teamUser.email} userType="team" />
               </button>
+              <a
+                href="mailto:support@thefullcollection.com"
+                className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 no-underline flex items-center gap-2 transition-colors font-body"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Help
+              </a>
               <button
                 onClick={logout}
                 className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
@@ -440,9 +447,18 @@ export default function TeamPortalClient() {
               ))}
             </nav>
 
-            {/* Sign out */}
-            <div className="px-3 py-3 border-t border-border">
-              <button onClick={logout} className="w-full px-3 py-3 text-left text-text-3 hover:text-red text-[14px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body">
+            {/* Help + Sign out */}
+            <div className="px-3 py-3 border-t border-border space-y-0.5">
+              <a
+                href="mailto:support@thefullcollection.com"
+                className="w-full flex items-center gap-3 px-3 py-3 text-text-3 hover:text-text text-[14px] rounded-lg hover:bg-surface-2 no-underline transition-colors font-body"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Help
+              </a>
+              <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-3 text-left text-text-3 hover:text-red text-[14px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body">
                 Sign out
               </button>
             </div>
@@ -470,7 +486,9 @@ export default function TeamPortalClient() {
             <span className="flex-1 text-left">Search content, messages, files...</span>
             <kbd className="text-[10px] bg-surface-3 py-0.5 px-1.5 rounded text-text-3">⌘K</kbd>
           </button>
-          <div className="w-[120px]" />
+          <div className="flex items-center gap-3 shrink-0 w-[120px] justify-end">
+            <NotificationBell userEmail={teamUser.email} userType="team" />
+          </div>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
