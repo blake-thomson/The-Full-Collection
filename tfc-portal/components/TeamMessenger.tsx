@@ -518,7 +518,7 @@ export function TeamMessenger({ currentUser }: Props) {
     const avatar = getConvAvatar(conv);
     const isActive = activeConv?.id === conv.id;
     const hasUnread = conv.unread_count > 0;
-    const canDelete = (currentUser.role === "owner" || currentUser.role === "admin") && conv.type !== "dm";
+    const canDelete = currentUser.role === "owner" || currentUser.role === "admin";
 
     return (
       <div className="relative group">
