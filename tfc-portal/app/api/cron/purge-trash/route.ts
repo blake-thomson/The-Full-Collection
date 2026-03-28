@@ -9,8 +9,8 @@ import { createSupabaseAdmin } from "@/lib/supabase";
  *
  * Requires a CRON_SECRET header for authorization.
  */
-export async function POST(req: NextRequest) {
-  // Verify cron secret to prevent unauthorized access
+export async function GET(req: NextRequest) {
+  // Verify cron secret — Vercel Cron sends Authorization: Bearer <CRON_SECRET>
   const secret = req.headers.get("x-cron-secret") || req.headers.get("authorization")?.replace("Bearer ", "");
   const cronSecret = process.env.CRON_SECRET;
 

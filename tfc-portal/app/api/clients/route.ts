@@ -148,15 +148,16 @@ export async function POST(req: NextRequest) {
 
   // Send welcome email with setup code
   try {
-    await sendClientWelcome({
+    const result = await sendClientWelcome({
       to: emailLower,
       name: name.trim(),
       email: emailLower,
       code: setupCode,
       appUrl: process.env.NEXT_PUBLIC_APP_URL!,
     });
-  } catch {
-    // Don't block on email failure
+    console.log("Client welcome email sent:", { to: emailLower, id: result?.data?.id });
+  } catch (err) {
+    console.error("Failed to send client welcome email:", err instanceof Error ? err.message : String(err), err);
   }
 
   return NextResponse.json(client);

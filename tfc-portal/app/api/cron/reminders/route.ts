@@ -12,7 +12,8 @@ import { createSupabaseAdmin } from "@/lib/supabase";
  * Creates in-app notifications for the relevant users.
  * Intended to be called by a cron job.
  */
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
+  // Verify cron secret — Vercel Cron sends Authorization: Bearer <CRON_SECRET>
   const secret = req.headers.get("x-cron-secret") || req.headers.get("authorization")?.replace("Bearer ", "");
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && secret !== cronSecret) {

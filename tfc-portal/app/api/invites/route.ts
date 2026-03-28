@@ -71,19 +71,24 @@ export async function POST(req: NextRequest) {
   }
 
   // Send invite email
+  let emailSent = false;
+  let emailError: string | null = null;
   try {
-    await sendTeamInvite({
+    const result = await sendTeamInvite({
       to: email.trim().toLowerCase(),
       name: name.trim(),
       inviterName: inviterName || "The Full Collection",
       role,
       code,
     });
-  } catch {
-    // Email send failure shouldn't block invite creation
+    emailSent = true;
+    console.log("Invite email sent:", { to: email, id: result?.data?.id });
+  } catch (err) {
+    emailError = err instanceof Error ? err.message : String(err);
+    console.error("Failed to send invite email:", emailError, err);
   }
 
-  return NextResponse.json({ code, name, email, role });
+  return NextResponse.json({ code, name, email, role, emailSent, emailError });
 }
 
 // DELETE /api/invites — revoke a pending invite (owner/admin only)

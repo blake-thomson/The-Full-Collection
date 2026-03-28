@@ -3,7 +3,6 @@ import { stripe } from "@/lib/stripe";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendClientWelcome } from "@/lib/resend";
 import Stripe from "stripe";
-import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +48,9 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (!existing) {
-      // Create the client record
+      // Generate a one-time setup code (no auth user yet — created when they activate)
+      const setupCode = generateSetupCode();
+
       const { error: clientErr } = await admin.from("clients").insert({
         name,
         email,
@@ -60,11 +61,12 @@ export async function POST(req: NextRequest) {
         stripe_subscription_id: session.subscription as string,
         subscription_status: "active",
         subscription_tier: tier,
+        setup_code: setupCode,
       });
 
       if (clientErr) {
-        // If the insert failed due to a unique constraint (race condition), just update instead
         if (clientErr.code === "23505") {
+          // Race condition — client already exists, just update Stripe info
           await admin
             .from("clients")
             .update({
@@ -78,44 +80,19 @@ export async function POST(req: NextRequest) {
           console.error("Failed to create client:", clientErr);
           return NextResponse.json({ received: true });
         }
-      }
-
-      // Create auth account — no password set; user will receive a reset link
-      const { data: authUser, error: authErr } = await admin.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: { name, role: "client" },
-      });
-
-      if (authErr && authErr.message !== "User already registered") {
-        console.error("Failed to create auth user:", authErr);
-      }
-
-      // Generate a secure password reset link so the client sets their own password
-      let resetLink: string | undefined;
-      try {
-        const { data: linkData } = await admin.auth.admin.generateLink({
-          type: "recovery",
-          email,
-          options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
-          },
-        });
-        resetLink = linkData?.properties?.action_link;
-      } catch (linkErr) {
-        console.error("Failed to generate reset link:", linkErr);
-      }
-
-      // Send welcome email with the secure set-password link (no plaintext password)
-      try {
-        await sendClientWelcome({
-          to: email,
-          name: name || "there",
-          email,
-          resetLink,
-        });
-      } catch (emailErr) {
-        console.error("Failed to send welcome email:", emailErr);
+      } else {
+        // Send welcome email with setup code
+        try {
+          await sendClientWelcome({
+            to: email,
+            name: name || "there",
+            email,
+            code: setupCode,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+          });
+        } catch (emailErr) {
+          console.error("Failed to send welcome email:", emailErr);
+        }
       }
     } else {
       // Client exists — update Stripe info
@@ -173,4 +150,13 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+function generateSetupCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
 }
