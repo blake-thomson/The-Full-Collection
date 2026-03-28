@@ -106,14 +106,6 @@ const TABS = [
       </svg>
     ),
   },
-  {
-    id: "help", label: "Help",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-    ),
-  },
 ];
 
 export default function DashboardClient() {
@@ -386,6 +378,15 @@ export default function DashboardClient() {
                 Recently Deleted
               </button>
               <button
+                onClick={() => switchTab("help")}
+                className={`w-full mt-1 px-3 py-2 text-left text-[12px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body flex items-center gap-2 ${tab === "help" ? "text-red" : "text-text-3 hover:text-text hover:bg-surface-2"}`}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Help
+              </button>
+              <button
                 onClick={logout}
                 className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
               >
@@ -495,6 +496,15 @@ export default function DashboardClient() {
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                 </svg>
                 Recently Deleted
+              </button>
+              <button
+                onClick={() => switchTab("help")}
+                className={`w-full flex items-center gap-3 px-3 py-3 text-[14px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body text-left ${tab === "help" ? "bg-red/10 text-red" : "text-text-3 hover:text-text hover:bg-surface-2"}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                Help
               </button>
               <button
                 onClick={logout}
