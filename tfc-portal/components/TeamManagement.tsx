@@ -156,7 +156,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
   }
 
   return (
-    <div className="max-w-[760px]">
+    <div>
       <div className="flex gap-[3px] mb-7">
         {[{ id: "team", label: "Team Members" }, { id: "clients", label: "Client Accounts" }].map((t) => (
           <button key={t.id} className={`nav-tab${tab === t.id ? " active" : ""}`} onClick={() => { setTab(t.id); setLastInvite(null); setLastClient(null); }}>
