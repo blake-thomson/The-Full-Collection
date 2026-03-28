@@ -288,9 +288,19 @@ export function TeamMessenger({ currentUser }: Props) {
     setEditingMsg(null);
   };
 
-  /* ── Delete message ── */
+  /* ── Delete message (own only) ── */
   const deleteMessage = async (id: string) => {
     await fetch(`/api/team-messages?id=${id}`, { method: "DELETE" });
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  /* ── Hide message (others' messages, per-user) ── */
+  const hideMessage = async (id: string) => {
+    await fetch("/api/team-messages", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action: "hide" }),
+    });
     setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
@@ -761,7 +771,7 @@ export function TeamMessenger({ currentUser }: Props) {
                               <polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 00-4-4H4" />
                             </svg>
                           </button>
-                          {isOwn && (
+                          {isOwn ? (
                             <>
                               <button
                                 onClick={() => { setEditingMsg(msg.id); setEditContent(msg.content); }}
@@ -783,6 +793,16 @@ export function TeamMessenger({ currentUser }: Props) {
                                 </svg>
                               </button>
                             </>
+                          ) : (
+                            <button
+                              onClick={() => hideMessage(msg.id)}
+                              className="w-6 h-6 flex items-center justify-center rounded text-text-3 hover:text-text hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors"
+                              title="Hide from my view"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>
+                              </svg>
+                            </button>
                           )}
                         </div>
                       )}

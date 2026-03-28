@@ -533,6 +533,7 @@ function MessageRow({
   onReply,
   onViewThread,
   onDelete,
+  onHide,
   currentUserEmail,
 }: {
   msg: Message;
@@ -540,6 +541,7 @@ function MessageRow({
   onReply: (msg: Message) => void;
   onViewThread: (msg: Message) => void;
   onDelete?: (msg: Message) => void;
+  onHide?: (msg: Message) => void;
   currentUserEmail?: string;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -631,15 +633,28 @@ function MessageRow({
               </svg>
               Reply
             </button>
-            {onDelete && (!currentUserEmail || msg.sender_email === currentUserEmail) && (
+            {currentUserEmail && msg.sender_email === currentUserEmail && onDelete && (
               <button
                 className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:bg-[#252525] rounded-lg"
                 style={{ color: "#A8A49C", minHeight: 32 }}
+                title="Delete"
                 onClick={() => onDelete(msg)}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+              </button>
+            )}
+            {currentUserEmail && msg.sender_email !== currentUserEmail && onHide && (
+              <button
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:bg-[#252525] rounded-lg"
+                style={{ color: "#A8A49C", minHeight: 32 }}
+                title="Hide from my view"
+                onClick={() => onHide(msg)}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>
                 </svg>
               </button>
             )}
@@ -695,6 +710,15 @@ function ThreadPanel({
 
   const handleDeleteReply = useCallback(async (msg: Message) => {
     const res = await fetch(`/api/messages?id=${msg.id}`, { method: "DELETE" });
+    if (res.ok) setReplies((prev) => prev.filter((r) => r.id !== msg.id));
+  }, []);
+
+  const handleHideReply = useCallback(async (msg: Message) => {
+    const res = await fetch("/api/messages", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: msg.id, action: "hide" }),
+    });
     if (res.ok) setReplies((prev) => prev.filter((r) => r.id !== msg.id));
   }, []);
 
@@ -805,6 +829,7 @@ function ThreadPanel({
                 onReply={() => {}}
                 onViewThread={() => {}}
                 onDelete={handleDeleteReply}
+                onHide={handleHideReply}
                 currentUserEmail={currentUser.email}
               />
             );
@@ -860,12 +885,21 @@ export function MessageThread({ clientId, currentUser, clientName }: Props) {
   const handleDeleteMessage = useCallback(async (msg: Message) => {
     try {
       const res = await fetch(`/api/messages?id=${msg.id}`, { method: "DELETE" });
-      if (res.ok) {
-        setMessages((prev) => prev.filter((m) => m.id !== msg.id));
-      }
+      if (res.ok) setMessages((prev) => prev.filter((m) => m.id !== msg.id));
     } catch {
       setError("Failed to delete message.");
     }
+  }, []);
+
+  const handleHideMessage = useCallback(async (msg: Message) => {
+    try {
+      const res = await fetch("/api/messages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: msg.id, action: "hide" }),
+      });
+      if (res.ok) setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    } catch {}
   }, []);
 
   const loadTeamMembers = useCallback(async () => {
@@ -988,6 +1022,7 @@ export function MessageThread({ clientId, currentUser, clientName }: Props) {
                   onReply={openThread}
                   onViewThread={openThread}
                   onDelete={handleDeleteMessage}
+                  onHide={handleHideMessage}
                   currentUserEmail={currentUser.email}
                 />
               </div>

@@ -16,28 +16,38 @@ export async function GET(req: NextRequest) {
   const access = await requireClientAccess(user.email!, clientId, supabase);
   if (!access.ok) return access.response;
 
+  // Get IDs of messages hidden by this user
+  const { data: hiddenRows } = await supabase
+    .from("message_hides")
+    .select("message_id")
+    .eq("user_email", user.email!);
+  const hiddenIds = hiddenRows?.map((r) => r.message_id as string) ?? [];
+
   const threadParentId = req.nextUrl.searchParams.get("thread_parent_id");
 
   if (threadParentId) {
-    const { data, error } = await supabase
+    let q = supabase
       .from("messages")
       .select("*")
       .eq("client_id", clientId)
       .eq("thread_parent_id", threadParentId)
       .is("deleted_at", null)
       .order("created_at", { ascending: true });
-
+    if (hiddenIds.length > 0) q = q.not("id", "in", `(${hiddenIds.join(",")})`);
+    const { data, error } = await q;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   }
 
-  const { data, error } = await supabase
+  let q = supabase
     .from("messages")
     .select("*")
     .eq("client_id", clientId)
     .is("thread_parent_id", null)
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
+  if (hiddenIds.length > 0) q = q.not("id", "in", `(${hiddenIds.join(",")})`);
+  const { data, error } = await q;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -122,10 +132,8 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await serverSupabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id, content } = await req.json();
-  if (!id || !content) {
-    return NextResponse.json({ error: "id and content are required" }, { status: 400 });
-  }
+  const { id, content, action } = await req.json();
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const supabase = createSupabaseAdmin();
 
@@ -138,6 +146,14 @@ export async function PATCH(req: NextRequest) {
 
   const access = await requireClientAccess(user.email!, msg.client_id, supabase);
   if (!access.ok) return access.response;
+
+  // Hide action — per-user only
+  if (action === "hide") {
+    await supabase.from("message_hides").upsert({ user_email: user.email!, message_id: id }, { onConflict: "user_email,message_id" });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!content) return NextResponse.json({ error: "content is required" }, { status: 400 });
 
   const { data, error } = await supabase
     .from("messages")

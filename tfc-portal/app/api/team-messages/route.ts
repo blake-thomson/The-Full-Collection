@@ -35,6 +35,13 @@ export async function GET(req: NextRequest) {
 
   if (!membership) return NextResponse.json({ error: "Not a member of this conversation" }, { status: 403 });
 
+  // Get IDs of messages this user has hidden
+  const { data: hiddenRows } = await admin
+    .from("team_message_hides")
+    .select("message_id")
+    .eq("user_email", actor.email);
+  const hiddenIds = hiddenRows?.map((r) => r.message_id as string) ?? [];
+
   let query = admin
     .from("team_messages")
     .select(`
@@ -46,6 +53,7 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false })
     .limit(limit);
 
+  if (hiddenIds.length > 0) query = query.not("id", "in", `(${hiddenIds.join(",")})`);
   if (before) query = query.lt("created_at", before);
 
   const { data: messages, error } = await query;
@@ -108,8 +116,17 @@ export async function PATCH(req: NextRequest) {
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { id, content } = body;
-  if (!id || !content?.trim()) return NextResponse.json({ error: "id and content required" }, { status: 400 });
+  const { id, content, action } = body;
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  // Hide action — per-user, no ownership check needed
+  if (action === "hide") {
+    const admin = createSupabaseAdmin();
+    await admin.from("team_message_hides").upsert({ user_email: actor.email, message_id: id }, { onConflict: "user_email,message_id" });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!content?.trim()) return NextResponse.json({ error: "content required" }, { status: 400 });
 
   const admin = createSupabaseAdmin();
 
