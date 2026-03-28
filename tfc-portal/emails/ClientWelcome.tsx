@@ -11,9 +11,10 @@ interface Props {
   appUrl: string;
 }
 
+
 export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
   const ctaUrl = resetLink || appUrl;
-  const ctaLabel = resetLink ? "Set Your Password & Sign In →" : "Sign In to Your Portal →";
+  const ctaLabel = resetLink ? "Set Your Password and Sign In" : "Sign In to Your Portal";
   const firstName = name.split(" ")[0] || name;
 
   return (
@@ -22,7 +23,6 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
       <Preview>Your Full Collection portal is ready, {firstName}. Set your password and get started.</Preview>
       <Body style={{ backgroundColor: "#0A0A0A", fontFamily: "'DM Sans', Arial, sans-serif", margin: 0, padding: 0 }}>
 
-        {/* Red accent bar */}
         <Section style={{ backgroundColor: "#E02020", height: 4, display: "block" }}>
           <Text style={{ margin: 0, fontSize: 0 }}>&nbsp;</Text>
         </Section>
@@ -41,15 +41,15 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
           </Section>
 
           {/* Hero */}
-          <Section style={{ marginBottom: 40 }}>
+          <Section style={{ marginBottom: 32 }}>
             <Text style={{ color: "#F0EDE6", fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.15 }}>
               Welcome, {firstName}.
             </Text>
             <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.8, margin: "0 0 12px" }}>
-              Your client portal is live. Everything you need to stay on top of your content — from production updates to team communication — is waiting for you inside.
+              Thank you for joining The Full Collection. We're genuinely excited to be part of your creative journey and look forward to growing with you every step of the way.
             </Text>
             <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.8, margin: 0 }}>
-              Use the button below to set your password and get in.
+              Your portal is ready. Set your password below to get started.
             </Text>
           </Section>
 
@@ -92,7 +92,6 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
 
           <Hr style={{ borderColor: "#1E1E1E", margin: "0 0 28px" }} />
 
-          {/* Footer */}
           <Section>
             <Text style={{ color: "#5A5652", fontSize: 12, lineHeight: 1.7, margin: "0 0 8px" }}>
               Questions? Reply to this email or reach us at{" "}
@@ -107,7 +106,6 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
 
         </Container>
 
-        {/* Bottom bar */}
         <Section style={{ backgroundColor: "#111111", borderTop: "1px solid #1E1E1E" }}>
           <Container style={{ maxWidth: 560, margin: "0 auto", padding: "16px 24px" }}>
             <Text style={{ color: "#2E2E2E", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", margin: 0, textAlign: "center" }}>
