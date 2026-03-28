@@ -127,22 +127,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "A client with this email already exists." }, { status: 400 });
   }
 
-  // Create auth user without a password — client will set their own via reset link
-  const { error: authError } = await supabase.auth.admin.createUser({
-    email: emailLower,
-    email_confirm: true,
-  });
-  if (authError) {
-    return NextResponse.json({ error: authError.message }, { status: 500 });
-  }
+  // Generate a one-time setup code
+  const setupCode = generateSetupCode();
 
-  // Insert client record
+  // Insert client record (no auth user yet — created when they activate)
   const { data: client, error: insertError } = await supabase
     .from("clients")
     .insert({
       name: name.trim(),
       email: emailLower,
       created_by: createdBy || null,
+      setup_code: setupCode,
     })
     .select()
     .single();
@@ -151,32 +146,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  // Generate a secure password-set link (recovery flow)
-  let resetLink: string | undefined;
-  try {
-    const { data: linkData } = await supabase.auth.admin.generateLink({
-      type: "recovery",
-      email: emailLower,
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
-      },
-    });
-    resetLink = linkData?.properties?.action_link ?? undefined;
-  } catch {
-    // Don't block on link generation failure
-  }
-
-  // Send welcome email with reset link (never send plaintext passwords)
+  // Send welcome email with setup code
   try {
     await sendClientWelcome({
       to: emailLower,
       name: name.trim(),
       email: emailLower,
-      resetLink,
+      code: setupCode,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
     });
   } catch {
     // Don't block on email failure
   }
 
   return NextResponse.json(client);
+}
+
+function generateSetupCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
 }

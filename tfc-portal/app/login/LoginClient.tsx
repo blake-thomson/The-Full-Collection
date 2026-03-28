@@ -151,7 +151,13 @@ export default function LoginClient() {
               </div>
               <div className="bg-surface-3 border border-border-2 rounded-lg py-[11px] px-[14px] mt-[14px]">
                 <p className="text-text-3 text-xs m-0 leading-relaxed">
-                  Don&apos;t have an account? Your login is created by The Full Collection team. Check your welcome email for credentials.
+                  New client?{" "}
+                  <button
+                    onClick={() => router.push("/setup")}
+                    className="text-red bg-transparent border-none cursor-pointer text-xs font-semibold p-0 font-body"
+                  >
+                    Activate your account →
+                  </button>
                 </p>
               </div>
             </>

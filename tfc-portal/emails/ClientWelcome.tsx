@@ -7,20 +7,17 @@ import {
 interface Props {
   name: string;
   email: string;
-  resetLink?: string;
+  code: string;
   appUrl: string;
 }
 
-
-export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
-  const ctaUrl = resetLink || appUrl;
-  const ctaLabel = resetLink ? "Set Your Password and Sign In" : "Sign In to Your Portal";
+export function ClientWelcomeEmail({ name, email, code, appUrl }: Props) {
   const firstName = name.split(" ")[0] || name;
 
   return (
     <Html lang="en">
       <Head />
-      <Preview>Your Full Collection portal is ready, {firstName}. Set your password and get started.</Preview>
+      <Preview>Your Full Collection portal is ready, {firstName}. Use your setup code to get started.</Preview>
       <Body style={{ backgroundColor: "#0A0A0A", fontFamily: "'DM Sans', Arial, sans-serif", margin: 0, padding: 0 }}>
 
         <Section style={{ backgroundColor: "#E02020", height: 4, display: "block" }}>
@@ -29,7 +26,6 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
 
         <Container style={{ maxWidth: 560, margin: "0 auto", padding: "48px 24px 56px" }}>
 
-          {/* Wordmark */}
           <Section style={{ marginBottom: 48 }}>
             <Text style={{
               color: "#E02020", fontSize: 11, fontWeight: 800,
@@ -40,20 +36,18 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
             </Text>
           </Section>
 
-          {/* Hero */}
           <Section style={{ marginBottom: 32 }}>
             <Text style={{ color: "#F0EDE6", fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.15 }}>
               Welcome, {firstName}.
             </Text>
             <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.8, margin: "0 0 12px" }}>
-              Thank you for joining The Full Collection. We're genuinely excited to be part of your creative journey and look forward to growing with you every step of the way.
+              Thank you for joining The Full Collection. We&apos;re genuinely excited to be part of your creative journey and look forward to growing with you every step of the way.
             </Text>
             <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.8, margin: 0 }}>
-              Your portal is ready. Set your password below to get started.
+              Use the setup code below to activate your account and set your password.
             </Text>
           </Section>
 
-          {/* Login details */}
           <Section style={{ background: "#151515", border: "1px solid #1E1E1E", borderRadius: 12, padding: "20px 24px", marginBottom: 28 }}>
             <Text style={{ color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 8px" }}>
               Your Login Email
@@ -63,10 +57,27 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
             </Text>
           </Section>
 
-          {/* CTA */}
+          <Section style={{ marginBottom: 28 }}>
+            <Text style={{ color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 10px" }}>
+              Your Setup Code
+            </Text>
+            <Text style={{ color: "#F0EDE6", fontSize: 32, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.2em", margin: 0, background: "#181818", padding: "14px 20px", borderRadius: 8, display: "block" }}>
+              {code}
+            </Text>
+            <Text style={{ color: "#5A5652", fontSize: 11, margin: "10px 0 0" }}>
+              This code is single-use and tied to your email address.
+            </Text>
+          </Section>
+
           <Section style={{ marginBottom: 36 }}>
+            <Text style={{ color: "#A8A49C", fontSize: 14, lineHeight: 1.7, margin: "0 0 20px" }}>
+              To get started:<br />
+              1. Go to your client portal<br />
+              2. Click &quot;Activate your account&quot;<br />
+              3. Enter your code above and set your password
+            </Text>
             <Button
-              href={ctaUrl}
+              href={`${appUrl}/setup?code=${code}`}
               style={{
                 display: "block",
                 background: "#E02020",
@@ -81,13 +92,8 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
                 textAlign: "center",
               }}
             >
-              {ctaLabel}
+              Get Started
             </Button>
-            {resetLink && (
-              <Text style={{ color: "#5A5652", fontSize: 11, margin: "10px 0 0", textAlign: "center" }}>
-                This link expires in 24 hours.
-              </Text>
-            )}
           </Section>
 
           <Hr style={{ borderColor: "#1E1E1E", margin: "0 0 28px" }} />
@@ -100,7 +106,7 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
               </Link>
             </Text>
             <Text style={{ color: "#2E2E2E", fontSize: 11, margin: 0 }}>
-              © {new Date().getFullYear()} The Full Collection. You received this because you signed up for a TFC portal account.
+              &copy; {new Date().getFullYear()} The Full Collection. You received this because you signed up for a TFC portal account.
             </Text>
           </Section>
 
