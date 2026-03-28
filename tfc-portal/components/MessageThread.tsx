@@ -533,12 +533,14 @@ function MessageRow({
   onReply,
   onViewThread,
   onDelete,
+  currentUserEmail,
 }: {
   msg: Message;
   grouped: boolean;
   onReply: (msg: Message) => void;
   onViewThread: (msg: Message) => void;
   onDelete?: (msg: Message) => void;
+  currentUserEmail?: string;
 }) {
   const [hovered, setHovered] = useState(false);
   const isSupport = msg.message_type === "support";
@@ -629,7 +631,7 @@ function MessageRow({
               </svg>
               Reply
             </button>
-            {onDelete && (
+            {onDelete && (!currentUserEmail || msg.sender_email === currentUserEmail) && (
               <button
                 className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold transition-colors hover:bg-[#252525] rounded-lg"
                 style={{ color: "#A8A49C", minHeight: 32 }}
@@ -690,6 +692,11 @@ function ThreadPanel({
   useEffect(() => {
     repliesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [replies]);
+
+  const handleDeleteReply = useCallback(async (msg: Message) => {
+    const res = await fetch(`/api/messages?id=${msg.id}`, { method: "DELETE" });
+    if (res.ok) setReplies((prev) => prev.filter((r) => r.id !== msg.id));
+  }, []);
 
   const sendReply = async (content: string, mentions: string[], messageType?: string) => {
     const optimistic: Message = {
@@ -797,6 +804,8 @@ function ThreadPanel({
                 grouped={grouped}
                 onReply={() => {}}
                 onViewThread={() => {}}
+                onDelete={handleDeleteReply}
+                currentUserEmail={currentUser.email}
               />
             );
           })
@@ -979,6 +988,7 @@ export function MessageThread({ clientId, currentUser, clientName }: Props) {
                   onReply={openThread}
                   onViewThread={openThread}
                   onDelete={handleDeleteMessage}
+                  currentUserEmail={currentUser.email}
                 />
               </div>
             );

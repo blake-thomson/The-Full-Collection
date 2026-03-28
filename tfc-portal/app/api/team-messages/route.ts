@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
       team_members!team_messages_sender_email_fkey(name, avatar_url, role)
     `)
     .eq("conversation_id", conversationId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -144,6 +145,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await admin.from("team_messages").delete().eq("id", id);
+  await admin.from("team_messages").update({ deleted_at: new Date().toISOString() }).eq("id", id);
   return NextResponse.json({ ok: true });
 }

@@ -59,6 +59,7 @@ async function buildResponse(
     .from("team_conversations")
     .select("*")
     .in("id", convIds)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   const enriched = await Promise.all(
@@ -198,4 +199,24 @@ export async function PATCH(req: NextRequest) {
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+}
+
+// DELETE /api/team-conversations?id=xxx — soft-delete a conversation (owner/admin only)
+export async function DELETE(req: NextRequest) {
+  const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!["owner", "admin"].includes(actor.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const admin = createSupabaseAdmin();
+  const now = new Date().toISOString();
+
+  // Soft-delete all messages in the conversation
+  await admin.from("team_messages").update({ deleted_at: now }).eq("conversation_id", id).is("deleted_at", null);
+  // Soft-delete the conversation
+  await admin.from("team_conversations").update({ deleted_at: now }).eq("id", id);
+
+  return NextResponse.json({ ok: true });
 }

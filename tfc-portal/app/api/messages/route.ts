@@ -163,13 +163,21 @@ export async function DELETE(req: NextRequest) {
 
   const { data: msg } = await supabase
     .from("messages")
-    .select("client_id")
+    .select("client_id, sender_email")
     .eq("id", id)
     .single();
   if (!msg) return NextResponse.json({ error: "Message not found" }, { status: 404 });
 
   const access = await requireClientAccess(user.email!, msg.client_id, supabase);
   if (!access.ok) return access.response;
+
+  // Only the sender or owner/admin team members may delete
+  if (msg.sender_email !== user.email) {
+    const { data: actor } = await supabase.from("team_members").select("role").eq("email", user.email!).single();
+    if (!actor || !["owner", "admin"].includes(actor.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
 
   const { error } = await supabase
     .from("messages")

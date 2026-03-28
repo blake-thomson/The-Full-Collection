@@ -119,6 +119,13 @@ export function TeamMessenger({ currentUser }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [hoveredMsg, setHoveredMsg] = useState<string | null>(null);
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashConvs, setTrashConvs] = useState<{ id: string; name: string | null; type: string; description?: string; deleted_at: string }[]>([]);
+  const [trashMsgs, setTrashMsgs] = useState<{ id: string; conversation_id: string; sender_email: string; content: string; deleted_at: string; team_members: { name: string } | null }[]>([]);
+  const [loadingTrash, setLoadingTrash] = useState(false);
+  const [deletingConv, setDeletingConv] = useState<string | null>(null);
+  const [confirmDeleteConv, setConfirmDeleteConv] = useState<string | null>(null);
+  const [trashBusy, setTrashBusy] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -319,6 +326,51 @@ export function TeamMessenger({ currentUser }: Props) {
     setCreating(false);
   };
 
+  const loadTrash = async () => {
+    setLoadingTrash(true);
+    const res = await fetch("/api/team-trash");
+    if (res.ok) {
+      const data = await res.json();
+      setTrashConvs(data.conversations ?? []);
+      setTrashMsgs(data.messages ?? []);
+    }
+    setLoadingTrash(false);
+  };
+
+  const deleteConversation = async (id: string) => {
+    setDeletingConv(id);
+    const res = await fetch(`/api/team-conversations?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeConv?.id === id) setActiveConv(null);
+    }
+    setDeletingConv(null);
+    setConfirmDeleteConv(null);
+  };
+
+  const restoreTrashItem = async (id: string, type: "conversation" | "message") => {
+    setTrashBusy(id);
+    const res = await fetch("/api/team-trash", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, type }),
+    });
+    if (res.ok) {
+      if (type === "conversation") setTrashConvs((prev) => prev.filter((c) => c.id !== id));
+      else setTrashMsgs((prev) => prev.filter((m) => m.id !== id));
+      if (type === "conversation") loadConversations();
+    }
+    setTrashBusy(null);
+  };
+
+  const permanentDelete = async (id: string, type: "conversation" | "message") => {
+    setTrashBusy(id);
+    await fetch(`/api/team-trash?id=${id}&type=${type}`, { method: "DELETE" });
+    if (type === "conversation") setTrashConvs((prev) => prev.filter((c) => c.id !== id));
+    else setTrashMsgs((prev) => prev.filter((m) => m.id !== id));
+    setTrashBusy(null);
+  };
+
   /* ── Conversation display name ── */
   const getConvName = (conv: Conversation) => {
     if (conv.type === "dm") {
@@ -428,6 +480,26 @@ export function TeamMessenger({ currentUser }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Trash — owner/admin only */}
+      {(currentUser.role === "owner" || currentUser.role === "admin") && (
+        <div style={{ padding: "16px 12px 8px", borderTop: "1px solid var(--border, #1e1e1e)" }}>
+          <button
+            onClick={() => { setShowTrash(true); loadTrash(); setActiveConv(null); setMobileSidebarOpen(false); }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium cursor-pointer font-body transition-all border-none text-left ${
+              showTrash ? "bg-red/10 text-red" : "bg-transparent text-text-3 hover:text-text hover:bg-surface-2"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+            Trash
+            {(trashConvs.length + trashMsgs.length) > 0 && (
+              <span className="ml-auto text-[10px] bg-red/20 text-red px-1.5 py-0.5 rounded-full">{trashConvs.length + trashMsgs.length}</span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -436,30 +508,61 @@ export function TeamMessenger({ currentUser }: Props) {
     const avatar = getConvAvatar(conv);
     const isActive = activeConv?.id === conv.id;
     const hasUnread = conv.unread_count > 0;
+    const canDelete = !conv.is_default && (currentUser.role === "owner" || currentUser.role === "admin") && conv.type !== "dm";
 
     return (
-      <button
-        onClick={() => { setActiveConv(conv); setMobileSidebarOpen(false); }}
-        className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
-          isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
-        }`}
-      >
-        {conv.type === "dm" && avatar ? (
-          <Avatar name={avatar.name} size={24} src={avatar.src} />
-        ) : conv.type === "channel" ? (
-          <span className={`text-[14px] font-bold ${isActive ? "text-red" : "text-text-3"}`}>#</span>
-        ) : (
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
-            {name.slice(0, 2).toUpperCase()}
-          </div>
+      <div className="relative group">
+        <button
+          onClick={() => { setActiveConv(conv); setShowTrash(false); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
+            isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
+          } ${confirmDeleteConv === conv.id ? "pr-[80px]" : ""}`}
+        >
+          {conv.type === "dm" && avatar ? (
+            <Avatar name={avatar.name} size={24} src={avatar.src} />
+          ) : conv.type === "channel" ? (
+            <span className={`text-[14px] font-bold ${isActive ? "text-red" : "text-text-3"}`}>#</span>
+          ) : (
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
+              {name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <span className={`flex-1 text-[13px] truncate ${hasUnread && !isActive ? "font-semibold text-text" : ""}`}>{name}</span>
+          {hasUnread && !isActive && (
+            <span className="bg-red text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {conv.unread_count > 99 ? "99+" : conv.unread_count}
+            </span>
+          )}
+        </button>
+        {canDelete && (
+          confirmDeleteConv === conv.id ? (
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+                disabled={deletingConv === conv.id}
+                className="text-[10px] font-semibold px-2 py-1 rounded bg-red/20 text-red border-none cursor-pointer font-body"
+              >
+                {deletingConv === conv.id ? "..." : "Delete"}
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(null); }}
+                className="text-[10px] px-1.5 py-1 rounded bg-surface-2 text-text-3 border-none cursor-pointer font-body"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(conv.id); }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-transparent border-none cursor-pointer text-text-3 hover:text-red p-1 rounded transition-all"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+          )
         )}
-        <span className={`flex-1 text-[13px] truncate ${hasUnread && !isActive ? "font-semibold text-text" : ""}`}>{name}</span>
-        {hasUnread && !isActive && (
-          <span className="bg-red text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-            {conv.unread_count > 99 ? "99+" : conv.unread_count}
-          </span>
-        )}
-      </button>
+      </div>
     );
   };
 
@@ -776,6 +879,102 @@ export function TeamMessenger({ currentUser }: Props) {
               </div>
             </div>
           </>
+        ) : showTrash ? (
+          /* Trash view */
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #1e1e1e", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ color: "#F0EDE6", fontWeight: 700, fontSize: 15 }}>Trash</span>
+              <button onClick={() => setShowTrash(false)} style={{ background: "none", border: "none", color: "#5A5652", cursor: "pointer", fontSize: 12, padding: "4px 8px", borderRadius: 6 }} className="hover:text-text transition-colors font-body">
+                Close
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+              {loadingTrash ? (
+                <div style={{ padding: 32, textAlign: "center", color: "#5A5652", fontSize: 13 }}>Loading...</div>
+              ) : trashConvs.length === 0 && trashMsgs.length === 0 ? (
+                <div style={{ padding: 32, textAlign: "center" }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>🗑️</div>
+                  <div style={{ color: "#5A5652", fontSize: 13 }}>Trash is empty</div>
+                  <div style={{ color: "#3A3632", fontSize: 11, marginTop: 4 }}>Deleted conversations and messages appear here for 30 days</div>
+                </div>
+              ) : (
+                <div>
+                  {trashConvs.length > 0 && (
+                    <div>
+                      <div style={{ padding: "4px 20px 8px", color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Conversations</div>
+                      {trashConvs.map((conv) => (
+                        <div key={conv.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #111" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ color: "#F0EDE6", fontSize: 13, fontWeight: 500 }}>
+                              {conv.type === "channel" ? `# ${conv.name}` : conv.name ?? (conv.type === "dm" ? "DM" : "Group")}
+                            </div>
+                            <div style={{ color: "#5A5652", fontSize: 11, marginTop: 2 }}>
+                              {conv.type} · Deleted {new Date(conv.deleted_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            <button
+                              onClick={() => restoreTrashItem(conv.id, "conversation")}
+                              disabled={trashBusy === conv.id}
+                              style={{ background: "#1e1e1e", border: "none", borderRadius: 6, padding: "4px 10px", color: "#A8A49C", fontSize: 11, cursor: "pointer" }}
+                            >
+                              {trashBusy === conv.id ? "..." : "Restore"}
+                            </button>
+                            <button
+                              onClick={() => permanentDelete(conv.id, "conversation")}
+                              disabled={trashBusy === conv.id}
+                              style={{ background: "none", border: "none", borderRadius: 6, padding: "4px 8px", color: "#5A5652", fontSize: 11, cursor: "pointer" }}
+                              className="hover:text-red transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {trashMsgs.length > 0 && (
+                    <div style={{ marginTop: trashConvs.length > 0 ? 16 : 0 }}>
+                      <div style={{ padding: "4px 20px 8px", color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Messages</div>
+                      {trashMsgs.map((msg) => (
+                        <div key={msg.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #111" }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ color: "#A8A49C", fontSize: 12, marginBottom: 2 }}>{msg.team_members?.name ?? msg.sender_email}</div>
+                            <div style={{ color: "#F0EDE6", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content}
+                            </div>
+                            <div style={{ color: "#5A5652", fontSize: 11, marginTop: 2 }}>
+                              Deleted {new Date(msg.deleted_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            <button
+                              onClick={() => restoreTrashItem(msg.id, "message")}
+                              disabled={trashBusy === msg.id}
+                              style={{ background: "#1e1e1e", border: "none", borderRadius: 6, padding: "4px 10px", color: "#A8A49C", fontSize: 11, cursor: "pointer" }}
+                            >
+                              {trashBusy === msg.id ? "..." : "Restore"}
+                            </button>
+                            <button
+                              onClick={() => permanentDelete(msg.id, "message")}
+                              disabled={trashBusy === msg.id}
+                              style={{ background: "none", border: "none", borderRadius: 6, padding: "4px 8px", color: "#5A5652", fontSize: 11, cursor: "pointer" }}
+                              className="hover:text-red transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div style={{ padding: "10px 20px", borderTop: "1px solid #111", background: "#0D0D0D" }}>
+              <p style={{ color: "#3A3632", fontSize: 10, margin: 0 }}>Items are permanently deleted after 30 days</p>
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
             <div className="text-[48px]">💬</div>
