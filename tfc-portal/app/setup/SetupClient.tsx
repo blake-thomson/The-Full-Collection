@@ -57,7 +57,7 @@ export default function SetupClient() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/onboarding");
   };
 
   return (
