@@ -20,6 +20,7 @@ import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { ClientAssignments } from "@/components/ClientAssignments";
 import { FAQ } from "@/components/FAQ";
+import { IdeaSwiper } from "@/components/IdeaSwiper";
 import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 import { TeamMessenger } from "@/components/TeamMessenger";
 import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
@@ -139,6 +140,7 @@ export default function TeamPortalClient() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
+  const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -237,6 +239,33 @@ export default function TeamPortalClient() {
   const handleCardDelete = (cardId: string) => {
     setClientCards((prev) => prev.filter((c) => c.id !== cardId));
     setSelectedCard(null);
+  };
+
+  const handleAcceptIdea = async (idea: { title: string; description: string; platform: string; content_style: string; content_type: string; priority: string; hook: string; cta: string }) => {
+    if (!selected) return;
+    try {
+      const res = await fetch("/api/kanban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: selected.id,
+          column_id: "idea",
+          title: idea.title,
+          description: `${idea.description}\n\nHook: "${idea.hook}"${idea.cta ? `\n\nCTA: ${idea.cta}` : ""}`,
+          platform: idea.platform,
+          content_style: idea.content_style,
+          content_type: idea.content_type,
+          priority: idea.priority || "medium",
+        }),
+      });
+      if (res.ok) {
+        const newCard = await res.json();
+        setClientCards((prev) => [...prev, newCard]);
+        setKanbanKey((k) => k + 1);
+      }
+    } catch (err) {
+      console.error("Failed to create card from idea:", err);
+    }
   };
 
   const switchTeamTab = (id: string) => { setTeamTab(id); setSelected(null); setMobileMenuOpen(false); setShowMyProfile(false); };
@@ -692,6 +721,16 @@ export default function TeamPortalClient() {
                       {t.label}
                     </button>
                   ))}
+                  <button
+                    onClick={() => setShowIdeaSwiper(true)}
+                    className="nav-tab whitespace-nowrap flex items-center gap-1.5 text-[#8B5CF6]"
+                    title="AI Idea Generator"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    Generate Ideas
+                  </button>
                 </div>
               </div>
 
@@ -838,6 +877,15 @@ export default function TeamPortalClient() {
           onSelectMessage={() => { setShowSearch(false); }}
           onSelectResource={() => { setShowSearch(false); }}
           onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {showIdeaSwiper && selected && (
+        <IdeaSwiper
+          clientId={selected.id}
+          clientPillars={(selected.onboarding_data as OnboardingData | null)?.pillars?.filter(Boolean)}
+          onAcceptIdea={handleAcceptIdea}
+          onClose={() => setShowIdeaSwiper(false)}
         />
       )}
     </div>

@@ -19,6 +19,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { FAQ } from "@/components/FAQ";
+import { IdeaSwiper } from "@/components/IdeaSwiper";
 import { useRealtimeKanban, useRealtimeMessages, useRealtimeNotifications } from "@/lib/use-realtime";
 import type { OnboardingData } from "@/lib/constants";
 
@@ -139,6 +140,7 @@ export default function DashboardClient() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaveErr, setProfileSaveErr] = useState("");
+  const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -195,6 +197,33 @@ export default function DashboardClient() {
   const handleCardDelete = (cardId: string) => {
     setKanbanCards((prev) => prev.filter((c) => c.id !== cardId));
     setSelectedCard(null);
+  };
+
+  const handleAcceptIdea = async (idea: { title: string; description: string; platform: string; content_style: string; content_type: string; priority: string; hook: string; cta: string }) => {
+    if (!client) return;
+    try {
+      const res = await fetch("/api/kanban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: client.id,
+          column_id: "idea",
+          title: idea.title,
+          description: `${idea.description}\n\nHook: "${idea.hook}"${idea.cta ? `\n\nCTA: ${idea.cta}` : ""}`,
+          platform: idea.platform,
+          content_style: idea.content_style,
+          content_type: idea.content_type,
+          priority: idea.priority || "medium",
+        }),
+      });
+      if (res.ok) {
+        const newCard = await res.json();
+        setKanbanCards((prev) => [...prev, newCard]);
+        setKanbanKey((k) => k + 1);
+      }
+    } catch (err) {
+      console.error("Failed to create card from idea:", err);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -512,6 +541,7 @@ export default function DashboardClient() {
               clientName={client.name}
               cards={kanbanCards}
               onSubmitIdea={() => { setTab("kanban"); setOpenCreateCard(true); setKanbanKey((k) => k + 1); }}
+              onGenerateIdeas={() => setShowIdeaSwiper(true)}
               onViewCalendar={() => setTab("calendar")}
               onMessageTeam={() => setTab("messages")}
               onCardClick={(card) => setSelectedCard(card as KanbanCard)}
@@ -821,6 +851,15 @@ export default function DashboardClient() {
           onSelectMessage={() => { setShowSearch(false); setTab("messages"); }}
           onSelectResource={() => { setShowSearch(false); setTab("resources"); }}
           onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {showIdeaSwiper && (
+        <IdeaSwiper
+          clientId={client.id}
+          clientPillars={(client.onboarding_data as OnboardingData | null)?.pillars?.filter(Boolean)}
+          onAcceptIdea={handleAcceptIdea}
+          onClose={() => setShowIdeaSwiper(false)}
         />
       )}
     </div>
