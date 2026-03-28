@@ -1,5 +1,6 @@
 import React from "react";
 import { Resend } from "resend";
+import { renderAsync } from "@react-email/render";
 import { TeamInviteEmail } from "@/emails/TeamInvite";
 import { ClientWelcomeEmail } from "@/emails/ClientWelcome";
 import { StatusNotificationEmail } from "@/emails/StatusNotification";
@@ -22,17 +23,20 @@ export async function sendTeamInvite({
   role: string;
   code: string;
 }) {
-  return resend.emails.send({
-    from: FROM,
-    to,
-    subject: "You've been invited to join The Full Collection team",
-    react: React.createElement(TeamInviteEmail, {
+  const html = await renderAsync(
+    React.createElement(TeamInviteEmail, {
       name,
       inviterName,
       role,
       code,
       appUrl: process.env.NEXT_PUBLIC_APP_URL!,
-    }),
+    })
+  );
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: "You've been invited to join The Full Collection team",
+    html,
   });
 }
 
@@ -49,16 +53,19 @@ export async function sendClientWelcome({
   code: string;
   appUrl: string;
 }) {
-  return resend.emails.send({
-    from: FROM,
-    to,
-    subject: "Welcome to The Full Collection — Your Portal is Ready",
-    react: React.createElement(ClientWelcomeEmail, {
+  const html = await renderAsync(
+    React.createElement(ClientWelcomeEmail, {
       name,
       email,
       code,
       appUrl,
-    }),
+    })
+  );
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Welcome to The Full Collection — Your Portal is Ready",
+    html,
   });
 }
 
@@ -75,17 +82,20 @@ export async function sendStatusNotification({
   oldStatus: string;
   newStatus: string;
 }) {
-  return resend.emails.send({
-    from: FROM,
-    to,
-    subject: `Content Update: "${contentTitle}" moved to ${newStatus}`,
-    react: React.createElement(StatusNotificationEmail, {
+  const html = await renderAsync(
+    React.createElement(StatusNotificationEmail, {
       clientName,
       contentTitle,
       oldStatus,
       newStatus,
       appUrl: process.env.NEXT_PUBLIC_APP_URL!,
-    }),
+    })
+  );
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Content Update: "${contentTitle}" moved to ${newStatus}`,
+    html,
   });
 }
 
@@ -96,14 +106,17 @@ export async function sendPasswordReset({
   to: string;
   resetLink: string;
 }) {
+  const html = await renderAsync(
+    React.createElement(PasswordResetEmail, {
+      email: to,
+      resetLink,
+      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+    })
+  );
   return resend.emails.send({
     from: FROM,
     to,
     subject: "Reset Your Password — The Full Collection",
-    react: React.createElement(PasswordResetEmail, {
-      email: to,
-      resetLink,
-      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
-    }),
+    html,
   });
 }
