@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  Html, Head, Preview, Body, Container, Section, Row, Column,
+  Html, Head, Preview, Body, Container, Section,
   Text, Button, Hr, Link,
 } from "@react-email/components";
 
@@ -10,13 +10,6 @@ interface Props {
   resetLink?: string;
   appUrl: string;
 }
-
-const card: React.CSSProperties = {
-  background: "#151515",
-  border: "1px solid #1E1E1E",
-  borderRadius: 12,
-  padding: "20px 24px",
-};
 
 export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
   const ctaUrl = resetLink || appUrl;
@@ -34,10 +27,10 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
           <Text style={{ margin: 0, fontSize: 0 }}>&nbsp;</Text>
         </Section>
 
-        <Container style={{ maxWidth: 560, margin: "0 auto", padding: "40px 24px 48px" }}>
+        <Container style={{ maxWidth: 560, margin: "0 auto", padding: "48px 24px 56px" }}>
 
           {/* Wordmark */}
-          <Section style={{ marginBottom: 40 }}>
+          <Section style={{ marginBottom: 48 }}>
             <Text style={{
               color: "#E02020", fontSize: 11, fontWeight: 800,
               letterSpacing: "0.22em", textTransform: "uppercase",
@@ -48,56 +41,20 @@ export function ClientWelcomeEmail({ name, email, resetLink, appUrl }: Props) {
           </Section>
 
           {/* Hero */}
-          <Section style={{ marginBottom: 32 }}>
-            <Text style={{ color: "#F0EDE6", fontSize: 30, fontWeight: 800, margin: "0 0 12px", lineHeight: 1.2 }}>
+          <Section style={{ marginBottom: 40 }}>
+            <Text style={{ color: "#F0EDE6", fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.15 }}>
               Welcome, {firstName}.
             </Text>
-            <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.75, margin: 0 }}>
-              Your client portal is live and ready to go. Everything you need to track your content, message the team, and manage your subscription is in one place.
+            <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.8, margin: "0 0 12px" }}>
+              Your client portal is live. Everything you need to stay on top of your content — from production updates to team communication — is waiting for you inside.
             </Text>
-          </Section>
-
-          {/* Feature row */}
-          <Section style={{ marginBottom: 32 }}>
-            <Row>
-              <Column style={{ width: "33%", paddingRight: 8 }}>
-                <Section style={card}>
-                  <Text style={{ color: "#E02020", fontSize: 18, margin: "0 0 6px" }}>📋</Text>
-                  <Text style={{ color: "#F0EDE6", fontSize: 12, fontWeight: 700, margin: "0 0 4px", letterSpacing: "0.03em" }}>
-                    Content Board
-                  </Text>
-                  <Text style={{ color: "#5A5652", fontSize: 11, margin: 0, lineHeight: 1.5 }}>
-                    Track every piece of content through production
-                  </Text>
-                </Section>
-              </Column>
-              <Column style={{ width: "33%", paddingRight: 4, paddingLeft: 4 }}>
-                <Section style={card}>
-                  <Text style={{ color: "#E02020", fontSize: 18, margin: "0 0 6px" }}>💬</Text>
-                  <Text style={{ color: "#F0EDE6", fontSize: 12, fontWeight: 700, margin: "0 0 4px", letterSpacing: "0.03em" }}>
-                    Messenger
-                  </Text>
-                  <Text style={{ color: "#5A5652", fontSize: 11, margin: 0, lineHeight: 1.5 }}>
-                    Direct line to your creative team
-                  </Text>
-                </Section>
-              </Column>
-              <Column style={{ width: "33%", paddingLeft: 8 }}>
-                <Section style={card}>
-                  <Text style={{ color: "#E02020", fontSize: 18, margin: "0 0 6px" }}>📁</Text>
-                  <Text style={{ color: "#F0EDE6", fontSize: 12, fontWeight: 700, margin: "0 0 4px", letterSpacing: "0.03em" }}>
-                    Resources
-                  </Text>
-                  <Text style={{ color: "#5A5652", fontSize: 11, margin: 0, lineHeight: 1.5 }}>
-                    All your brand assets in one place
-                  </Text>
-                </Section>
-              </Column>
-            </Row>
+            <Text style={{ color: "#A8A49C", fontSize: 15, lineHeight: 1.8, margin: 0 }}>
+              Use the button below to set your password and get in.
+            </Text>
           </Section>
 
           {/* Login details */}
-          <Section style={{ ...card, marginBottom: 28 }}>
+          <Section style={{ background: "#151515", border: "1px solid #1E1E1E", borderRadius: 12, padding: "20px 24px", marginBottom: 28 }}>
             <Text style={{ color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 8px" }}>
               Your Login Email
             </Text>
