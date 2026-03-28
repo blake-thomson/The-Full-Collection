@@ -11,7 +11,6 @@ import { TeamManagement } from "@/components/TeamManagement";
 import { NotificationBell } from "@/components/NotificationBell";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { ContentCalendar } from "@/components/ContentCalendar";
-import { MessageThread } from "@/components/MessageThread";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
 import { SubscriptionSection } from "@/components/SubscriptionSection";
 import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
@@ -104,7 +103,6 @@ const NAV_ITEMS = [
 const CLIENT_TABS = [
   { id: "kanban", label: "Content Board" },
   { id: "calendar", label: "Calendar" },
-  { id: "messages", label: "Messages" },
   { id: "intake", label: "Intake" },
   { id: "resources", label: "Resources" },
   { id: "billing", label: "Billing" },
@@ -281,7 +279,7 @@ export default function TeamPortalClient() {
   const currentUser = { name: teamUser.name, email: teamUser.email, type: "team" as const };
   const navItems = NAV_ITEMS.filter((n) => !n.ownerOnly || ["owner", "admin"].includes(teamUser.role));
 
-  const overflowClientTabs = ["kanban", "messages", "calendar", "resources", "billing", "trash"];
+  const overflowClientTabs = ["kanban", "calendar", "resources", "billing", "trash"];
 
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
@@ -761,13 +759,6 @@ export default function TeamPortalClient() {
                 {clientTab === "calendar" && (
                   <div className="h-full">
                     <ContentCalendar cards={clientCards} onCardClick={(card) => setSelectedCard(card as KanbanCard)} />
-                  </div>
-                )}
-
-                {/* Messages */}
-                {clientTab === "messages" && (
-                  <div className="h-full">
-                    <MessageThread clientId={selected.id} currentUser={currentUser} clientName={selected.name} />
                   </div>
                 )}
 
