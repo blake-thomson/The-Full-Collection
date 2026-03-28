@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /* ── FAQ Data ── */
 
@@ -249,10 +249,76 @@ const TEAM_FAQ_DATA: FAQCategory[] = [
 
 /* ── Component ── */
 
-export function FAQ({ userType = "client" }: { userType?: "client" | "team" }) {
+const TYPE_LABELS: Record<string, string> = { feature: "Feature Request", bug: "Bug Report", improvement: "Improvement" };
+const TYPE_COLORS: Record<string, string> = { feature: "#3B82F6", bug: "#EF4444", improvement: "#10B981" };
+const STATUS_LABELS: Record<string, string> = { pending: "Pending", reviewing: "Reviewing", planned: "Planned", done: "Done", declined: "Declined" };
+const STATUS_COLORS: Record<string, string> = { pending: "#F59E0B", reviewing: "#3B82F6", planned: "#8B5CF6", done: "#10B981", declined: "#6B7280" };
+
+interface FeatureRequest {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  submitted_by: string;
+  submitted_by_name: string;
+  status: string;
+  created_at: string;
+}
+
+export function FAQ({ userType = "client", userRole }: { userType?: "client" | "team"; userRole?: string }) {
   const [search, setSearch] = useState("");
   const [openCategory, setOpenCategory] = useState<number | null>(null);
   const [openItem, setOpenItem] = useState<string | null>(null);
+
+  // Feature request form state
+  const [frTitle, setFrTitle] = useState("");
+  const [frDesc, setFrDesc] = useState("");
+  const [frType, setFrType] = useState("feature");
+  const [frBusy, setFrBusy] = useState(false);
+  const [frSuccess, setFrSuccess] = useState(false);
+  const [frErr, setFrErr] = useState("");
+
+  // Admin review state
+  const [requests, setRequests] = useState<FeatureRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
+  const isAdmin = userRole === "owner" || userRole === "admin";
+
+  const loadRequests = async () => {
+    setLoadingRequests(true);
+    const res = await fetch("/api/feature-requests");
+    if (res.ok) setRequests(await res.json());
+    setLoadingRequests(false);
+  };
+
+  useEffect(() => {
+    if (isAdmin && showRequests) loadRequests();
+  }, [isAdmin, showRequests]);
+
+  const submitRequest = async () => {
+    setFrErr("");
+    if (!frTitle.trim() || !frDesc.trim()) { setFrErr("Please fill in all fields."); return; }
+    setFrBusy(true);
+    const res = await fetch("/api/feature-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: frTitle, description: frDesc, type: frType }),
+    });
+    setFrBusy(false);
+    if (!res.ok) { const d = await res.json(); setFrErr(d.error || "Failed to submit."); return; }
+    setFrTitle(""); setFrDesc(""); setFrType("feature");
+    setFrSuccess(true);
+    setTimeout(() => setFrSuccess(false), 5000);
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    await fetch("/api/feature-requests", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+  };
 
   const categories = userType === "team" ? [...FAQ_DATA, ...TEAM_FAQ_DATA] : FAQ_DATA;
 
@@ -438,6 +504,130 @@ export function FAQ({ userType = "client" }: { userType?: "client" | "team" }) {
           Send a message to your team from the Messages tab, or type <code className="text-red bg-surface px-1.5 py-0.5 rounded text-[11px]">/help</code> to create a support ticket.
         </p>
       </div>
+
+      {/* Feature Request Form — team only */}
+      {userType === "team" && (
+        <div className="mt-6 rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="px-5 py-4 border-b border-border bg-surface-2 flex items-center gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-red shrink-0">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            <span className="text-text text-[14px] font-semibold">Submit a Feature Request</span>
+          </div>
+          <div className="p-5">
+            {frSuccess ? (
+              <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.25)] rounded-lg p-4 text-center">
+                <p className="text-[#10B981] text-sm font-bold m-0 mb-1">Request submitted!</p>
+                <p className="text-text-3 text-[12px] m-0">Blake will review it and update the status.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3.5">
+                <p className="text-text-3 text-[12px] m-0 leading-relaxed">
+                  Found a bug, have an idea, or want something improved? Submit it here and it'll go straight to Blake's review queue.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {(["feature", "bug", "improvement"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setFrType(t)}
+                      className="tfc-pill capitalize"
+                      style={frType === t ? { background: `${TYPE_COLORS[t]}18`, color: TYPE_COLORS[t], border: `1px solid ${TYPE_COLORS[t]}40` } : {}}
+                    >
+                      {TYPE_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <label className="tfc-label">Title</label>
+                  <input
+                    className="tfc-input"
+                    value={frTitle}
+                    onChange={(e) => setFrTitle(e.target.value)}
+                    placeholder="Brief summary of the request"
+                  />
+                </div>
+                <div>
+                  <label className="tfc-label">Description</label>
+                  <textarea
+                    className="tfc-input resize-none"
+                    rows={3}
+                    value={frDesc}
+                    onChange={(e) => setFrDesc(e.target.value)}
+                    placeholder="Describe what you'd like to see, or what's broken and how to reproduce it..."
+                  />
+                </div>
+                {frErr && <div className="text-[#FCA5A5] text-[13px] bg-[rgba(239,68,68,0.08)] py-2 px-3 rounded-[7px]">{frErr}</div>}
+                <button className="tfc-btn py-[9px] px-5 text-xs self-start" onClick={submitRequest} disabled={frBusy}>
+                  {frBusy ? "Submitting..." : "Submit Request →"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Admin Review Panel — owner/admin only */}
+      {userType === "team" && isAdmin && (
+        <div className="mt-4 rounded-xl border border-border bg-surface overflow-hidden">
+          <button
+            onClick={() => setShowRequests(!showRequests)}
+            className="w-full px-5 py-4 border-b border-border bg-surface-2 flex items-center justify-between bg-transparent cursor-pointer text-left hover:bg-surface-3 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-red shrink-0">
+                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+              </svg>
+              <span className="text-text text-[14px] font-semibold">Review Requests</span>
+              <span className="text-[11px] font-bold text-text-3 bg-surface-3 border border-border py-[2px] px-2 rounded-md">Owner / Admin</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-3 transition-transform" style={{ transform: showRequests ? "rotate(180deg)" : "none" }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+
+          {showRequests && (
+            <div className="p-5">
+              {loadingRequests ? (
+                <p className="text-text-3 text-[13px] text-center py-4">Loading...</p>
+              ) : requests.length === 0 ? (
+                <p className="text-text-3 text-[13px] text-center py-4">No requests submitted yet.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {requests.map((r) => (
+                    <div key={r.id} className="bg-surface-2 border border-border rounded-xl p-4">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-text text-[13px] font-semibold">{r.title}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.08em] py-[2px] px-2 rounded-md"
+                              style={{ color: TYPE_COLORS[r.type], background: `${TYPE_COLORS[r.type]}18`, border: `1px solid ${TYPE_COLORS[r.type]}30` }}>
+                              {TYPE_LABELS[r.type]}
+                            </span>
+                          </div>
+                          <p className="text-text-2 text-[12px] m-0 leading-relaxed">{r.description}</p>
+                          <p className="text-text-3 text-[11px] m-0 mt-1.5">
+                            {r.submitted_by_name} · {new Date(r.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        </div>
+                        <select
+                          value={r.status}
+                          onChange={(e) => updateStatus(r.id, e.target.value)}
+                          className="text-[11px] font-bold uppercase tracking-[0.06em] py-[4px] px-2.5 rounded-lg border cursor-pointer bg-surface shrink-0"
+                          style={{ color: STATUS_COLORS[r.status], borderColor: `${STATUS_COLORS[r.status]}40` }}
+                        >
+                          {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                            <option key={val} value={val}>{label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

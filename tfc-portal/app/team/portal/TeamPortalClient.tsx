@@ -624,7 +624,7 @@ export default function TeamPortalClient() {
           {/* ── HELP / FAQ ── */}
           {teamTab === "help" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
-              <FAQ userType="team" />
+              <FAQ userType="team" userRole={teamUser.role} />
             </div>
           )}
 
