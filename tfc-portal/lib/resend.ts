@@ -41,12 +41,14 @@ export async function sendClientWelcome({
   to,
   name,
   email,
-  resetLink,
+  code,
+  appUrl,
 }: {
   to: string;
   name: string;
   email: string;
-  resetLink?: string;
+  code: string;
+  appUrl: string;
 }) {
   return resend.emails.send({
     from: FROM,
@@ -55,8 +57,8 @@ export async function sendClientWelcome({
     react: ClientWelcomeEmail({
       name,
       email,
-      resetLink,
-      appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+      code,
+      appUrl,
     }),
   });
 }
