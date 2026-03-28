@@ -58,6 +58,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
   const [deleting, setDeleting] = useState(false);
   const [changingRoleId, setChangingRoleId] = useState<string | null>(null);
   const [savingRole, setSavingRole] = useState(false);
+  const [roleDropdownPos, setRoleDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const supabase = createBrowserSupabase();
   const canManage = ["owner", "admin"].includes(teamUser.role);
 
@@ -73,6 +74,13 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!changingRoleId) return;
+    const close = () => { setChangingRoleId(null); setRoleDropdownPos(null); };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [changingRoleId]);
 
   const sendInvite = async () => {
     setInvErr("");
@@ -248,9 +256,19 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                       </span>
                       {m.email === teamUser.email && <span className="text-text-3 text-[11px] font-normal">(you)</span>}
                       {canManage && m.email !== teamUser.email && m.role !== "owner" ? (
-                        <div className="relative">
+                        <div>
                           <button
-                            onClick={(e) => { e.stopPropagation(); setChangingRoleId(changingRoleId === m.id ? null : m.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (changingRoleId === m.id) {
+                                setChangingRoleId(null);
+                                setRoleDropdownPos(null);
+                              } else {
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setRoleDropdownPos({ top: rect.bottom + 6, left: rect.left });
+                                setChangingRoleId(m.id);
+                              }
+                            }}
                             className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md cursor-pointer border-none flex items-center gap-1"
                             style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
                             title="Change role"
@@ -258,9 +276,10 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                             {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
                           </button>
-                          {changingRoleId === m.id && (
+                          {changingRoleId === m.id && roleDropdownPos && (
                             <div
-                              className="absolute left-0 top-full mt-1 z-20 bg-surface border border-border rounded-xl shadow-xl py-1 min-w-[160px]"
+                              style={{ position: "fixed", top: roleDropdownPos.top, left: roleDropdownPos.left, zIndex: 9999 }}
+                              className="bg-surface border border-border rounded-xl shadow-xl py-1 min-w-[180px]"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {(teamUser.role === "owner" ? ["admin", "project_manager", "editor", "videographer", "smm"] : ["editor", "videographer", "smm"]).map((r) => (
