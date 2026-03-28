@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Html, Head, Preview, Body, Container, Section, Row, Column,
   Text, Button, Hr, Link,
