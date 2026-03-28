@@ -28,35 +28,28 @@ export default function AcceptInviteClient() {
       setErr("Passwords do not match.");
       return;
     }
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
     setBusy(true);
 
-    // Validate invite via API (uses service role key server-side)
-    const res = await fetch("/api/invites/validate", {
+    // Create auth user, validate invite, and create team member — all server-side atomically
+    const res = await fetch("/api/invites/accept", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, name: name.trim(), password }),
     });
-    const invite = await res.json();
+    const data = await res.json();
     if (!res.ok) {
-      setErr(invite.error || "Invalid invite code.");
+      setErr(data.error || "Failed to accept invite.");
       setBusy(false);
       return;
     }
 
-    // Create auth user
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: invite.email,
-      password,
-    });
-    if (signUpError) {
-      setErr(signUpError.message);
-      setBusy(false);
-      return;
-    }
-
-    // Sign in
+    // Sign in with the newly created credentials
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: invite.email,
+      email: data.email,
       password,
     });
     if (signInError) {
@@ -65,20 +58,6 @@ export default function AcceptInviteClient() {
       return;
     }
 
-    // Create team member and mark invite used
-    const acceptRes = await fetch("/api/invites/accept", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, name: name.trim() }),
-    });
-    if (!acceptRes.ok) {
-      const data = await acceptRes.json();
-      setErr(data.error || "Failed to accept invite.");
-      setBusy(false);
-      return;
-    }
-
-    setBusy(false);
     router.push("/team/welcome");
   };
 
@@ -113,19 +92,36 @@ export default function AcceptInviteClient() {
             </div>
             <div>
               <label className="tfc-label">Your Name</label>
-              <input className="tfc-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
+              <input
+                className="tfc-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your full name"
+              />
             </div>
             <div>
               <label className="tfc-label">Password</label>
-              <input className="tfc-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" />
+              <input
+                className="tfc-input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password (min 8 characters)"
+              />
             </div>
             <div>
               <label className="tfc-label">Confirm Password</label>
-              <input className="tfc-input" type="password" value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)} placeholder="Confirm password" />
+              <input
+                className="tfc-input"
+                type="password"
+                value={confirmPass}
+                onChange={(e) => setConfirmPass(e.target.value)}
+                placeholder="Confirm password"
+              />
             </div>
             {err && <ErrBox msg={err} />}
             <button className="tfc-btn w-full mt-1" onClick={submit} disabled={busy}>
-              {busy ? "Verifying..." : "Activate Account →"}
+              {busy ? "Creating account..." : "Activate Account →"}
             </button>
           </div>
           <p className="text-center mt-[18px] text-[13px] text-text-2">
