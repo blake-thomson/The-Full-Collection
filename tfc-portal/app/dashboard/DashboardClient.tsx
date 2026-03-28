@@ -9,6 +9,7 @@ import { Kanban } from "@/components/Kanban";
 import { IntakeView } from "@/components/IntakeView";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { NotificationBell } from "@/components/NotificationBell";
+import { useTheme } from "@/lib/theme";
 import { MessageThread } from "@/components/MessageThread";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
@@ -109,6 +110,7 @@ const TABS = [
 ];
 
 export default function DashboardClient() {
+  const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState("home");
   const [client, setClient] = useState<ClientData | null>(null);
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
@@ -784,6 +786,43 @@ export default function DashboardClient() {
                         <span className="text-[13px] font-semibold" style={{ color: row.color || "#F0EDE6" }}>{row.v}</span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Appearance */}
+                  <div className="bg-surface border border-border rounded-2xl p-5 sm:p-7 mb-4">
+                    <h4 className="text-text font-heading text-[14px] font-bold m-0 mb-4">Appearance</h4>
+                    <div className="flex gap-3">
+                      {([
+                        { id: "dark" as const, label: "Dark", bg: "#0A0A0A", sidebar: "#111111", text: "#F0EDE6", border: "#252525" },
+                        { id: "light" as const, label: "Light", bg: "#F2F0EC", sidebar: "#FFFFFF", text: "#1A1917", border: "#DDD9D3" },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => setTheme(opt.id)}
+                          className="flex-1 flex flex-col items-start gap-2.5 p-3 rounded-xl border-2 cursor-pointer bg-transparent transition-all"
+                          style={{ borderColor: theme === opt.id ? "#E02020" : "var(--color-border-2)" }}
+                        >
+                          <div style={{
+                            width: "100%", height: 56, borderRadius: 8,
+                            background: opt.bg, border: `1px solid ${opt.border}`,
+                            overflow: "hidden", position: "relative", flexShrink: 0,
+                          }}>
+                            <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 34, background: opt.sidebar, borderRight: `1px solid ${opt.border}` }} />
+                            <div style={{ position: "absolute", top: 12, left: 42, right: 8, height: 7, borderRadius: 4, background: opt.text, opacity: 0.8 }} />
+                            <div style={{ position: "absolute", top: 26, left: 42, right: 20, height: 5, borderRadius: 3, background: opt.text, opacity: 0.3 }} />
+                            <div style={{ position: "absolute", top: 37, left: 42, right: 14, height: 5, borderRadius: 3, background: opt.text, opacity: 0.18 }} />
+                          </div>
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="text-text text-[12px] font-semibold">{opt.label}</span>
+                            {theme === opt.id && (
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-auto shrink-0">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Security */}

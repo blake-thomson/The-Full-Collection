@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         red: { DEFAULT: "#E02020", light: "#FF3B3B" },
-        bg: "#0A0A0A",
-        surface: { DEFAULT: "#111111", 2: "#181818", 3: "#202020" },
-        border: { DEFAULT: "#252525", 2: "#2E2E2E" },
-        text: { DEFAULT: "#F0EDE6", 2: "#A8A49C", 3: "#5A5652" },
+        bg: "var(--color-bg)",
+        surface: { DEFAULT: "var(--color-surface)", 2: "var(--color-surface-2)", 3: "var(--color-surface-3)" },
+        border: { DEFAULT: "var(--color-border)", 2: "var(--color-border-2)" },
+        text: { DEFAULT: "var(--color-text)", 2: "var(--color-text-2)", 3: "var(--color-text-3)" },
       },
       fontFamily: {
         heading: ["var(--font-syne)", "Syne", "sans-serif"],

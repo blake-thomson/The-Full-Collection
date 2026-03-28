@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "@/lib/theme";
 
 interface TeamMember {
   id: string;
@@ -163,6 +164,7 @@ const ROLE_SOPS: Record<string, { summary: string; responsibilities: string[]; p
 };
 
 export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, onBack, onClientSelect }: Props) {
+  const { theme, setTheme } = useTheme();
   const [tab, setTab] = useState<"profile" | "work" | "clients">("profile");
   const [member, setMember] = useState<TeamMember | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -474,6 +476,49 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Appearance — only visible on your own profile */}
+          {isOwnProfile && (
+            <div style={{ marginTop: 24, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 16, padding: "20px 24px" }}>
+              <div style={{ color: "var(--color-text)", fontSize: 14, fontWeight: 700, fontFamily: "var(--font-syne), Syne, sans-serif", marginBottom: 16 }}>Appearance</div>
+              <div style={{ display: "flex", gap: 12 }}>
+                {([
+                  { id: "dark" as const, label: "Dark", bg: "#0A0A0A", sidebar: "#111111", text: "#F0EDE6", border: "#252525" },
+                  { id: "light" as const, label: "Light", bg: "#F2F0EC", sidebar: "#FFFFFF", text: "#1A1917", border: "#DDD9D3" },
+                ]).map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setTheme(opt.id)}
+                    style={{
+                      flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start",
+                      gap: 10, padding: 12, borderRadius: 12, cursor: "pointer",
+                      background: "transparent", border: `2px solid ${theme === opt.id ? "#E02020" : "var(--color-border-2)"}`,
+                      transition: "border-color 0.15s",
+                    }}
+                  >
+                    <div style={{
+                      width: "100%", height: 52, borderRadius: 8,
+                      background: opt.bg, border: `1px solid ${opt.border}`,
+                      overflow: "hidden", position: "relative",
+                    }}>
+                      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 32, background: opt.sidebar, borderRight: `1px solid ${opt.border}` }} />
+                      <div style={{ position: "absolute", top: 11, left: 40, right: 8, height: 7, borderRadius: 4, background: opt.text, opacity: 0.8 }} />
+                      <div style={{ position: "absolute", top: 25, left: 40, right: 20, height: 5, borderRadius: 3, background: opt.text, opacity: 0.3 }} />
+                      <div style={{ position: "absolute", top: 36, left: 40, right: 14, height: 5, borderRadius: 3, background: opt.text, opacity: 0.18 }} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+                      <span style={{ color: "var(--color-text)", fontSize: 12, fontWeight: 600 }}>{opt.label}</span>
+                      {theme === opt.id && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto" }}>
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

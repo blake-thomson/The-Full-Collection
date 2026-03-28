@@ -48,6 +48,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="TFC Portal" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        {/* Prevent flash of wrong theme */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('tfc-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}` }} />
       </head>
       <body className="bg-bg font-body text-text antialiased">
         {children}
