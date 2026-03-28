@@ -6,9 +6,7 @@ import { PasswordResetEmail } from "@/emails/PasswordReset";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 
-// TODO: Change FROM to 'The Full Collection <hello@thefullcollection.com>' once the domain is verified in Resend.
-// Using the Resend test address until then.
-const FROM = "The Full Collection <onboarding@resend.dev>";
+const FROM = "The Full Collection <hello@thefullcollection.com>";
 
 export async function sendTeamInvite({
   to,
