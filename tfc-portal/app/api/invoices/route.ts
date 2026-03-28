@@ -134,3 +134,46 @@ export async function PATCH(req: NextRequest) {
   }
   return NextResponse.json(data);
 }
+
+// DELETE /api/invoices?id=...
+export async function DELETE(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const supabase = createSupabaseAdmin();
+
+  // Only team members can delete invoices
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
+
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { error: "Invoice id required" },
+      { status: 400 }
+    );
+  }
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("id", id)
+    .single();
+
+  if (!invoice) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  }
+
+  const { error } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ success: true });
+}

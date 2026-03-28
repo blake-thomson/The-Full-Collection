@@ -5,6 +5,25 @@ import { sendTeamInvite } from "@/lib/resend";
 import { requireTeamMember } from "@/lib/auth-helpers";
 import crypto from "crypto";
 
+// GET /api/invites — list all invites (team members only)
+export async function GET() {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const supabase = createSupabaseAdmin();
+  const access = await requireTeamMember(user.email!, supabase);
+  if (!access.ok) return access.response;
+
+  const { data, error } = await supabase
+    .from("team_invites")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
 export async function POST(req: NextRequest) {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();

@@ -19,6 +19,7 @@ import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { ClientAssignments } from "@/components/ClientAssignments";
+import { FAQ } from "@/components/FAQ";
 import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 import { TeamMessenger } from "@/components/TeamMessenger";
 import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
@@ -96,6 +97,10 @@ const NAV_ITEMS = [
   {
     id: "team", label: "Team", ownerOnly: true,
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  },
+  {
+    id: "help", label: "Help",
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   },
 ];
 
@@ -190,7 +195,7 @@ export default function TeamPortalClient() {
           id: a.id, description: a.action, timestamp: a.created_at, type: a.actor_type || "system",
         })));
       }
-    } catch {}
+    } catch (err) { console.error("Failed to load client details:", err); }
   }, []);
 
   const loadOverviewActivity = useCallback(async () => {
@@ -207,7 +212,7 @@ export default function TeamPortalClient() {
       }
       items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setAllActivity(items.slice(0, 30));
-    } catch {}
+    } catch (err) { console.error("Failed to load overview activity:", err); }
   }, [clients]);
 
   useEffect(() => { if (selected) loadClientDetails(selected.id); }, [selected, loadClientDetails]);
@@ -570,6 +575,13 @@ export default function TeamPortalClient() {
                   }
                 }}
               />
+            </div>
+          )}
+
+          {/* ── HELP / FAQ ── */}
+          {teamTab === "help" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
+              <FAQ userType="team" />
             </div>
           )}
 

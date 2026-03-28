@@ -202,7 +202,7 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
           </div>
 
           {/* Day Cells */}
-          <div className="grid grid-cols-7 gap-px">
+          <div className="grid grid-cols-7 gap-px" role="grid">
             {calendarDays.map((d, i) => {
               const dateKey = toDateKey(d);
               const dayCards = cardsByDate[dateKey] || [];
@@ -215,6 +215,7 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
                 <div
                   key={i}
                   onClick={() => setSelectedDate(isSelected ? null : dateKey)}
+                  aria-label={`${MONTHS[((d.month % 12) + 12) % 12]} ${d.date}, ${d.year}`}
                   className="min-h-[70px] sm:min-h-[90px] p-1.5 sm:p-2 rounded-lg cursor-pointer transition-all border"
                   style={{
                     background: isSelected ? "rgba(224,32,32,0.06)" : d.isCurrentMonth ? "#111111" : "#0D0D0D",

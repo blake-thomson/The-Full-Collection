@@ -185,6 +185,7 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
         <a
           href="/api/drive/connect"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-red text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+          aria-label="Connect Google Drive"
         >
           Connect Google Drive
         </a>
@@ -217,6 +218,7 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search files..."
+            aria-label="Search files"
             className="tfc-input w-full"
             style={{ paddingLeft: 36 }}
           />
@@ -228,6 +230,7 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
             <button
               onClick={() => setViewMode("grid")}
               className={`p-2 cursor-pointer transition-colors ${viewMode === "grid" ? "bg-surface-3 text-text" : "bg-surface text-text-3 hover:text-text-2"}`}
+              aria-label="Grid view"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
@@ -236,6 +239,7 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
             <button
               onClick={() => setViewMode("list")}
               className={`p-2 cursor-pointer transition-colors ${viewMode === "list" ? "bg-surface-3 text-text" : "bg-surface text-text-3 hover:text-text-2"}`}
+              aria-label="List view"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
@@ -278,6 +282,7 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
             onClick={() => setConfirmDisconnect(true)}
             className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-surface border border-border text-text-3 hover:text-[#EF4444] hover:border-[#EF4444]/30 cursor-pointer font-body transition-colors whitespace-nowrap"
             title="Disconnect Google Drive"
+            aria-label="Disconnect Google Drive"
           >
             Disconnect
           </button>
@@ -404,6 +409,8 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.8)" }}
+          role="dialog"
+          aria-modal="true"
           onClick={() => setPreviewFile(null)}
         >
           <div className="bg-surface border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>

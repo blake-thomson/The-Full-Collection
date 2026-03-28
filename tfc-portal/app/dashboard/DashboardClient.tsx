@@ -18,6 +18,8 @@ import { ClientHome } from "@/components/ClientHome";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
+import { FAQ } from "@/components/FAQ";
+import { useRealtimeKanban, useRealtimeMessages, useRealtimeNotifications } from "@/lib/use-realtime";
 import type { OnboardingData } from "@/lib/constants";
 
 interface ClientData {
@@ -103,6 +105,14 @@ const TABS = [
       </svg>
     ),
   },
+  {
+    id: "help", label: "Help",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+  },
 ];
 
 export default function DashboardClient() {
@@ -156,6 +166,11 @@ export default function DashboardClient() {
   }, []);
 
   useEffect(() => { loadKanbanCards(); }, [loadKanbanCards]);
+
+  // Real-time subscriptions
+  useRealtimeKanban(client?.id || "", () => { loadKanbanCards(); setKanbanKey((k) => k + 1); });
+  useRealtimeMessages(client?.id || "", () => { /* triggers re-render for message tab badge */ });
+  useRealtimeNotifications(client?.email || "", () => { /* NotificationBell polls, but this gives instant updates */ });
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -238,7 +253,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser = { name: client.name, email: client.email, type: "client" as const };
-  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "trash"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "help", "trash"];
 
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
@@ -540,6 +555,13 @@ export default function DashboardClient() {
           {tab === "resources" && (
             <div className="h-full">
               <ResourceLibrary clientId={client.id} currentUser={currentUser} isTeam={false} />
+            </div>
+          )}
+
+          {/* Help / FAQ */}
+          {tab === "help" && (
+            <div className="h-full overflow-y-auto">
+              <FAQ userType="client" />
             </div>
           )}
 

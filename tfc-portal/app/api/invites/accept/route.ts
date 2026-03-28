@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { checkRateLimit, getClientIp, INVITE_RATE_LIMIT, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`invite-accept:${ip}`, INVITE_RATE_LIMIT);
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const { code, name } = await req.json();
   if (!code || !name) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });

@@ -133,10 +133,27 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "invoice.paid") {
     const invoice = event.data.object as Stripe.Invoice;
-    await admin
+    const updateResult = await admin
       .from("clients")
       .update({ subscription_status: "active" })
       .eq("stripe_customer_id", invoice.customer as string);
+    if (updateResult.error) {
+      console.error("Failed to update subscription status on invoice.paid:", updateResult.error);
+    }
+  }
+
+  // Handle one-time checkout completions (invoice Pay Now flow)
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    if (session.mode === "payment" && session.metadata?.invoice_id) {
+      const { error: invErr } = await admin
+        .from("invoices")
+        .update({ status: "paid" })
+        .eq("id", session.metadata.invoice_id);
+      if (invErr) {
+        console.error("Failed to mark invoice as paid:", invErr);
+      }
+    }
   }
 
   if (event.type === "customer.subscription.deleted") {

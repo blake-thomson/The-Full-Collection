@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { checkRateLimit, getClientIp, INVITE_RATE_LIMIT, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`invite-validate:${ip}`, INVITE_RATE_LIMIT);
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const { code } = await req.json();
   if (!code) {
     return NextResponse.json({ error: "Code required" }, { status: 400 });

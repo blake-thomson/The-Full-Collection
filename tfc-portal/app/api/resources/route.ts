@@ -90,3 +90,43 @@ export async function DELETE(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
+
+// PATCH /api/resources — update a resource
+export async function PATCH(req: NextRequest) {
+  const serverSupabase = createServerSupabase();
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id, name, type, url, description, category } = await req.json();
+
+  if (!id) return NextResponse.json({ error: "Resource id required" }, { status: 400 });
+
+  const supabase = createSupabaseAdmin();
+
+  const { data: resource } = await supabase
+    .from("resources")
+    .select("client_id")
+    .eq("id", id)
+    .single();
+  if (!resource) return NextResponse.json({ error: "Resource not found" }, { status: 404 });
+
+  const access = await requireClientAccess(user.email!, resource.client_id, supabase);
+  if (!access.ok) return access.response;
+
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (type !== undefined) updates.type = type;
+  if (url !== undefined) updates.url = url;
+  if (description !== undefined) updates.description = description;
+  if (category !== undefined) updates.category = category;
+
+  const { data, error } = await supabase
+    .from("resources")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
