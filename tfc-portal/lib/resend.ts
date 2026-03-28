@@ -1,3 +1,4 @@
+import React from "react";
 import { Resend } from "resend";
 import { TeamInviteEmail } from "@/emails/TeamInvite";
 import { ClientWelcomeEmail } from "@/emails/ClientWelcome";
@@ -25,7 +26,7 @@ export async function sendTeamInvite({
     from: FROM,
     to,
     subject: "You've been invited to join The Full Collection team",
-    react: TeamInviteEmail({
+    react: React.createElement(TeamInviteEmail, {
       name,
       inviterName,
       role,
@@ -52,7 +53,7 @@ export async function sendClientWelcome({
     from: FROM,
     to,
     subject: "Welcome to The Full Collection — Your Portal is Ready",
-    react: ClientWelcomeEmail({
+    react: React.createElement(ClientWelcomeEmail, {
       name,
       email,
       code,
@@ -78,7 +79,7 @@ export async function sendStatusNotification({
     from: FROM,
     to,
     subject: `Content Update: "${contentTitle}" moved to ${newStatus}`,
-    react: StatusNotificationEmail({
+    react: React.createElement(StatusNotificationEmail, {
       clientName,
       contentTitle,
       oldStatus,
@@ -99,7 +100,7 @@ export async function sendPasswordReset({
     from: FROM,
     to,
     subject: "Reset Your Password — The Full Collection",
-    react: PasswordResetEmail({
+    react: React.createElement(PasswordResetEmail, {
       email: to,
       resetLink,
       appUrl: process.env.NEXT_PUBLIC_APP_URL!,
