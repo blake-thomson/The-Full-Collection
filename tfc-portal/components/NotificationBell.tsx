@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
 
 interface Notification {
   id: string;
@@ -20,7 +20,9 @@ export function NotificationBell({ userEmail, userType }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -45,7 +47,10 @@ export function NotificationBell({ userEmail, userType }: Props) {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     };
@@ -53,6 +58,18 @@ export function NotificationBell({ userEmail, userType }: Props) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  // Calculate fixed dropdown position from button bounding rect
+  useLayoutEffect(() => {
+    if (open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const panelWidth = 380;
+      const viewportWidth = window.innerWidth;
+      // Position right edge of panel at right edge of button, but don't go off-screen left
+      const right = Math.max(8, viewportWidth - rect.right - 2);
+      setDropdownPos({ top: rect.bottom + 8, right });
+    }
   }, [open]);
 
   const markAllRead = async () => {
@@ -103,9 +120,10 @@ export function NotificationBell({ userEmail, userType }: Props) {
   };
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       {/* Bell Button */}
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className="relative bg-transparent border-none cursor-pointer p-1.5 rounded-lg transition-colors"
         style={{ color: open ? "#F0EDE6" : "#A8A49C" }}
@@ -125,11 +143,16 @@ export function NotificationBell({ userEmail, userType }: Props) {
         )}
       </button>
 
-      {/* Dropdown Panel */}
-      {open && (
+      {/* Dropdown Panel — always fixed so it's never clipped by sidebar overflow */}
+      {open && dropdownPos && (
         <div
-          className="fixed sm:absolute right-2 left-2 sm:left-auto sm:right-0 top-[56px] sm:top-[calc(100%+8px)] sm:w-[380px] bg-surface border border-border rounded-xl overflow-hidden z-50"
-          style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}
+          ref={panelRef}
+          className="fixed w-[calc(100vw-16px)] sm:w-[380px] bg-surface border border-border rounded-xl overflow-hidden z-[9999]"
+          style={{
+            top: dropdownPos.top,
+            right: dropdownPos.right,
+            boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
+          }}
         >
           {/* Panel Header */}
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">

@@ -34,9 +34,10 @@ interface Client {
 
 interface Props {
   teamUser: { name: string; email: string; role: string };
+  onClientSelect?: (clientId: string) => void;
 }
 
-export function TeamManagement({ teamUser }: Props) {
+export function TeamManagement({ teamUser, onClientSelect }: Props) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -125,7 +126,7 @@ export function TeamManagement({ teamUser }: Props) {
     if (res.ok) load();
   };
 
-  const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", editor: "#10B981", smm: "#8B5CF6" };
+  const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", editor: "#10B981", smm: "#8B5CF6", videographer: "#EC4899" };
   const pendingInvites = invites.filter((i) => !i.used);
 
   if (selectedMemberId) {
@@ -135,6 +136,7 @@ export function TeamManagement({ teamUser }: Props) {
         currentUserEmail={teamUser.email}
         currentUserRole={teamUser.role}
         onBack={() => setSelectedMemberId(null)}
+        onClientSelect={onClientSelect}
       />
     );
   }
@@ -193,8 +195,10 @@ export function TeamManagement({ teamUser }: Props) {
               <div className="mb-[18px]">
                 <label className="tfc-label">Role</label>
                 <div className="flex gap-2">
-                  {(teamUser.role === "owner" ? ["admin", "project_manager", "editor", "smm"] : ["editor", "smm"]).map((r) => (
-                    <button key={r} className={`tfc-pill capitalize${invRole === r ? " active" : ""}`} onClick={() => setInvRole(r)}>{r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r}</button>
+                  {(teamUser.role === "owner" ? ["admin", "project_manager", "editor", "videographer", "smm"] : ["editor", "videographer", "smm"]).map((r) => (
+                    <button key={r} className={`tfc-pill capitalize${invRole === r ? " active" : ""}`} onClick={() => setInvRole(r)}>
+                      {r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r === "videographer" ? "Videographer" : r}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -233,7 +237,7 @@ export function TeamManagement({ teamUser }: Props) {
                         className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md"
                         style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
                       >
-                        {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role}
+                        {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
                       </span>
                     </div>
                     {m.bio ? (

@@ -10,6 +10,7 @@ interface Card {
   column_id: string;
   due_date?: string;
   publish_date?: string;
+  shoot_date?: string;
   priority?: string;
 }
 
@@ -87,6 +88,19 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
     return map;
   }, [cards]);
 
+  // Shoot dates — separate map so we can color them differently
+  const shootDatesByDate = useMemo(() => {
+    const map: Record<string, Card[]> = {};
+    cards.forEach((card) => {
+      if (card.shoot_date) {
+        const dateKey = card.shoot_date.split("T")[0];
+        if (!map[dateKey]) map[dateKey] = [];
+        map[dateKey].push(card);
+      }
+    });
+    return map;
+  }, [cards]);
+
   const prevMonth = () => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
@@ -124,6 +138,7 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
   };
 
   const selectedCards = selectedDate ? (cardsByDate[selectedDate] || []) : [];
+  const selectedShootCards = selectedDate ? (shootDatesByDate[selectedDate] || []) : [];
 
   return (
     <div className="flex flex-col h-full">
@@ -174,11 +189,25 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
             ))}
           </div>
 
+          {/* Legend */}
+          <div className="flex items-center gap-4 mb-2 px-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(224,32,32,0.3)", borderLeft: "2px solid #E02020" }} />
+              <span className="text-text-3 text-[10px] font-semibold">Publish Date</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(245,158,11,0.2)", borderLeft: "2px solid #F59E0B" }} />
+              <span className="text-text-3 text-[10px] font-semibold">Shoot Date</span>
+            </div>
+          </div>
+
           {/* Day Cells */}
           <div className="grid grid-cols-7 gap-px">
             {calendarDays.map((d, i) => {
               const dateKey = toDateKey(d);
               const dayCards = cardsByDate[dateKey] || [];
+              const dayShootCards = shootDatesByDate[dateKey] || [];
+              const totalItems = dayCards.length + dayShootCards.length;
               const isSelected = selectedDate === dateKey;
               const isTodayCell = isToday(d);
 
@@ -201,14 +230,31 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
                     >
                       {d.date}
                     </span>
-                    {dayCards.length > 0 && (
+                    {totalItems > 0 && (
                       <span className="text-[9px] font-bold text-text-3 bg-surface-3 py-[1px] px-[5px] rounded-full">
-                        {dayCards.length}
+                        {totalItems}
                       </span>
                     )}
                   </div>
                   <div className="space-y-0.5">
-                    {dayCards.slice(0, 3).map((card) => {
+                    {/* Shoot dates first — amber */}
+                    {dayShootCards.slice(0, 2).map((card) => (
+                      <div
+                        key={`shoot-${card.id}`}
+                        className="text-[9px] sm:text-[10px] truncate rounded px-1 py-0.5 leading-tight cursor-pointer"
+                        style={{
+                          background: "rgba(245,158,11,0.12)",
+                          color: "#F59E0B",
+                          borderLeft: "2px solid #F59E0B",
+                        }}
+                        onClick={(e) => { e.stopPropagation(); onCardClick?.(card); }}
+                        title={`📷 Shoot: ${card.title}`}
+                      >
+                        📷 {card.title}
+                      </div>
+                    ))}
+                    {/* Publish dates */}
+                    {dayCards.slice(0, Math.max(0, 3 - dayShootCards.length)).map((card) => {
                       const col = colMap[card.column_id];
                       return (
                         <div
@@ -219,17 +265,14 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
                             color: col?.color || "#6B7280",
                             borderLeft: `2px solid ${col?.color || "#6B7280"}`,
                           }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCardClick?.(card);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); onCardClick?.(card); }}
                         >
                           {card.title}
                         </div>
                       );
                     })}
-                    {dayCards.length > 3 && (
-                      <div className="text-[9px] text-text-3 pl-1">+{dayCards.length - 3} more</div>
+                    {totalItems > 3 && (
+                      <div className="text-[9px] text-text-3 pl-1">+{totalItems - 3} more</div>
                     )}
                   </div>
                 </div>
@@ -246,12 +289,32 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
                 {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
               </h4>
               <p className="text-text-3 text-[11px] m-0 mt-0.5">
-                {selectedCards.length} item{selectedCards.length !== 1 ? "s" : ""} due
+                {selectedCards.length + selectedShootCards.length} item{(selectedCards.length + selectedShootCards.length) !== 1 ? "s" : ""}
               </p>
             </div>
-            {selectedCards.length === 0 && (
-              <div className="p-6 text-text-3 text-[13px] text-center">No content due this day.</div>
+            {selectedCards.length === 0 && selectedShootCards.length === 0 && (
+              <div className="p-6 text-text-3 text-[13px] text-center">Nothing scheduled this day.</div>
             )}
+            {/* Shoot dates */}
+            {selectedShootCards.map((card) => (
+              <div
+                key={`shoot-${card.id}`}
+                className="px-4 py-3 border-b border-border cursor-pointer transition-colors hover:bg-surface-2"
+                onClick={() => onCardClick?.(card)}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#F59E0B" }} />
+                  <span className="text-text text-[13px] font-medium">{card.title}</span>
+                  <span className="text-[10px] font-bold py-[1px] px-1.5 rounded ml-auto" style={{ background: "rgba(245,158,11,0.12)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.2)" }}>📷 Shoot</span>
+                </div>
+                {card.platform && (
+                  <div className="pl-4">
+                    <span className="text-text-3 text-[10px]">{card.platform}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+            {/* Publish dates */}
             {selectedCards.map((card) => {
               const col = colMap[card.column_id];
               return (

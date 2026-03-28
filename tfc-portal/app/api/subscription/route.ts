@@ -62,8 +62,9 @@ export async function GET(req: NextRequest) {
     // In Stripe SDK v17+, period dates live on the first subscription item
     const item = subscription.items?.data?.[0] as any;
 
-    // Fetch all paid invoices to compute total paid
+    // Fetch all paid invoices to compute total paid + payment count
     let totalPaid = 0;
+    let totalPaymentCount = 0;
     if (client.stripe_customer_id) {
       const invoices = await stripe.invoices.list({
         customer: client.stripe_customer_id,
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest) {
         (sum, inv) => sum + (inv.amount_paid ?? 0),
         0
       );
+      totalPaymentCount = invoices.data.length;
     }
 
     // If past_due, find how many days since the most recent failed invoice due date
@@ -103,12 +105,18 @@ export async function GET(req: NextRequest) {
     const currentPeriodStart =
       subAny.current_period_start ?? item?.current_period_start ?? null;
 
+    // Subscription start date (when they first subscribed)
+    const subAny2 = subscription as any;
+    const startDate = subAny2.start_date ?? subAny2.created ?? null;
+
     return NextResponse.json({
       tier: client.subscription_tier,
       status: subscription.status,
       currentPeriodEnd,
       currentPeriodStart,
+      startDate,
       totalPaid,
+      totalPaymentCount,
       daysOverdue,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     });

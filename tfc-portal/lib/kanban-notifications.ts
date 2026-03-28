@@ -10,6 +10,7 @@
 
 import { createSupabaseAdmin } from "./supabase";
 import { sendStatusNotification } from "./resend";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ColumnId } from "./constants";
 
 type NotificationRule = {
@@ -180,5 +181,54 @@ export async function triggerKanbanNotifications(
   } catch (err) {
     // Never block the card update — log and move on
     console.error("kanban-notifications: failed to send notifications", err);
+  }
+}
+
+/**
+ * Fires in-app notifications to videographers and editors assigned to a client
+ * when a card's shoot_date is set or updated.
+ */
+export async function triggerShootDateNotifications(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
+  clientId: string,
+  cardTitle: string,
+  shootDate: string,
+  cardId: string
+): Promise<void> {
+  try {
+    const formatted = new Date(shootDate).toLocaleDateString("en-US", {
+      weekday: "short", month: "short", day: "numeric",
+    });
+
+    const { data: assignments } = await supabase
+      .from("client_assignments")
+      .select("team_member_email")
+      .eq("client_id", clientId);
+
+    if (!assignments?.length) return;
+
+    const assignedEmails = assignments.map((a: { team_member_email: string }) => a.team_member_email);
+
+    const { data: members } = await supabase
+      .from("team_members")
+      .select("email, role")
+      .in("email", assignedEmails)
+      .in("role", ["editor", "videographer", "admin", "owner"]);
+
+    if (!members?.length) return;
+
+    const notifications = members.map((m: { email: string; role: string }) => ({
+      recipient_email: m.email,
+      recipient_type: "team",
+      title: "Shoot Date Scheduled",
+      message: `"${cardTitle}" has a shoot date set for ${formatted}.`,
+      link: `/team/portal?card=${cardId}`,
+      type: "shoot_date",
+    }));
+
+    await supabase.from("notifications").insert(notifications);
+  } catch (err) {
+    console.error("shoot-date-notifications: failed", err);
   }
 }

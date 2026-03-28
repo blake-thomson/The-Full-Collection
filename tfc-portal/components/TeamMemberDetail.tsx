@@ -35,6 +35,7 @@ interface Props {
   currentUserEmail: string;
   currentUserRole: string;
   onBack: () => void;
+  onClientSelect?: (clientId: string) => void;
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -161,7 +162,7 @@ const ROLE_SOPS: Record<string, { summary: string; responsibilities: string[]; p
   },
 };
 
-export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, onBack }: Props) {
+export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, onBack, onClientSelect }: Props) {
   const [tab, setTab] = useState<"profile" | "work" | "clients">("profile");
   const [member, setMember] = useState<TeamMember | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -512,21 +513,45 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
               </div>
 
               {/* Cards grouped by client */}
-              {Object.entries(cardsByClient).map(([clientName, clientCards]) => (
+              {Object.entries(cardsByClient).map(([clientName, clientCards]) => {
+                const clientId = clientCards[0]?.client_id;
+                return (
                 <div key={clientName} style={{ marginBottom: 20 }}>
                   <div style={{
                     color: "#A8A49C", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
                     textTransform: "uppercase", marginBottom: 10, paddingBottom: 8,
-                    borderBottom: "1px solid #1A1A1A",
+                    borderBottom: "1px solid #1A1A1A", display: "flex", alignItems: "center", justifyContent: "space-between",
                   }}>
-                    {clientName} — {clientCards.length} item{clientCards.length !== 1 ? "s" : ""}
+                    <span>{clientName} — {clientCards.length} item{clientCards.length !== 1 ? "s" : ""}</span>
+                    {onClientSelect && clientId && (
+                      <button
+                        onClick={() => onClientSelect(clientId)}
+                        style={{
+                          background: "transparent", border: "1px solid #252525", borderRadius: 6,
+                          color: "#A8A49C", fontSize: 10, fontWeight: 700, cursor: "pointer",
+                          padding: "3px 10px", letterSpacing: "0.06em", textTransform: "uppercase",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#E02020"; (e.currentTarget as HTMLButtonElement).style.color = "#E02020"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#252525"; (e.currentTarget as HTMLButtonElement).style.color = "#A8A49C"; }}
+                      >
+                        Open Board →
+                      </button>
+                    )}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {clientCards.map((card) => (
-                      <div key={card.id} style={{
-                        background: "#111111", border: "1px solid #1e1e1e", borderRadius: 10,
-                        padding: "12px 16px", display: "flex", alignItems: "center", gap: 14,
-                      }}>
+                      <div
+                        key={card.id}
+                        onClick={() => onClientSelect && clientId && onClientSelect(clientId)}
+                        style={{
+                          background: "#111111", border: "1px solid #1e1e1e", borderRadius: 10,
+                          padding: "12px 16px", display: "flex", alignItems: "center", gap: 14,
+                          cursor: onClientSelect ? "pointer" : "default",
+                          transition: "border-color 0.15s",
+                        }}
+                        onMouseEnter={(e) => { if (onClientSelect) (e.currentTarget as HTMLDivElement).style.borderColor = "#2a2a2a"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "#1e1e1e"; }}
+                      >
                         <div style={{
                           width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
                           background: COLUMN_COLORS[card.column_id] ?? "#5A5652",
@@ -564,7 +589,8 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

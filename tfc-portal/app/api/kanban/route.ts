@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
-import { triggerKanbanNotifications } from "@/lib/kanban-notifications";
+import { triggerKanbanNotifications, triggerShootDateNotifications } from "@/lib/kanban-notifications";
 import type { ColumnId } from "@/lib/constants";
 
 // GET /api/kanban?client_id=...
@@ -102,7 +102,7 @@ export async function PATCH(req: NextRequest) {
   // Verify card ownership before updating
   const { data: card } = await supabase
     .from("kanban_cards")
-    .select("client_id, column_id, title")
+    .select("client_id, column_id, title, shoot_date")
     .eq("id", id)
     .single();
   if (!card) return NextResponse.json({ error: "Card not found" }, { status: 404 });
@@ -137,6 +137,12 @@ export async function PATCH(req: NextRequest) {
   if (newColumnId && newColumnId !== card.column_id) {
     const cardTitle = (body.title as string | undefined) || card.title;
     triggerKanbanNotifications(card.client_id, cardTitle, newColumnId, id);
+  }
+
+  // Fire shoot date notifications when shoot_date is newly set or changed
+  if (body.shoot_date && body.shoot_date !== card.shoot_date) {
+    const cardTitle = (body.title as string | undefined) || card.title;
+    triggerShootDateNotifications(supabase, card.client_id, cardTitle, body.shoot_date, id);
   }
 
   return NextResponse.json(data);

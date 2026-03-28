@@ -8,7 +8,9 @@ interface SubscriptionData {
   status: string;
   currentPeriodEnd?: number;
   currentPeriodStart?: number;
+  startDate?: number;
   totalPaid?: number;
+  totalPaymentCount?: number;
   daysOverdue?: number | null;
   cancelAtPeriodEnd?: boolean;
   subscription?: null;
@@ -213,7 +215,7 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
             </span>
           </div>
 
-          {/* Stats grid */}
+          {/* Stats grid — 5 data points */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {/* Monthly Rate */}
             <div className="bg-surface rounded-lg p-3">
@@ -234,27 +236,48 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
             {/* Next Payment */}
             <div className="bg-surface rounded-lg p-3">
               <p className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase m-0 mb-1">
-                {data.cancelAtPeriodEnd ? "Ends On" : "Next Payment"}
+                {data.cancelAtPeriodEnd ? "Ends On" : isOverdue ? "Was Due" : "Next Payment"}
               </p>
               <p
                 className="font-heading text-[13px] font-[700] m-0 leading-tight"
-                style={{
-                  color: isOverdue ? "#EF4444" : "var(--color-text)",
-                }}
+                style={{ color: isOverdue ? "#EF4444" : "var(--color-text)" }}
               >
-                {data.currentPeriodEnd
-                  ? formatDate(data.currentPeriodEnd)
-                  : "—"}
+                {data.currentPeriodEnd ? formatDate(data.currentPeriodEnd) : "—"}
               </p>
+              {isOverdue && data.daysOverdue != null && data.daysOverdue > 0 && (
+                <p className="text-[#EF4444] text-[11px] font-semibold m-0 mt-0.5">
+                  {data.daysOverdue}d overdue
+                </p>
+              )}
             </div>
 
             {/* Total Paid */}
-            <div className="bg-surface rounded-lg p-3 col-span-2 sm:col-span-1">
+            <div className="bg-surface rounded-lg p-3">
               <p className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase m-0 mb-1">
                 Total Paid
               </p>
               <p className="text-[#10B981] font-heading text-[20px] font-[800] m-0">
                 {data.totalPaid != null ? formatCurrency(data.totalPaid) : "—"}
+              </p>
+            </div>
+
+            {/* Subscribed Since */}
+            <div className="bg-surface rounded-lg p-3">
+              <p className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase m-0 mb-1">
+                Subscribed Since
+              </p>
+              <p className="text-text font-heading text-[13px] font-[700] m-0 leading-tight">
+                {data.startDate ? formatDate(data.startDate) : "—"}
+              </p>
+            </div>
+
+            {/* Payments Made */}
+            <div className="bg-surface rounded-lg p-3 col-span-1">
+              <p className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase m-0 mb-1">
+                Payments Made
+              </p>
+              <p className="text-text font-heading text-[20px] font-[800] m-0">
+                {data.totalPaymentCount != null ? data.totalPaymentCount : "—"}
               </p>
             </div>
           </div>

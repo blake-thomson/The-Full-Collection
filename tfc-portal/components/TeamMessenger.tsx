@@ -47,7 +47,7 @@ interface Props {
 
 const ROLE_COLOR: Record<string, string> = {
   owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6",
-  editor: "#10B981", social_media_manager: "#8B5CF6", smm: "#8B5CF6",
+  editor: "#10B981", social_media_manager: "#8B5CF6", smm: "#8B5CF6", videographer: "#EC4899",
 };
 
 function timeAgo(iso: string) {
@@ -607,7 +607,7 @@ export function TeamMessenger({ currentUser }: Props) {
                             {senderRole && (
                               <span className="text-[9px] font-bold tracking-[0.08em] uppercase py-[1px] px-[5px] rounded"
                                 style={{ color: ROLE_COLOR[senderRole] || "#A8A49C", background: `${ROLE_COLOR[senderRole] || "#A8A49C"}18` }}>
-                                {senderRole === "smm" ? "SMM" : senderRole === "social_media_manager" ? "SMM" : senderRole === "project_manager" ? "PM" : senderRole}
+                                {senderRole === "smm" ? "SMM" : senderRole === "social_media_manager" ? "SMM" : senderRole === "project_manager" ? "PM" : senderRole === "videographer" ? "Video" : senderRole}
                               </span>
                             )}
                             <span className="text-text-3 text-[11px]">{formatTime(msg.created_at)}</span>
@@ -639,7 +639,7 @@ export function TeamMessenger({ currentUser }: Props) {
                             <button onClick={() => setEditingMsg(null)} className="tfc-btn-ghost text-xs py-1 px-3">Cancel</button>
                           </div>
                         ) : (
-                          <p className="text-text text-[13px] leading-relaxed m-0 whitespace-pre-wrap break-words">
+                          <p className="text-text-2 text-[13px] leading-[1.6] m-0 whitespace-pre-wrap break-words">
                             {msg.content}
                             {msg.edited && <span className="text-text-3 text-[10px] ml-1">(edited)</span>}
                           </p>
@@ -745,8 +745,8 @@ export function TeamMessenger({ currentUser }: Props) {
                     }}
                     placeholder={`Message ${getConvName(activeConv)}...`}
                     rows={1}
-                    style={{ resize: "none", minHeight: 40, maxHeight: 120 }}
-                    className="tfc-input w-full text-[13px] py-2.5 pr-10"
+                    style={{ resize: "none", minHeight: 42, maxHeight: 120 }}
+                    className="tfc-textarea w-full text-[13px]"
                     onInput={(e) => {
                       const el = e.currentTarget;
                       el.style.height = "auto";
@@ -757,9 +757,16 @@ export function TeamMessenger({ currentUser }: Props) {
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim() || sending}
-                  className="tfc-btn h-10 w-10 flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed p-0"
+                  className="shrink-0 flex items-center justify-center rounded-lg transition-all"
+                  style={{
+                    width: 44, height: 44,
+                    background: input.trim() ? "#E02020" : "#1A1A1A",
+                    color: input.trim() ? "#fff" : "#5A5652",
+                    opacity: input.trim() ? 1 : 0.7,
+                    border: "none", cursor: input.trim() ? "pointer" : "default",
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                   </svg>
                 </button>

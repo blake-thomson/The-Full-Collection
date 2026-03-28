@@ -100,10 +100,10 @@ const NAV_ITEMS = [
 ];
 
 const CLIENT_TABS = [
-  { id: "intake", label: "Intake" },
   { id: "kanban", label: "Content Board" },
   { id: "calendar", label: "Calendar" },
   { id: "messages", label: "Messages" },
+  { id: "intake", label: "Intake" },
   { id: "resources", label: "Resources" },
   { id: "billing", label: "Billing" },
   { id: "assignments", label: "Assignments" },
@@ -475,6 +475,14 @@ export default function TeamPortalClient() {
                 currentUserEmail={teamUser.email}
                 currentUserRole={teamUser.role}
                 onBack={() => setShowMyProfile(false)}
+                onClientSelect={(clientId) => {
+                  const client = clients.find((c) => c.id === clientId);
+                  if (client) {
+                    setSelected(client);
+                    setClientTab("kanban");
+                    setShowMyProfile(false);
+                  }
+                }}
               />
             </div>
           )}
@@ -551,7 +559,17 @@ export default function TeamPortalClient() {
           {/* ── TEAM TAB ── */}
           {teamTab === "team" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
-              <TeamManagement teamUser={teamUser} />
+              <TeamManagement
+                teamUser={teamUser}
+                onClientSelect={(clientId) => {
+                  const client = clients.find((c) => c.id === clientId);
+                  if (client) {
+                    setSelected(client);
+                    setClientTab("kanban");
+                    setTeamTab("clients");
+                  }
+                }}
+              />
             </div>
           )}
 
@@ -591,7 +609,7 @@ export default function TeamPortalClient() {
                   {filtered.map((c) => {
                     const tier = c.subscription_tier && c.subscription_tier in TIERS ? TIERS[c.subscription_tier as TierKey] : null;
                     return (
-                    <div key={c.id} className="client-row" onClick={() => { setSelected(c); setClientTab("intake"); }}>
+                    <div key={c.id} className="client-row" onClick={() => { setSelected(c); setClientTab("kanban"); }}>
                       <div className="flex items-center gap-2.5">
                         <Avatar name={c.name} />
                         <div>
@@ -635,19 +653,28 @@ export default function TeamPortalClient() {
           {selected && !showMyProfile && (
             <div className="flex-1 overflow-hidden flex flex-col">
               {/* Client sub-nav */}
-              <div className="border-b border-border px-4 sm:px-6 py-2 sm:py-0 sm:h-14 flex flex-col sm:flex-row sm:items-center justify-between shrink-0 gap-2">
-                <div className="flex items-center gap-3.5">
-                  <button onClick={() => setSelected(null)} className="text-text-2 bg-transparent border-none cursor-pointer text-[13px] font-body flex items-center gap-1">
-                    ← Back
+              <div className="border-b border-border shrink-0">
+                {/* Top row: back + client identity */}
+                <div className="px-4 sm:px-6 h-12 flex items-center gap-3 border-b border-border">
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="text-text-3 bg-transparent border-none cursor-pointer text-[12px] font-body flex items-center gap-1.5 hover:text-text transition-colors shrink-0"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    All Clients
                   </button>
-                  <div className="w-px h-[18px] bg-border-2 hidden sm:block" />
-                  <div className="flex items-center gap-2.5">
-                    <Avatar name={selected.name} size={28} />
-                    <span className="text-text text-sm font-semibold">{selected.name}</span>
-                    <span className="text-text-3 text-[13px] hidden sm:inline">{selected.email}</span>
+                  <div className="w-px h-4 bg-border-2" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar name={selected.name} size={24} />
+                    <span className="text-text text-[13px] font-semibold truncate">{selected.name}</span>
+                    {selected.onboarding_complete
+                      ? <span className="hidden sm:inline text-[10px] font-bold py-[2px] px-2 rounded" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>Onboarded</span>
+                      : <span className="hidden sm:inline text-[10px] font-bold py-[2px] px-2 rounded" style={{ background: "rgba(245,158,11,0.1)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.2)" }}>Pending</span>
+                    }
                   </div>
                 </div>
-                <div className="flex gap-[3px] overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
+                {/* Tab row */}
+                <div className="px-4 sm:px-6 flex gap-0.5 overflow-x-auto hide-scrollbar">
                   {CLIENT_TABS.map((t) => (
                     <button key={t.id} className={`nav-tab whitespace-nowrap${clientTab === t.id ? " active" : ""}`} onClick={() => setClientTab(t.id)}>
                       {t.label}
