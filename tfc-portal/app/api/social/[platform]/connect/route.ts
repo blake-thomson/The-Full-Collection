@@ -7,7 +7,7 @@ const PLATFORM_CONFIG: Record<
 > = {
   instagram: {
     authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
-    scopes: "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments,instagram_business_manage_insights",
+    scopes: "instagram_business_basic,instagram_content_publish,instagram_manage_comments,instagram_business_manage_insights",
     clientIdEnv: "META_APP_ID",
   },
   tiktok: {
@@ -22,7 +22,7 @@ const PLATFORM_CONFIG: Record<
   },
   facebook: {
     authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
-    scopes: "public_profile,email",
+    scopes: "public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts",
     clientIdEnv: "META_APP_ID",
   },
 };
