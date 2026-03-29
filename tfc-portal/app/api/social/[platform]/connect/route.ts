@@ -7,7 +7,7 @@ const PLATFORM_CONFIG: Record<
 > = {
   instagram: {
     authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
-    scopes: "public_profile,email",
+    scopes: "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_comments,instagram_business_manage_insights",
     clientIdEnv: "META_APP_ID",
   },
   tiktok: {
