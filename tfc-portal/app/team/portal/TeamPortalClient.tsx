@@ -23,6 +23,14 @@ import { IdeaSwiper } from "@/components/IdeaSwiper";
 import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 import { TeamMessenger } from "@/components/TeamMessenger";
 import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
+import { ResearchBoard } from "@/components/ResearchBoard";
+import { ReportManager } from "@/components/ReportManager";
+import SocialAccounts from "@/components/SocialAccounts";
+import { EvergreenLibrary } from "@/components/EvergreenLibrary";
+import { PerformanceAnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { WorkflowTriggers } from "@/components/WorkflowTriggers";
+import { PermissionsMatrix } from "@/components/PermissionsMatrix";
+import { AIInsights } from "@/components/AIInsights";
 import { COLUMNS } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
 import { TIERS } from "@/lib/tiers";
@@ -95,6 +103,10 @@ const NAV_ITEMS = [
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>,
   },
   {
+    id: "research", label: "Research",
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  },
+  {
     id: "team", label: "Team", ownerOnly: true,
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   },
@@ -108,6 +120,10 @@ const CLIENT_TABS = [
   { id: "billing", label: "Billing" },
   { id: "assignments", label: "Assignments" },
   { id: "activity", label: "Activity" },
+  { id: "analytics", label: "Analytics" },
+  { id: "social", label: "Social Accounts" },
+  { id: "reports", label: "Reports" },
+  { id: "library", label: "Library" },
   { id: "trash", label: "Trash" },
   { id: "info", label: "Account" },
 ];
@@ -616,6 +632,19 @@ export default function TeamPortalClient() {
                   }
                 }}
               />
+              <div className="mt-8">
+                <WorkflowTriggers currentUserRole={teamUser.role} />
+              </div>
+              <div className="mt-8">
+                <PermissionsMatrix currentUserRole={teamUser.role} />
+              </div>
+            </div>
+          )}
+
+          {/* ── RESEARCH TAB ── */}
+          {teamTab === "research" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <ResearchBoard clients={clients.map(c => ({ id: c.id, name: c.name }))} />
             </div>
           )}
 
@@ -815,6 +844,37 @@ export default function TeamPortalClient() {
                 {clientTab === "assignments" && (
                   <div style={{ padding: "24px 20px" }}>
                     <ClientAssignments clientId={selected.id} />
+                  </div>
+                )}
+
+                {/* Analytics */}
+                {clientTab === "analytics" && selected && (
+                  <div className="overflow-y-auto p-4 sm:p-6">
+                    <PerformanceAnalyticsDashboard clientId={selected.id} isTeam />
+                    <div className="mt-8">
+                      <AIInsights clientId={selected.id} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Social Accounts */}
+                {clientTab === "social" && selected && (
+                  <div className="overflow-y-auto p-4 sm:p-6">
+                    <SocialAccounts clientId={selected.id} />
+                  </div>
+                )}
+
+                {/* Reports */}
+                {clientTab === "reports" && selected && (
+                  <div className="overflow-y-auto p-4 sm:p-6">
+                    <ReportManager clientId={selected.id} />
+                  </div>
+                )}
+
+                {/* Library */}
+                {clientTab === "library" && selected && (
+                  <div className="overflow-y-auto p-4 sm:p-6">
+                    <EvergreenLibrary clientId={selected.id} isTeam />
                   </div>
                 )}
 
