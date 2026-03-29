@@ -6,8 +6,8 @@ const PLATFORM_CONFIG: Record<
   { authUrl: string; scopes: string; clientIdEnv: string }
 > = {
   instagram: {
-    authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
-    scopes: "instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement",
+    authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
+    scopes: "public_profile,email",
     clientIdEnv: "META_APP_ID",
   },
   tiktok: {
@@ -21,8 +21,8 @@ const PLATFORM_CONFIG: Record<
     clientIdEnv: "GOOGLE_CLIENT_ID",
   },
   facebook: {
-    authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
-    scopes: "pages_show_list,pages_read_engagement,pages_manage_posts,pages_read_user_content",
+    authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
+    scopes: "public_profile,email",
     clientIdEnv: "META_APP_ID",
   },
 };
