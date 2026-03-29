@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public pages — no auth required
-  const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout", "/reset-password", "/setup"];
+  const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout", "/reset-password", "/setup", "/terms", "/privacy"];
   if (publicPaths.some((p) => path.startsWith(p))) {
     return supabaseResponse;
   }
