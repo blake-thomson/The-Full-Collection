@@ -812,7 +812,7 @@ export function TeamMessenger({ currentUser }: Props) {
                 const showDate = !prev || !isSameDay(prev.created_at, msg.created_at);
                 const isOwn = msg.sender_email === currentUser.email;
                 // Support both team messages (team_members join) and client messages (sender_name field)
-                const senderName = (msg as Record<string, unknown>).sender_name as string | undefined
+                const senderName = (msg as unknown as Record<string, unknown>).sender_name as string | undefined
                   ?? msg.team_members?.name ?? msg.sender_email;
                 const senderRole = msg.team_members?.role ?? "";
                 const avatarSrc = msg.team_members?.avatar_url;
@@ -946,7 +946,7 @@ export function TeamMessenger({ currentUser }: Props) {
                     <polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 00-4-4H4" />
                   </svg>
                   <span className="text-text-3 text-[11px] flex-1 truncate">
-                    Replying to <strong className="text-text-2">{(replyTo as Record<string, unknown>).sender_name as string ?? replyTo.team_members?.name ?? replyTo.sender_email}</strong>: {replyTo.content}
+                    Replying to <strong className="text-text-2">{(replyTo as unknown as Record<string, unknown>).sender_name as string ?? replyTo.team_members?.name ?? replyTo.sender_email}</strong>: {replyTo.content}
                   </span>
                   <button onClick={() => setReplyTo(null)} className="bg-transparent border-none cursor-pointer text-text-3 hover:text-text p-0.5">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
