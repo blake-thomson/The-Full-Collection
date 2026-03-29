@@ -10,7 +10,7 @@ import { IntakeView } from "@/components/IntakeView";
 import { CardDetailModal } from "@/components/CardDetailModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useTheme } from "@/lib/theme";
-import { MessageThread } from "@/components/MessageThread";
+import { ClientMessenger } from "@/components/ClientMessenger";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { ResourceLibrary } from "@/components/ResourceLibrary";
 import { SubscriptionSection } from "@/components/SubscriptionSection";
@@ -581,8 +581,8 @@ export default function DashboardClient() {
 
           {/* Messages */}
           {tab === "messages" && (
-            <div className="h-full">
-              <MessageThread clientId={client.id} currentUser={currentUser} clientName={client.name} />
+            <div className="h-full flex flex-col overflow-hidden">
+              <ClientMessenger clientId={client.id} currentUser={currentUser} />
             </div>
           )}
 

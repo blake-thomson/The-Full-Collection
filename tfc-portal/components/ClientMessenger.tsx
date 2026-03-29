@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { Avatar } from "@/components/ui/Avatar";
 
-interface TeamMember {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface TeamMemberOption {
   id: string;
   name: string;
   email: string;
@@ -14,17 +16,17 @@ interface TeamMember {
 
 interface ConversationMember {
   member_email: string;
-  team_members: { name: string; avatar_url?: string; role: string };
+  member_name: string | null;
+  member_type: "client" | "team";
 }
 
 interface Conversation {
   id: string;
   name: string | null;
-  type: "channel" | "dm" | "group";
-  description?: string;
-  is_default: boolean;
+  type: "dm" | "group";
+  client_id: string;
   members: ConversationMember[];
-  last_message: { content: string; sender_email: string; created_at: string } | null;
+  last_message: { content: string; sender_email: string; sender_name: string | null; created_at: string } | null;
   unread_count: number;
   last_read_at: string;
 }
@@ -33,27 +35,31 @@ interface Message {
   id: string;
   conversation_id: string;
   sender_email: string;
+  sender_name: string | null;
+  sender_type: "client" | "team";
   content: string;
   reply_to_id: string | null;
   edited: boolean;
   created_at: string;
   updated_at: string;
-  team_members: { name: string; avatar_url?: string; role: string } | null;
 }
 
 interface Props {
-  currentUser: TeamMember;
+  clientId: string;
+  currentUser: { name: string; email: string; type: "client" | "team" };
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLE_COLOR: Record<string, string> = {
   owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6",
   editor: "#10B981", social_media_manager: "#8B5CF6", smm: "#8B5CF6", videographer: "#EC4899",
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function timeAgo(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
+  const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
@@ -61,7 +67,7 @@ function timeAgo(iso: string) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString();
+  return new Date(iso).toLocaleDateString();
 }
 
 function formatTime(iso: string) {
@@ -96,7 +102,9 @@ function DateSeparator({ iso }: { iso: string }) {
   );
 }
 
-export function TeamMessenger({ currentUser }: Props) {
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function ClientMessenger({ clientId, currentUser }: Props) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -104,9 +112,9 @@ export function TeamMessenger({ currentUser }: Props) {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [allMembers, setAllMembers] = useState<TeamMember[]>([]);
+  const [allMembers, setAllMembers] = useState<TeamMemberOption[]>([]);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [newType, setNewType] = useState<"channel" | "dm" | "group">("dm");
+  const [newType, setNewType] = useState<"dm" | "group">("dm");
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
@@ -119,22 +127,8 @@ export function TeamMessenger({ currentUser }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [hoveredMsg, setHoveredMsg] = useState<string | null>(null);
-  const [showTrash, setShowTrash] = useState(false);
-  const [trashConvs, setTrashConvs] = useState<{ id: string; name: string | null; type: string; description?: string; deleted_at: string }[]>([]);
-  const [trashMsgs, setTrashMsgs] = useState<{ id: string; conversation_id: string; sender_email: string; content: string; deleted_at: string; team_members: { name: string } | null }[]>([]);
-  const [loadingTrash, setLoadingTrash] = useState(false);
   const [deletingConv, setDeletingConv] = useState<string | null>(null);
   const [confirmDeleteConv, setConfirmDeleteConv] = useState<string | null>(null);
-  const [trashBusy, setTrashBusy] = useState<string | null>(null);
-  // Client conversations (cross-portal — team members see client DMs here)
-  const [clientConvs, setClientConvs] = useState<{
-    id: string; name: string | null; type: "dm" | "group";
-    members: { member_email: string; member_name: string | null; member_type: string }[];
-    last_message: { content: string; sender_name: string | null; created_at: string } | null;
-    unread_count: number;
-  }[]>([]);
-  const [activeClientConv, setActiveClientConv] = useState<string | null>(null); // id of active client conv
-  const [convSource, setConvSource] = useState<"team" | "client">("team");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -142,29 +136,18 @@ export function TeamMessenger({ currentUser }: Props) {
 
   /* ── Load conversations ── */
   const loadConversations = useCallback(async () => {
-    const res = await fetch("/api/team-conversations");
+    const res = await fetch(`/api/client-conversations?client_id=${clientId}`);
     if (res.ok) {
       const data: Conversation[] = await res.json();
       setConversations(data);
-      if (!activeConv && data.length > 0) {
-        const general = data.find((c) => c.name === "general") ?? data[0];
-        setActiveConv(general);
-      }
+      if (!activeConv && data.length > 0) setActiveConv(data[0]);
     }
     setLoading(false);
-  }, [activeConv]);
+  }, [clientId, activeConv]);
 
   useEffect(() => { loadConversations(); }, []);
 
-  /* ── Load client conversations (cross-portal inbox) ── */
-  const loadClientConvs = useCallback(async () => {
-    const res = await fetch("/api/client-conversations");
-    if (res.ok) setClientConvs(await res.json());
-  }, []);
-
-  useEffect(() => { loadClientConvs(); }, []);
-
-  /* ── Load all team members (for DM creation + @mentions) ── */
+  /* ── Load team members (for DM/group creation + @mentions) ── */
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/team-members");
@@ -173,31 +156,21 @@ export function TeamMessenger({ currentUser }: Props) {
   }, []);
 
   /* ── Load messages for active conversation ── */
-  const loadMessages = useCallback(async (convId: string, source: "team" | "client" = "team") => {
+  const loadMessages = useCallback(async (convId: string) => {
     setLoadingMessages(true);
-    if (source === "client") {
-      const res = await fetch(`/api/client-messages?conversation_id=${convId}&limit=80`);
-      if (res.ok) setMessages(await res.json());
-      fetch("/api/client-conversations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversation_id: convId, action: "read" }),
-      });
-    } else {
-      const res = await fetch(`/api/team-messages?conversation_id=${convId}&limit=80`);
-      if (res.ok) setMessages(await res.json());
-      fetch("/api/team-conversations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversation_id: convId, action: "read" }),
-      });
-    }
+    const res = await fetch(`/api/client-messages?conversation_id=${convId}&limit=80`);
+    if (res.ok) setMessages(await res.json());
     setLoadingMessages(false);
+    fetch("/api/client-conversations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conversation_id: convId, action: "read" }),
+    });
   }, []);
 
   useEffect(() => {
     if (activeConv) {
-      loadMessages(activeConv.id, "team");
+      loadMessages(activeConv.id);
       setReplyTo(null);
     }
   }, [activeConv, loadMessages]);
@@ -206,15 +179,14 @@ export function TeamMessenger({ currentUser }: Props) {
   useEffect(() => {
     if (!activeConv) return;
     const channel = supabase
-      .channel(`team_messages_${activeConv.id}`)
+      .channel(`client_messages_${activeConv.id}`)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
-        table: "team_messages",
+        table: "client_messages",
         filter: `conversation_id=eq.${activeConv.id}`,
       }, async (payload) => {
-        // Fetch the full message with member info
-        const res = await fetch(`/api/team-messages?conversation_id=${activeConv.id}&limit=1`);
+        const res = await fetch(`/api/client-messages?conversation_id=${activeConv.id}&limit=1`);
         if (res.ok) {
           const latest = await res.json();
           setMessages((prev) => {
@@ -223,9 +195,8 @@ export function TeamMessenger({ currentUser }: Props) {
             return [...prev, ...newOnes];
           });
         }
-        // Mark read if it's from someone else
         if (payload.new.sender_email !== currentUser.email) {
-          fetch("/api/team-conversations", {
+          fetch("/api/client-conversations", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ conversation_id: activeConv.id, action: "read" }),
@@ -236,33 +207,6 @@ export function TeamMessenger({ currentUser }: Props) {
 
     return () => { supabase.removeChannel(channel); };
   }, [activeConv, currentUser.email, supabase]);
-
-  /* ── Real-time for active CLIENT conversation ── */
-  useEffect(() => {
-    if (!activeClientConv) return;
-    const channel = supabase
-      .channel(`client_messages_${activeClientConv}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "client_messages",
-        filter: `conversation_id=eq.${activeClientConv}`,
-      }, async () => {
-        const res = await fetch(`/api/client-messages?conversation_id=${activeClientConv}&limit=1`);
-        if (res.ok) {
-          const latest = await res.json();
-          setMessages((prev) => {
-            const ids = new Set(prev.map((m) => m.id));
-            const newOnes = latest.filter((m: Message) => !ids.has(m.id));
-            return [...prev, ...newOnes];
-          });
-        }
-        // Refresh unread counts
-        loadClientConvs();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [activeClientConv, supabase, loadClientConvs]);
 
   /* ── Scroll to bottom on new messages ── */
   useEffect(() => {
@@ -286,7 +230,7 @@ export function TeamMessenger({ currentUser }: Props) {
       (m.name.toLowerCase().includes(mentionSearch) || m.email.toLowerCase().includes(mentionSearch))
   ).slice(0, 6);
 
-  const insertMention = (member: TeamMember) => {
+  const insertMention = (member: TeamMemberOption) => {
     const newInput = input.replace(/@\w*$/, `@${member.name.replace(/\s/g, "")} `);
     setInput(newInput);
     setShowMentions(false);
@@ -294,21 +238,18 @@ export function TeamMessenger({ currentUser }: Props) {
   };
 
   /* ── Send message ── */
-  const msgApi = convSource === "client" ? "/api/client-messages" : "/api/team-messages";
-
   const sendMessage = async () => {
-    const convId = convSource === "client" ? activeClientConv : activeConv?.id;
-    if (!input.trim() || !convId || sending) return;
+    if (!input.trim() || !activeConv || sending) return;
     setSending(true);
     const content = input.trim();
     setInput("");
     setReplyTo(null);
 
-    const res = await fetch(msgApi, {
+    const res = await fetch("/api/client-messages", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        conversation_id: convId,
+        conversation_id: activeConv.id,
         content,
         reply_to_id: replyTo?.id ?? null,
       }),
@@ -316,24 +257,17 @@ export function TeamMessenger({ currentUser }: Props) {
 
     if (res.ok) {
       const msg = await res.json();
-      setMessages((prev) => prev.find((m) => m.id === msg.id) ? prev : [...prev, msg]);
-      if (convSource === "client") {
-        setClientConvs((prev) =>
-          prev.map((c) =>
-            c.id === convId
-              ? { ...c, last_message: { content, sender_name: currentUser.name, created_at: msg.created_at }, unread_count: 0 }
-              : c
-          )
-        );
-      } else if (activeConv) {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === activeConv.id
-              ? { ...c, last_message: { content, sender_email: currentUser.email, created_at: msg.created_at }, unread_count: 0 }
-              : c
-          )
-        );
-      }
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === activeConv.id
+            ? { ...c, last_message: { content, sender_email: currentUser.email, sender_name: currentUser.name, created_at: msg.created_at }, unread_count: 0 }
+            : c
+        )
+      );
     }
     setSending(false);
   };
@@ -341,7 +275,7 @@ export function TeamMessenger({ currentUser }: Props) {
   /* ── Edit message ── */
   const saveEdit = async (id: string) => {
     if (!editContent.trim()) return;
-    await fetch(msgApi, {
+    await fetch("/api/client-messages", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, content: editContent.trim() }),
@@ -352,13 +286,13 @@ export function TeamMessenger({ currentUser }: Props) {
 
   /* ── Delete message (own only) ── */
   const deleteMessage = async (id: string) => {
-    await fetch(`${msgApi}?id=${id}`, { method: "DELETE" });
+    await fetch(`/api/client-messages?id=${id}`, { method: "DELETE" });
     setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
-  /* ── Hide message (others' messages, per-user) ── */
+  /* ── Hide message (others', per-user) ── */
   const hideMessage = async (id: string) => {
-    await fetch(msgApi, {
+    await fetch("/api/client-messages", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, action: "hide" }),
@@ -369,17 +303,17 @@ export function TeamMessenger({ currentUser }: Props) {
   /* ── Create conversation ── */
   const createConversation = async () => {
     if (creating) return;
-    if (newType === "channel" && !newName.trim()) return;
-    if ((newType === "dm" || newType === "group") && selectedEmails.length === 0) return;
+    if (selectedEmails.length === 0) return;
     setCreating(true);
 
-    const res = await fetch("/api/team-conversations", {
+    const res = await fetch("/api/client-conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: newType,
-        name: newType === "channel" ? newName.trim().toLowerCase().replace(/\s+/g, "-") : null,
+        name: newType === "group" ? (newName.trim().toLowerCase().replace(/\s+/g, "-") || null) : null,
         description: newDesc.trim() || null,
+        client_id: clientId,
         member_emails: selectedEmails,
       }),
     });
@@ -398,65 +332,29 @@ export function TeamMessenger({ currentUser }: Props) {
     setCreating(false);
   };
 
-  const loadTrash = async () => {
-    setLoadingTrash(true);
-    const res = await fetch("/api/team-trash");
-    if (res.ok) {
-      const data = await res.json();
-      setTrashConvs(data.conversations ?? []);
-      setTrashMsgs(data.messages ?? []);
-    }
-    setLoadingTrash(false);
-  };
-
+  /* ── Delete conversation ── */
   const deleteConversation = async (id: string) => {
     setDeletingConv(id);
-    const res = await fetch(`/api/team-conversations?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setConversations((prev) => prev.filter((c) => c.id !== id));
-      if (activeConv?.id === id) setActiveConv(null);
-    }
+    await fetch(`/api/client-conversations?id=${id}`, { method: "DELETE" });
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeConv?.id === id) setActiveConv(null);
     setDeletingConv(null);
     setConfirmDeleteConv(null);
-  };
-
-  const restoreTrashItem = async (id: string, type: "conversation" | "message") => {
-    setTrashBusy(id);
-    const res = await fetch("/api/team-trash", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, type }),
-    });
-    if (res.ok) {
-      if (type === "conversation") setTrashConvs((prev) => prev.filter((c) => c.id !== id));
-      else setTrashMsgs((prev) => prev.filter((m) => m.id !== id));
-      if (type === "conversation") loadConversations();
-    }
-    setTrashBusy(null);
-  };
-
-  const permanentDelete = async (id: string, type: "conversation" | "message") => {
-    setTrashBusy(id);
-    await fetch(`/api/team-trash?id=${id}&type=${type}`, { method: "DELETE" });
-    if (type === "conversation") setTrashConvs((prev) => prev.filter((c) => c.id !== id));
-    else setTrashMsgs((prev) => prev.filter((m) => m.id !== id));
-    setTrashBusy(null);
   };
 
   /* ── Conversation display name ── */
   const getConvName = (conv: Conversation) => {
     if (conv.type === "dm") {
       const other = conv.members.find((m) => m.member_email !== currentUser.email);
-      return other?.team_members?.name ?? conv.name ?? "DM";
+      return other?.member_name ?? conv.name ?? "DM";
     }
-    if (conv.type === "channel") return `# ${conv.name}`;
     return conv.name ?? "Group";
   };
 
   const getConvAvatar = (conv: Conversation) => {
     if (conv.type === "dm") {
       const other = conv.members.find((m) => m.member_email !== currentUser.email);
-      return other ? { name: other.team_members.name, src: other.team_members.avatar_url } : null;
+      return other ? { name: other.member_name ?? "?" } : null;
     }
     return null;
   };
@@ -465,14 +363,13 @@ export function TeamMessenger({ currentUser }: Props) {
   const isGrouped = (msg: Message, prev: Message | undefined) => {
     if (!prev) return false;
     if (prev.sender_email !== msg.sender_email) return false;
-    const diff = new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime();
-    return diff < 5 * 60 * 1000; // 5 minutes
+    return new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000;
   };
 
-  const channels = conversations.filter((c) => c.type === "channel");
   const dms = conversations.filter((c) => c.type === "dm");
   const groups = conversations.filter((c) => c.type === "group");
 
+  /* ── Sidebar ── */
   const Sidebar = () => (
     <div className="w-full h-full flex flex-col bg-surface border-r border-border">
       {/* Header */}
@@ -492,23 +389,6 @@ export function TeamMessenger({ currentUser }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
-        {/* Channels */}
-        {channels.length > 0 && (
-          <div className="mb-2">
-            <div className="px-4 py-1.5 flex items-center justify-between">
-              <span className="text-text-3 text-[10px] font-bold tracking-[0.12em] uppercase">Channels</span>
-              <button onClick={() => { setNewType("channel"); setShowNewModal(true); }} className="text-text-3 hover:text-text bg-transparent border-none cursor-pointer p-0.5 rounded transition-colors">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </button>
-            </div>
-            {channels.map((conv) => (
-              <ConvRow key={conv.id} conv={conv} />
-            ))}
-          </div>
-        )}
-
         {/* Direct Messages */}
         <div className="mb-2">
           <div className="px-4 py-1.5 flex items-center justify-between">
@@ -551,93 +431,27 @@ export function TeamMessenger({ currentUser }: Props) {
             + New group chat
           </button>
         </div>
-
-        {/* Client Messages — conversations clients started with this team member */}
-        {clientConvs.length > 0 && (
-          <div className="mb-2 mt-4">
-            <div className="px-4 py-1.5">
-              <span className="text-text-3 text-[10px] font-bold tracking-[0.12em] uppercase">Client Messages</span>
-            </div>
-            {clientConvs.map((conv) => {
-              const isActive = convSource === "client" && activeClientConv === conv.id;
-              const other = conv.members.find((m) => m.member_type === "client");
-              const displayName = conv.type === "dm"
-                ? (other?.member_name ?? "Client")
-                : (conv.name ?? "Group");
-              const hasUnread = conv.unread_count > 0;
-              return (
-                <button
-                  key={conv.id}
-                  onClick={() => {
-                    setActiveClientConv(conv.id);
-                    setConvSource("client");
-                    setActiveConv(null);
-                    setShowTrash(false);
-                    setMobileSidebarOpen(false);
-                    loadMessages(conv.id, "client");
-                    setReplyTo(null);
-                  }}
-                  className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
-                    isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
-                    {displayName.slice(0, 2).toUpperCase()}
-                  </div>
-                  <span className={`flex-1 text-[13px] truncate ${hasUnread && !isActive ? "font-semibold text-text" : ""}`}>{displayName}</span>
-                  {hasUnread && !isActive && (
-                    <span className="bg-red text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                      {conv.unread_count > 99 ? "99+" : conv.unread_count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
-
-      {/* Trash — owner/admin only */}
-      {(currentUser.role === "owner" || currentUser.role === "admin") && (
-        <div style={{ padding: "16px 12px 8px", borderTop: "1px solid var(--border, #1e1e1e)" }}>
-          <button
-            onClick={() => { setShowTrash(true); loadTrash(); setActiveConv(null); setMobileSidebarOpen(false); }}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium cursor-pointer font-body transition-all border-none text-left ${
-              showTrash ? "bg-red/10 text-red" : "bg-transparent text-text-3 hover:text-text hover:bg-surface-2"
-            }`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-            </svg>
-            Trash
-            {(trashConvs.length + trashMsgs.length) > 0 && (
-              <span className="ml-auto text-[10px] bg-red/20 text-red px-1.5 py-0.5 rounded-full">{trashConvs.length + trashMsgs.length}</span>
-            )}
-          </button>
-        </div>
-      )}
     </div>
   );
 
+  /* ── Conversation row ── */
   const ConvRow = ({ conv }: { conv: Conversation }) => {
     const name = getConvName(conv);
     const avatar = getConvAvatar(conv);
-    const isActive = convSource === "team" && activeConv?.id === conv.id;
+    const isActive = activeConv?.id === conv.id;
     const hasUnread = conv.unread_count > 0;
-    const canDelete = currentUser.role === "owner" || currentUser.role === "admin";
 
     return (
       <div className="relative group">
         <button
-          onClick={() => { setActiveConv(conv); setActiveClientConv(null); setConvSource("team"); setShowTrash(false); setMobileSidebarOpen(false); }}
+          onClick={() => { setActiveConv(conv); setMobileSidebarOpen(false); }}
           className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
             isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
           } ${confirmDeleteConv === conv.id ? "pr-[80px]" : ""}`}
         >
           {conv.type === "dm" && avatar ? (
-            <Avatar name={avatar.name} size={24} src={avatar.src} />
-          ) : conv.type === "channel" ? (
-            <span className={`text-[14px] font-bold ${isActive ? "text-red" : "text-text-3"}`}>#</span>
+            <Avatar name={avatar.name} size={24} />
           ) : (
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
               {name.slice(0, 2).toUpperCase()}
@@ -650,33 +464,31 @@ export function TeamMessenger({ currentUser }: Props) {
             </span>
           )}
         </button>
-        {canDelete && (
-          confirmDeleteConv === conv.id ? (
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
-                disabled={deletingConv === conv.id}
-                className="text-[10px] font-semibold px-2 py-1 rounded bg-red/20 text-red border-none cursor-pointer font-body"
-              >
-                {deletingConv === conv.id ? "..." : "Delete"}
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(null); }}
-                className="text-[10px] px-1.5 py-1 rounded bg-surface-2 text-text-3 border-none cursor-pointer font-body"
-              >
-                ✕
-              </button>
-            </div>
-          ) : (
+        {confirmDeleteConv === conv.id ? (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
             <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(conv.id); }}
-              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-transparent border-none cursor-pointer text-text-3 hover:text-red p-1 rounded transition-all"
+              onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+              disabled={deletingConv === conv.id}
+              className="text-[10px] font-semibold px-2 py-1 rounded bg-red/20 text-red border-none cursor-pointer font-body"
             >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
+              {deletingConv === conv.id ? "..." : "Delete"}
             </button>
-          )
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(null); }}
+              className="text-[10px] px-1.5 py-1 rounded bg-surface-2 text-text-3 border-none cursor-pointer font-body"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(conv.id); }}
+            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-transparent border-none cursor-pointer text-text-3 hover:text-red p-1 rounded transition-all"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+          </button>
         )}
       </div>
     );
@@ -717,19 +529,7 @@ export function TeamMessenger({ currentUser }: Props) {
 
       {/* ── Main chat area ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {(activeConv || (convSource === "client" && activeClientConv)) ? (() => {
-          // Resolve display info for either team or client conversation
-          const clientConv = convSource === "client" ? clientConvs.find((c) => c.id === activeClientConv) : null;
-          const clientName = clientConv
-            ? (clientConv.type === "dm"
-              ? (clientConv.members.find((m) => m.member_type === "client")?.member_name ?? "Client")
-              : (clientConv.name ?? "Group"))
-            : null;
-          const convName = convSource === "client" ? clientName : (activeConv ? getConvName(activeConv) : "");
-          const convMemberCount = convSource === "client" ? (clientConv?.members.length ?? 0) : (activeConv?.members.length ?? 0);
-          const convType = convSource === "client" ? clientConv?.type : activeConv?.type;
-
-          return (
+        {activeConv ? (
           <>
             {/* Chat header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface shrink-0">
@@ -742,35 +542,27 @@ export function TeamMessenger({ currentUser }: Props) {
                 </svg>
               </button>
 
-              {convType === "dm" && convSource === "team" && activeConv && getConvAvatar(activeConv) ? (
-                <Avatar name={getConvAvatar(activeConv)!.name} size={28} src={getConvAvatar(activeConv)!.src} />
-              ) : convType === "channel" ? (
-                <span className="text-text-2 text-[16px] font-bold">#</span>
+              {activeConv.type === "dm" && getConvAvatar(activeConv) ? (
+                <Avatar name={getConvAvatar(activeConv)!.name} size={28} />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-surface-3 flex items-center justify-center text-[10px] font-bold text-text-3">
-                  {(convName ?? "?").slice(0, 2).toUpperCase()}
+                  {getConvName(activeConv).slice(0, 2).toUpperCase()}
                 </div>
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="text-text font-semibold text-[14px] truncate">{convName}</div>
-                {activeConv?.description && (
-                  <div className="text-text-3 text-[11px] truncate">{activeConv.description}</div>
-                )}
-                {convType !== "dm" && (
-                  <div className="text-text-3 text-[11px]">{convMemberCount} member{convMemberCount !== 1 ? "s" : ""}</div>
-                )}
-                {convSource === "client" && (
-                  <div className="text-text-3 text-[10px]">Client conversation</div>
+                <div className="text-text font-semibold text-[14px] truncate">{getConvName(activeConv)}</div>
+                {activeConv.type !== "dm" && (
+                  <div className="text-text-3 text-[11px]">{activeConv.members.length} member{activeConv.members.length !== 1 ? "s" : ""}</div>
                 )}
               </div>
 
-              {/* Members avatars — team convs only */}
-              {convSource === "team" && activeConv && activeConv.type !== "dm" && activeConv.members.length > 0 && (
+              {/* Member avatars for groups */}
+              {activeConv.type !== "dm" && activeConv.members.length > 0 && (
                 <div className="hidden sm:flex items-center">
                   {activeConv.members.slice(0, 4).map((m, i) => (
                     <div key={m.member_email} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
-                      <Avatar name={m.team_members.name} size={24} src={m.team_members.avatar_url} />
+                      <Avatar name={m.member_name ?? m.member_email} size={24} />
                     </div>
                   ))}
                   {activeConv.members.length > 4 && (
@@ -790,18 +582,13 @@ export function TeamMessenger({ currentUser }: Props) {
               {!loadingMessages && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                   <div className="text-[32px]">
-                    {convType === "channel" ? "📣" : convType === "dm" ? "👋" : "💬"}
+                    {activeConv.type === "dm" ? "👋" : "💬"}
                   </div>
                   <div className="text-text font-semibold text-[14px]">
-                    {convType === "dm"
-                      ? `This is the beginning of your DM with ${convName}`
-                      : convType === "channel" && activeConv
-                      ? `Welcome to #${activeConv.name}!`
-                      : `Welcome to ${convName}`}
+                    {activeConv.type === "dm"
+                      ? `This is the beginning of your DM with ${getConvName(activeConv)}`
+                      : `Welcome to ${activeConv.name}`}
                   </div>
-                  {activeConv?.description && (
-                    <div className="text-text-3 text-[12px] max-w-[300px]">{activeConv.description}</div>
-                  )}
                   <div className="text-text-3 text-[12px]">Send the first message 👇</div>
                 </div>
               )}
@@ -811,11 +598,10 @@ export function TeamMessenger({ currentUser }: Props) {
                 const grouped = isGrouped(msg, prev);
                 const showDate = !prev || !isSameDay(prev.created_at, msg.created_at);
                 const isOwn = msg.sender_email === currentUser.email;
-                // Support both team messages (team_members join) and client messages (sender_name field)
-                const senderName = (msg as Record<string, unknown>).sender_name as string | undefined
-                  ?? msg.team_members?.name ?? msg.sender_email;
-                const senderRole = msg.team_members?.role ?? "";
-                const avatarSrc = msg.team_members?.avatar_url;
+                const senderName = msg.sender_name ?? msg.sender_email;
+                // Look up role if sender is a team member
+                const teamMemberInfo = allMembers.find((m) => m.email === msg.sender_email);
+                const senderRole = teamMemberInfo?.role ?? "";
 
                 return (
                   <div key={msg.id}>
@@ -828,7 +614,7 @@ export function TeamMessenger({ currentUser }: Props) {
                       {/* Avatar column */}
                       <div className="w-8 shrink-0 pt-0.5">
                         {!grouped ? (
-                          <Avatar name={senderName} size={32} src={avatarSrc} />
+                          <Avatar name={senderName} size={32} src={teamMemberInfo?.avatar_url} />
                         ) : (
                           <span className="invisible text-[10px] text-text-3 group-hover:visible">
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -946,7 +732,7 @@ export function TeamMessenger({ currentUser }: Props) {
                     <polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 00-4-4H4" />
                   </svg>
                   <span className="text-text-3 text-[11px] flex-1 truncate">
-                    Replying to <strong className="text-text-2">{(replyTo as Record<string, unknown>).sender_name as string ?? replyTo.team_members?.name ?? replyTo.sender_email}</strong>: {replyTo.content}
+                    Replying to <strong className="text-text-2">{replyTo.sender_name ?? replyTo.sender_email}</strong>: {replyTo.content}
                   </span>
                   <button onClick={() => setReplyTo(null)} className="bg-transparent border-none cursor-pointer text-text-3 hover:text-text p-0.5">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -990,7 +776,7 @@ export function TeamMessenger({ currentUser }: Props) {
                       }
                       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
                     }}
-                    placeholder={`Message ${convName ?? "..."}...`}
+                    placeholder={`Message ${getConvName(activeConv)}...`}
                     rows={1}
                     style={{ resize: "none", minHeight: 42, maxHeight: 120 }}
                     className="tfc-textarea w-full text-[13px]"
@@ -1023,108 +809,11 @@ export function TeamMessenger({ currentUser }: Props) {
               </div>
             </div>
           </>
-          );
-        })() : showTrash ? (
-          /* Trash view */
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ padding: "16px 20px", borderBottom: "1px solid #1e1e1e", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ color: "#F0EDE6", fontWeight: 700, fontSize: 15 }}>Trash</span>
-              <button onClick={() => setShowTrash(false)} style={{ background: "none", border: "none", color: "#5A5652", cursor: "pointer", fontSize: 12, padding: "4px 8px", borderRadius: 6 }} className="hover:text-text transition-colors font-body">
-                Close
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
-              {loadingTrash ? (
-                <div style={{ padding: 32, textAlign: "center", color: "#5A5652", fontSize: 13 }}>Loading...</div>
-              ) : trashConvs.length === 0 && trashMsgs.length === 0 ? (
-                <div style={{ padding: 32, textAlign: "center" }}>
-                  <div style={{ fontSize: 36, marginBottom: 8 }}>🗑️</div>
-                  <div style={{ color: "#5A5652", fontSize: 13 }}>Trash is empty</div>
-                  <div style={{ color: "#3A3632", fontSize: 11, marginTop: 4 }}>Deleted conversations and messages appear here for 30 days</div>
-                </div>
-              ) : (
-                <div>
-                  {trashConvs.length > 0 && (
-                    <div>
-                      <div style={{ padding: "4px 20px 8px", color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Conversations</div>
-                      {trashConvs.map((conv) => (
-                        <div key={conv.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #111" }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ color: "#F0EDE6", fontSize: 13, fontWeight: 500 }}>
-                              {conv.type === "channel" ? `# ${conv.name}` : conv.name ?? (conv.type === "dm" ? "DM" : "Group")}
-                            </div>
-                            <div style={{ color: "#5A5652", fontSize: 11, marginTop: 2 }}>
-                              {conv.type} · Deleted {new Date(conv.deleted_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                            <button
-                              onClick={() => restoreTrashItem(conv.id, "conversation")}
-                              disabled={trashBusy === conv.id}
-                              style={{ background: "#1e1e1e", border: "none", borderRadius: 6, padding: "4px 10px", color: "#A8A49C", fontSize: 11, cursor: "pointer" }}
-                            >
-                              {trashBusy === conv.id ? "..." : "Restore"}
-                            </button>
-                            <button
-                              onClick={() => permanentDelete(conv.id, "conversation")}
-                              disabled={trashBusy === conv.id}
-                              style={{ background: "none", border: "none", borderRadius: 6, padding: "4px 8px", color: "#5A5652", fontSize: 11, cursor: "pointer" }}
-                              className="hover:text-red transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {trashMsgs.length > 0 && (
-                    <div style={{ marginTop: trashConvs.length > 0 ? 16 : 0 }}>
-                      <div style={{ padding: "4px 20px 8px", color: "#5A5652", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Messages</div>
-                      {trashMsgs.map((msg) => (
-                        <div key={msg.id} style={{ padding: "10px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #111" }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ color: "#A8A49C", fontSize: 12, marginBottom: 2 }}>{msg.team_members?.name ?? msg.sender_email}</div>
-                            <div style={{ color: "#F0EDE6", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content}
-                            </div>
-                            <div style={{ color: "#5A5652", fontSize: 11, marginTop: 2 }}>
-                              Deleted {new Date(msg.deleted_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                            <button
-                              onClick={() => restoreTrashItem(msg.id, "message")}
-                              disabled={trashBusy === msg.id}
-                              style={{ background: "#1e1e1e", border: "none", borderRadius: 6, padding: "4px 10px", color: "#A8A49C", fontSize: 11, cursor: "pointer" }}
-                            >
-                              {trashBusy === msg.id ? "..." : "Restore"}
-                            </button>
-                            <button
-                              onClick={() => permanentDelete(msg.id, "message")}
-                              disabled={trashBusy === msg.id}
-                              style={{ background: "none", border: "none", borderRadius: 6, padding: "4px 8px", color: "#5A5652", fontSize: 11, cursor: "pointer" }}
-                              className="hover:text-red transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div style={{ padding: "10px 20px", borderTop: "1px solid #111", background: "#0D0D0D" }}>
-              <p style={{ color: "#3A3632", fontSize: 10, margin: 0 }}>Items are permanently deleted after 30 days</p>
-            </div>
-          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
             <div className="text-[48px]">💬</div>
-            <div className="text-text font-heading font-bold text-[18px]">Team Messenger</div>
-            <div className="text-text-3 text-[13px] max-w-[280px]">Select a conversation or start a new one to get the team talking.</div>
+            <div className="text-text font-heading font-bold text-[18px]">Messenger</div>
+            <div className="text-text-3 text-[13px] max-w-[280px]">Select a conversation or start a new one to get chatting.</div>
             <button onClick={() => setShowNewModal(true)} className="tfc-btn mt-2">Start a conversation</button>
             <button onClick={() => setMobileSidebarOpen(true)} className="md:hidden tfc-btn-ghost mt-1">View conversations</button>
           </div>
@@ -1145,9 +834,9 @@ export function TeamMessenger({ currentUser }: Props) {
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Type selector */}
+              {/* Type selector — DM and Group only (no channels) */}
               <div className="flex gap-2">
-                {(["dm", "group", "channel"] as const).map((t) => (
+                {(["dm", "group"] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setNewType(t)}
@@ -1157,21 +846,21 @@ export function TeamMessenger({ currentUser }: Props) {
                         : "bg-surface-2 border-border text-text-3 hover:text-text hover:border-border-2"
                     }`}
                   >
-                    {t === "dm" ? "Direct" : t === "group" ? "Group" : "Channel"}
+                    {t === "dm" ? "Direct" : "Group"}
                   </button>
                 ))}
               </div>
 
-              {/* Channel name */}
-              {newType === "channel" && (
+              {/* Group name */}
+              {newType === "group" && (
                 <>
                   <div>
-                    <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">Channel name</label>
+                    <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">Group name (optional)</label>
                     <input
                       autoFocus
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      placeholder="e.g. content-review"
+                      placeholder="e.g. Content Review"
                       className="tfc-input w-full text-[13px]"
                     />
                   </div>
@@ -1180,24 +869,11 @@ export function TeamMessenger({ currentUser }: Props) {
                     <input
                       value={newDesc}
                       onChange={(e) => setNewDesc(e.target.value)}
-                      placeholder="What's this channel for?"
+                      placeholder="What's this group for?"
                       className="tfc-input w-full text-[13px]"
                     />
                   </div>
                 </>
-              )}
-
-              {/* Group name */}
-              {newType === "group" && (
-                <div>
-                  <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">Group name (optional)</label>
-                  <input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g. Design Team"
-                    className="tfc-input w-full text-[13px]"
-                  />
-                </div>
               )}
 
               {/* Member selection */}
@@ -1206,7 +882,7 @@ export function TeamMessenger({ currentUser }: Props) {
                   {newType === "dm" ? "Select person" : "Add members"}
                 </label>
                 <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                  {allMembers.filter((m) => m.email !== currentUser.email).map((m) => {
+                  {allMembers.map((m) => {
                     const isSelected = selectedEmails.includes(m.email);
                     return (
                       <button
@@ -1239,6 +915,9 @@ export function TeamMessenger({ currentUser }: Props) {
                       </button>
                     );
                   })}
+                  {allMembers.length === 0 && (
+                    <div className="text-text-3 text-[12px] py-4 text-center">No team members found</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1247,10 +926,10 @@ export function TeamMessenger({ currentUser }: Props) {
               <button onClick={() => setShowNewModal(false)} className="tfc-btn-ghost flex-1 py-2.5">Cancel</button>
               <button
                 onClick={createConversation}
-                disabled={creating || (newType === "channel" && !newName.trim()) || ((newType === "dm" || newType === "group") && selectedEmails.length === 0)}
+                disabled={creating || selectedEmails.length === 0}
                 className="tfc-btn flex-1 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {creating ? "Creating..." : newType === "dm" ? "Start DM" : newType === "group" ? "Create Group" : "Create Channel"}
+                {creating ? "Creating..." : newType === "dm" ? "Start DM" : "Create Group"}
               </button>
             </div>
           </div>
