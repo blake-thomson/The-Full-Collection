@@ -2,23 +2,22 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request: { headers: request.headers } });
+  let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll();
         },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({ name, value, ...options });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({ name, value: "", ...options });
-          response.cookies.set({ name, value: "", ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
         },
       },
     }
@@ -30,23 +29,28 @@ export async function middleware(request: NextRequest) {
   // Public pages — no auth required
   const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout", "/reset-password", "/setup"];
   if (publicPaths.some((p) => path.startsWith(p))) {
-    return response;
+    return supabaseResponse;
   }
 
   // API routes — handled by the routes themselves
   if (path.startsWith("/api/")) {
-    return response;
+    return supabaseResponse;
   }
 
   // Protected pages — redirect to login if not authenticated
   if (!user) {
-    if (path.startsWith("/team/")) {
-      return NextResponse.redirect(new URL("/team/login", request.url));
-    }
-    return NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = path.startsWith("/team/")
+      ? new URL("/team/login", request.url)
+      : new URL("/login", request.url);
+    const redirect = NextResponse.redirect(loginUrl);
+    // Carry over any cookie updates from the session refresh attempt
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirect.cookies.set(cookie.name, cookie.value);
+    });
+    return redirect;
   }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {
