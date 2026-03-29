@@ -980,10 +980,9 @@ export function MessageThread({ clientId, currentUser, clientName }: Props) {
     <div className="flex h-full" style={{ background: "#0A0A0A" }}>
       {/* Main channel */}
       <div className={`flex flex-col flex-1 min-w-0 ${threadMsg ? "hidden sm:flex" : "flex"}`}>
-        {/* Channel header */}
+        {/* Header */}
         <div className="px-4 sm:px-6 py-3 shrink-0 flex items-center gap-3" style={{ borderBottom: "1px solid #1A1A1A" }}>
-          <span className="font-heading font-bold text-[15px]" style={{ color: "#F0EDE6" }}># general</span>
-          <span className="text-[12px]" style={{ color: "#5A5652" }}>{resolvedClientName}</span>
+          <span className="font-heading font-bold text-[15px]" style={{ color: "#F0EDE6" }}>{resolvedClientName}</span>
           <div className="flex-1" />
           <span className="text-[11px]" style={{ color: "#5A5652" }}>{messages.length} messages</span>
         </div>
