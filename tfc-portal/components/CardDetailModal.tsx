@@ -5,6 +5,7 @@ import { COLUMNS } from "@/lib/constants";
 import { openGooglePicker, type PickerResult } from "@/lib/google-picker";
 import PublishScheduler from "@/components/PublishScheduler";
 import TimeTracker from "@/components/TimeTracker";
+import { AICaptionGenerator } from "@/components/AICaptionGenerator";
 
 interface Attachment {
   id: string;
@@ -908,6 +909,16 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
                 onUpdate({ ...card, column_id: "scheduled" });
                 onClose();
               }}
+            />
+          </div>
+        )}
+
+        {/* AI Caption Generator — shown for team on approved/scheduled cards */}
+        {currentUser.type === "team" && (card.column_id === "approved" || card.column_id === "scheduled") && (
+          <div className="px-6 py-4 border-t border-border">
+            <AICaptionGenerator
+              cardId={card.id}
+              cardColumnId={card.column_id}
             />
           </div>
         )}
