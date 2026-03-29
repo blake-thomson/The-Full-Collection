@@ -17,6 +17,31 @@ function getOAuth2Client() {
   );
 }
 
+// Resolve which table has the user's Drive token
+async function resolveTokenSource(email: string, admin: ReturnType<typeof createSupabaseAdmin>) {
+  const { data: client } = await admin
+    .from("clients")
+    .select("google_drive_token")
+    .eq("email", email)
+    .single();
+
+  if (client?.google_drive_token) {
+    return { table: "clients" as const, raw: client.google_drive_token };
+  }
+
+  const { data: member } = await admin
+    .from("team_members")
+    .select("google_drive_token")
+    .eq("email", email)
+    .single();
+
+  if (member?.google_drive_token) {
+    return { table: "team_members" as const, raw: member.google_drive_token };
+  }
+
+  return null;
+}
+
 // GET — list files using per-user OAuth token
 export async function GET(req: NextRequest) {
   const supabase = createServerSupabase();
@@ -24,23 +49,18 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createSupabaseAdmin();
-  const { data: client } = await admin
-    .from("clients")
-    .select("google_drive_token")
-    .eq("email", user.email)
-    .single();
+  const source = await resolveTokenSource(user.email!, admin);
 
-  if (!client?.google_drive_token) {
+  if (!source) {
     return NextResponse.json({ connected: false });
   }
 
   // Decrypt token — handle both encrypted (new) and legacy plaintext (old) values
   let token: DriveToken | null;
-  if (isEncrypted(client.google_drive_token)) {
-    token = decryptJson<DriveToken>(client.google_drive_token as EncryptedValue);
+  if (isEncrypted(source.raw)) {
+    token = decryptJson<DriveToken>(source.raw as EncryptedValue);
   } else {
-    // Legacy plaintext — decrypt on next write, use as-is for now
-    token = client.google_drive_token as DriveToken;
+    token = source.raw as DriveToken;
   }
 
   if (!token?.access_token) {
@@ -55,9 +75,9 @@ export async function GET(req: NextRequest) {
     const merged = { ...token, ...newTokens };
     const encrypted = encryptJson(merged);
     await admin
-      .from("clients")
+      .from(source.table)
       .update({ google_drive_token: encrypted })
-      .eq("email", user.email);
+      .eq("email", user.email!);
   });
 
   const { searchParams } = new URL(req.url);
@@ -70,7 +90,6 @@ export async function GET(req: NextRequest) {
 
     let query = `'${folderId}' in parents and trashed = false`;
     if (search) {
-      // Safely escape single quotes in the search term
       const escaped = search.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
       query = `name contains '${escaped}' and trashed = false`;
     }
@@ -116,9 +135,9 @@ export async function GET(req: NextRequest) {
         err.message.includes("Token has been expired or revoked"))
     ) {
       await admin
-        .from("clients")
+        .from(source.table)
         .update({ google_drive_token: null })
-        .eq("email", user.email);
+        .eq("email", user.email!);
       return NextResponse.json({ connected: false });
     }
     const message = err instanceof Error ? err.message : "Failed to access Google Drive";
@@ -133,11 +152,10 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createSupabaseAdmin();
-  const { error } = await admin
-    .from("clients")
-    .update({ google_drive_token: null })
-    .eq("email", user.email);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Clear from whichever table has a token
+  await admin.from("clients").update({ google_drive_token: null }).eq("email", user.email!);
+  await admin.from("team_members").update({ google_drive_token: null }).eq("email", user.email!);
+
   return NextResponse.json({ success: true });
 }

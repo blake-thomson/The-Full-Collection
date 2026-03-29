@@ -4,10 +4,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { encryptJson } from "@/lib/crypto";
 
-const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL,
-  "https://portal.thefullcollection.com",
-].filter(Boolean);
+const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/drive/callback`;
 
 // GET — handle OAuth callback, exchange code for tokens, encrypt and store in DB
 export async function GET(req: NextRequest) {
@@ -26,20 +23,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard?tab=files&drive_error=consent_denied", req.url));
   }
 
-  const origin = new URL(req.url).origin;
-
-  // Validate the origin is one of our known domains
-  if (!ALLOWED_ORIGINS.includes(origin)) {
-    console.error("OAuth callback from unexpected origin:", origin);
-    return NextResponse.redirect(new URL("/dashboard?tab=files&drive_error=invalid_origin", req.url));
-  }
-
-  const redirectUri = `${origin}/api/drive/callback`;
-
   const oauth2 = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    redirectUri
+    REDIRECT_URI
   );
 
   try {
@@ -55,12 +42,28 @@ export async function GET(req: NextRequest) {
     const encrypted = encryptJson(tokenData);
 
     const admin = createSupabaseAdmin();
-    await admin
-      .from("clients")
-      .update({ google_drive_token: encrypted })
-      .eq("email", user.email);
 
-    return NextResponse.redirect(new URL("/dashboard?tab=files", req.url));
+    // Try to store in clients table first, then team_members
+    const { data: clientRow } = await admin
+      .from("clients")
+      .select("id")
+      .eq("email", user.email!)
+      .single();
+
+    if (clientRow) {
+      await admin
+        .from("clients")
+        .update({ google_drive_token: encrypted })
+        .eq("email", user.email!);
+      return NextResponse.redirect(new URL("/dashboard?tab=files", req.url));
+    }
+
+    // Must be a team member
+    await admin
+      .from("team_members")
+      .update({ google_drive_token: encrypted })
+      .eq("email", user.email!);
+    return NextResponse.redirect(new URL("/team/portal?tab=files", req.url));
   } catch (err) {
     console.error("Google OAuth token exchange error:", err);
     return NextResponse.redirect(
