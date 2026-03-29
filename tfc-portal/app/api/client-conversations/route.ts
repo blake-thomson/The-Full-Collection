@@ -223,6 +223,33 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ...conv, members: members ?? [], last_message: null, unread_count: 0 });
 }
 
+// DELETE /api/client-conversations?id=xxx — soft-delete conversation
+export async function DELETE(req: NextRequest) {
+  const actor = await resolveActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const admin = createSupabaseAdmin();
+
+  // Verify the actor is a member of this conversation
+  const { data: membership } = await admin
+    .from("client_conversation_members")
+    .select("id")
+    .eq("conversation_id", id)
+    .eq("member_email", actor.email)
+    .single();
+
+  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const now = new Date().toISOString();
+  await admin.from("client_messages").update({ deleted_at: now }).eq("conversation_id", id).is("deleted_at", null);
+  await admin.from("client_conversations").update({ deleted_at: now }).eq("id", id);
+
+  return NextResponse.json({ ok: true });
+}
+
 // PATCH /api/client-conversations — mark as read
 export async function PATCH(req: NextRequest) {
   const actor = await resolveActor();

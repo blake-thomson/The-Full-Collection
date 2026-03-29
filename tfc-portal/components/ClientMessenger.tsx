@@ -4,6 +4,16 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { Avatar } from "@/components/ui/Avatar";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface TeamMemberOption {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar_url?: string;
+}
+
 interface ConversationMember {
   member_email: string;
   member_name: string | null;
@@ -34,30 +44,19 @@ interface Message {
   updated_at: string;
 }
 
-interface TeamMemberOption {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar_url?: string;
-}
-
 interface Props {
   clientId: string;
   currentUser: { name: string; email: string; type: "client" | "team" };
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const ROLE_COLOR: Record<string, string> = {
   owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6",
   editor: "#10B981", social_media_manager: "#8B5CF6", smm: "#8B5CF6", videographer: "#EC4899",
 };
 
-function formatRole(role: string) {
-  if (role === "smm" || role === "social_media_manager") return "SMM";
-  if (role === "project_manager") return "PM";
-  if (role === "videographer") return "Video";
-  return role;
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -103,6 +102,8 @@ function DateSeparator({ iso }: { iso: string }) {
   );
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function ClientMessenger({ clientId, currentUser }: Props) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -111,19 +112,23 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
+  const [allMembers, setAllMembers] = useState<TeamMemberOption[]>([]);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newType, setNewType] = useState<"dm" | "group">("dm");
   const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [editingMsg, setEditingMsg] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionCursor, setMentionCursor] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [hoveredMsg, setHoveredMsg] = useState<string | null>(null);
-  const [confirmDeleteConv, setConfirmDeleteConv] = useState<string | null>(null);
   const [deletingConv, setDeletingConv] = useState<string | null>(null);
+  const [confirmDeleteConv, setConfirmDeleteConv] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -142,15 +147,15 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
 
   useEffect(() => { loadConversations(); }, []);
 
-  /* ── Load team members (for DM/group creation) ── */
+  /* ── Load team members (for DM/group creation + @mentions) ── */
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/team-members");
-      if (res.ok) setTeamMembers(await res.json());
+      if (res.ok) setAllMembers(await res.json());
     })();
   }, []);
 
-  /* ── Load messages ── */
+  /* ── Load messages for active conversation ── */
   const loadMessages = useCallback(async (convId: string) => {
     setLoadingMessages(true);
     const res = await fetch(`/api/client-messages?conversation_id=${convId}&limit=80`);
@@ -180,7 +185,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
         schema: "public",
         table: "client_messages",
         filter: `conversation_id=eq.${activeConv.id}`,
-      }, async () => {
+      }, async (payload) => {
         const res = await fetch(`/api/client-messages?conversation_id=${activeConv.id}&limit=1`);
         if (res.ok) {
           const latest = await res.json();
@@ -190,17 +195,49 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
             return [...prev, ...newOnes];
           });
         }
+        if (payload.new.sender_email !== currentUser.email) {
+          fetch("/api/client-conversations", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ conversation_id: activeConv.id, action: "read" }),
+          });
+        }
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [activeConv, supabase]);
 
-  /* ── Scroll to bottom ── */
+    return () => { supabase.removeChannel(channel); };
+  }, [activeConv, currentUser.email, supabase]);
+
+  /* ── Scroll to bottom on new messages ── */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* ── Send ── */
+  /* ── @mention detection ── */
+  useEffect(() => {
+    const match = input.match(/@(\w*)$/);
+    if (match) {
+      setMentionSearch(match[1].toLowerCase());
+      setShowMentions(true);
+      setMentionCursor(0);
+    } else {
+      setShowMentions(false);
+    }
+  }, [input]);
+
+  const mentionMatches = allMembers.filter(
+    (m) => m.email !== currentUser.email &&
+      (m.name.toLowerCase().includes(mentionSearch) || m.email.toLowerCase().includes(mentionSearch))
+  ).slice(0, 6);
+
+  const insertMention = (member: TeamMemberOption) => {
+    const newInput = input.replace(/@\w*$/, `@${member.name.replace(/\s/g, "")} `);
+    setInput(newInput);
+    setShowMentions(false);
+    inputRef.current?.focus();
+  };
+
+  /* ── Send message ── */
   const sendMessage = async () => {
     if (!input.trim() || !activeConv || sending) return;
     setSending(true);
@@ -220,7 +257,10 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
 
     if (res.ok) {
       const msg = await res.json();
-      setMessages((prev) => prev.find((m) => m.id === msg.id) ? prev : [...prev, msg]);
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeConv.id
@@ -232,7 +272,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
     setSending(false);
   };
 
-  /* ── Edit ── */
+  /* ── Edit message ── */
   const saveEdit = async (id: string) => {
     if (!editContent.trim()) return;
     await fetch("/api/client-messages", {
@@ -244,13 +284,13 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
     setEditingMsg(null);
   };
 
-  /* ── Delete (own messages only) ── */
+  /* ── Delete message (own only) ── */
   const deleteMessage = async (id: string) => {
     await fetch(`/api/client-messages?id=${id}`, { method: "DELETE" });
     setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
-  /* ── Hide (others' messages) ── */
+  /* ── Hide message (others', per-user) ── */
   const hideMessage = async (id: string) => {
     await fetch("/api/client-messages", {
       method: "PATCH",
@@ -271,7 +311,8 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: newType,
-        name: newType === "group" ? (newName.trim() || null) : null,
+        name: newType === "group" ? (newName.trim().toLowerCase().replace(/\s+/g, "-") || null) : null,
+        description: newDesc.trim() || null,
         client_id: clientId,
         member_emails: selectedEmails,
       }),
@@ -281,32 +322,31 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
       const conv = await res.json();
       setConversations((prev) => {
         const exists = prev.find((c) => c.id === conv.id);
-        return exists ? prev.map((c) => c.id === conv.id ? conv : c) : [...prev, conv];
+        return exists ? prev : [...prev, conv];
       });
       setActiveConv(conv);
       setShowNewModal(false);
-      setNewName(""); setSelectedEmails([]);
+      setNewName(""); setNewDesc(""); setSelectedEmails([]);
       setMobileSidebarOpen(false);
     }
     setCreating(false);
   };
 
-  /* ── Delete conversation (own DMs) ── */
+  /* ── Delete conversation ── */
   const deleteConversation = async (id: string) => {
     setDeletingConv(id);
-    // Client can only delete conversations they created — we'll soft-delete via a PATCH
-    // Actually for now we just remove from local state (full delete endpoint requires owner/admin)
+    await fetch(`/api/client-conversations?id=${id}`, { method: "DELETE" });
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeConv?.id === id) setActiveConv(null);
     setDeletingConv(null);
     setConfirmDeleteConv(null);
   };
 
-  /* ── Display helpers ── */
+  /* ── Conversation display name ── */
   const getConvName = (conv: Conversation) => {
     if (conv.type === "dm") {
       const other = conv.members.find((m) => m.member_email !== currentUser.email);
-      return other?.member_name ?? "DM";
+      return other?.member_name ?? conv.name ?? "DM";
     }
     return conv.name ?? "Group";
   };
@@ -319,6 +359,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
     return null;
   };
 
+  /* ── Group messages by sender+time ── */
   const isGrouped = (msg: Message, prev: Message | undefined) => {
     if (!prev) return false;
     if (prev.sender_email !== msg.sender_email) return false;
@@ -329,72 +370,12 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
   const groups = conversations.filter((c) => c.type === "group");
 
   /* ── Sidebar ── */
-  const ConvRow = ({ conv }: { conv: Conversation }) => {
-    const name = getConvName(conv);
-    const avatar = getConvAvatar(conv);
-    const isActive = activeConv?.id === conv.id;
-    const hasUnread = conv.unread_count > 0;
-
-    return (
-      <div className="relative group">
-        <button
-          onClick={() => { setActiveConv(conv); setMobileSidebarOpen(false); }}
-          className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
-            isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
-          }`}
-        >
-          {conv.type === "dm" && avatar ? (
-            <Avatar name={avatar.name} size={24} />
-          ) : (
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
-              {name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-          <span className={`flex-1 text-[13px] truncate ${hasUnread && !isActive ? "font-semibold text-text" : ""}`}>{name}</span>
-          {conv.last_message && !hasUnread && (
-            <span className="text-text-3 text-[10px] shrink-0">{timeAgo(conv.last_message.created_at)}</span>
-          )}
-          {hasUnread && !isActive && (
-            <span className="bg-red text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-              {conv.unread_count > 99 ? "99+" : conv.unread_count}
-            </span>
-          )}
-        </button>
-        {confirmDeleteConv === conv.id ? (
-          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
-              disabled={deletingConv === conv.id}
-              className="text-[10px] font-semibold px-2 py-1 rounded bg-red/20 text-red border-none cursor-pointer font-body"
-            >
-              {deletingConv === conv.id ? "..." : "Delete"}
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(null); }}
-              className="text-[10px] px-1.5 py-1 rounded bg-surface-2 text-text-3 border-none cursor-pointer font-body"
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(conv.id); }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-transparent border-none cursor-pointer text-text-3 hover:text-red p-1 rounded transition-all"
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-            </svg>
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  const SidebarContent = () => (
+  const Sidebar = () => (
     <div className="w-full h-full flex flex-col bg-surface border-r border-border">
+      {/* Header */}
       <div className="px-4 py-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <span className="text-text font-heading font-bold text-[14px]">Messages</span>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-text font-heading font-bold text-[14px]">Messenger</span>
           <button
             onClick={() => setShowNewModal(true)}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-surface-2 hover:bg-red/10 text-text-3 hover:text-red border-none cursor-pointer transition-colors"
@@ -441,6 +422,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
           </div>
         )}
 
+        {/* Start group chat CTA */}
         <div className="px-4 pt-2">
           <button
             onClick={() => { setNewType("group"); setShowNewModal(true); }}
@@ -453,6 +435,65 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
     </div>
   );
 
+  /* ── Conversation row ── */
+  const ConvRow = ({ conv }: { conv: Conversation }) => {
+    const name = getConvName(conv);
+    const avatar = getConvAvatar(conv);
+    const isActive = activeConv?.id === conv.id;
+    const hasUnread = conv.unread_count > 0;
+
+    return (
+      <div className="relative group">
+        <button
+          onClick={() => { setActiveConv(conv); setMobileSidebarOpen(false); }}
+          className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
+            isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
+          } ${confirmDeleteConv === conv.id ? "pr-[80px]" : ""}`}
+        >
+          {conv.type === "dm" && avatar ? (
+            <Avatar name={avatar.name} size={24} />
+          ) : (
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
+              {name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <span className={`flex-1 text-[13px] truncate ${hasUnread && !isActive ? "font-semibold text-text" : ""}`}>{name}</span>
+          {hasUnread && !isActive && (
+            <span className="bg-red text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {conv.unread_count > 99 ? "99+" : conv.unread_count}
+            </span>
+          )}
+        </button>
+        {confirmDeleteConv === conv.id ? (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id); }}
+              disabled={deletingConv === conv.id}
+              className="text-[10px] font-semibold px-2 py-1 rounded bg-red/20 text-red border-none cursor-pointer font-body"
+            >
+              {deletingConv === conv.id ? "..." : "Delete"}
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(null); }}
+              className="text-[10px] px-1.5 py-1 rounded bg-surface-2 text-text-3 border-none cursor-pointer font-body"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmDeleteConv(conv.id); }}
+            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-transparent border-none cursor-pointer text-text-3 hover:text-red p-1 rounded transition-all"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -463,34 +504,34 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
 
   return (
     <div className="flex-1 flex overflow-hidden" style={{ height: "100%" }}>
-      {/* Desktop sidebar */}
+      {/* ── Sidebar (desktop) ── */}
       <div className="hidden md:flex w-[220px] shrink-0 flex-col border-r border-border overflow-hidden">
-        <SidebarContent />
+        <Sidebar />
       </div>
 
-      {/* Mobile sidebar overlay */}
+      {/* ── Mobile sidebar overlay ── */}
       {mobileSidebarOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="w-[260px] h-full bg-surface shadow-2xl">
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
-              <span className="text-text font-bold text-[14px]">Messages</span>
+              <span className="text-text font-bold text-[14px]">Messenger</span>
               <button onClick={() => setMobileSidebarOpen(false)} className="bg-transparent border-none cursor-pointer text-text-3 p-1">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <SidebarContent />
+            <Sidebar />
           </div>
           <div className="flex-1 bg-black/40" onClick={() => setMobileSidebarOpen(false)} />
         </div>
       )}
 
-      {/* Main chat area */}
+      {/* ── Main chat area ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {activeConv ? (
           <>
-            {/* Header */}
+            {/* Chat header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface shrink-0">
               <button
                 onClick={() => setMobileSidebarOpen(true)}
@@ -516,6 +557,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                 )}
               </div>
 
+              {/* Member avatars for groups */}
               {activeConv.type !== "dm" && activeConv.members.length > 0 && (
                 <div className="hidden sm:flex items-center">
                   {activeConv.members.slice(0, 4).map((m, i) => (
@@ -539,11 +581,13 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
               )}
               {!loadingMessages && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
-                  <div className="text-[32px]">{activeConv.type === "dm" ? "👋" : "💬"}</div>
+                  <div className="text-[32px]">
+                    {activeConv.type === "dm" ? "👋" : "💬"}
+                  </div>
                   <div className="text-text font-semibold text-[14px]">
                     {activeConv.type === "dm"
                       ? `This is the beginning of your DM with ${getConvName(activeConv)}`
-                      : `Welcome to ${getConvName(activeConv)}`}
+                      : `Welcome to ${activeConv.name}`}
                   </div>
                   <div className="text-text-3 text-[12px]">Send the first message 👇</div>
                 </div>
@@ -555,7 +599,9 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                 const showDate = !prev || !isSameDay(prev.created_at, msg.created_at);
                 const isOwn = msg.sender_email === currentUser.email;
                 const senderName = msg.sender_name ?? msg.sender_email;
-                const teamInfo = teamMembers.find((m) => m.email === msg.sender_email);
+                // Look up role if sender is a team member
+                const teamMemberInfo = allMembers.find((m) => m.email === msg.sender_email);
+                const senderRole = teamMemberInfo?.role ?? "";
 
                 return (
                   <div key={msg.id}>
@@ -565,9 +611,10 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                       onMouseEnter={() => setHoveredMsg(msg.id)}
                       onMouseLeave={() => setHoveredMsg(null)}
                     >
+                      {/* Avatar column */}
                       <div className="w-8 shrink-0 pt-0.5">
                         {!grouped ? (
-                          <Avatar name={senderName} size={32} src={teamInfo?.avatar_url} />
+                          <Avatar name={senderName} size={32} src={teamMemberInfo?.avatar_url} />
                         ) : (
                           <span className="invisible text-[10px] text-text-3 group-hover:visible">
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -575,20 +622,22 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                         )}
                       </div>
 
+                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         {!grouped && (
                           <div className="flex items-baseline gap-2 mb-0.5">
                             <span className="text-text font-semibold text-[13px]">{senderName}</span>
-                            {teamInfo?.role && (
+                            {senderRole && (
                               <span className="text-[9px] font-bold tracking-[0.08em] uppercase py-[1px] px-[5px] rounded"
-                                style={{ color: ROLE_COLOR[teamInfo.role] || "#A8A49C", background: `${ROLE_COLOR[teamInfo.role] || "#A8A49C"}18` }}>
-                                {formatRole(teamInfo.role)}
+                                style={{ color: ROLE_COLOR[senderRole] || "#A8A49C", background: `${ROLE_COLOR[senderRole] || "#A8A49C"}18` }}>
+                                {senderRole === "smm" ? "SMM" : senderRole === "social_media_manager" ? "SMM" : senderRole === "project_manager" ? "PM" : senderRole === "videographer" ? "Video" : senderRole}
                               </span>
                             )}
                             <span className="text-text-3 text-[11px]">{formatTime(msg.created_at)}</span>
                           </div>
                         )}
 
+                        {/* Reply context */}
                         {msg.reply_to_id && (
                           <div className="flex items-start gap-1.5 mb-1 pl-2 border-l-2 border-border">
                             <span className="text-text-3 text-[11px] italic truncate">
@@ -620,6 +669,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                         )}
                       </div>
 
+                      {/* Hover actions */}
                       {hoveredMsg === msg.id && editingMsg !== msg.id && (
                         <div className="absolute right-2 top-1 flex items-center gap-0.5 bg-surface border border-border rounded-lg shadow-sm px-1 py-0.5">
                           <button
@@ -675,6 +725,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
 
             {/* Input area */}
             <div className="px-4 pb-4 pt-2 border-t border-border shrink-0">
+              {/* Reply preview */}
               {replyTo && (
                 <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-surface-2 border border-border">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3 shrink-0">
@@ -691,6 +742,25 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                 </div>
               )}
 
+              {/* @mention dropdown */}
+              {showMentions && mentionMatches.length > 0 && (
+                <div className="mb-2 bg-surface border border-border rounded-xl shadow-lg overflow-hidden">
+                  {mentionMatches.map((m, i) => (
+                    <button
+                      key={m.email}
+                      onClick={() => insertMention(m)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-left border-none cursor-pointer transition-colors font-body ${
+                        i === mentionCursor ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2"
+                      }`}
+                    >
+                      <Avatar name={m.name} size={22} src={m.avatar_url} />
+                      <span className="text-[12px] font-medium">{m.name}</span>
+                      <span className="text-text-3 text-[11px]">{m.role}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-end gap-2">
                 <div className="flex-1 relative">
                   <textarea
@@ -698,6 +768,12 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
+                      if (showMentions) {
+                        if (e.key === "ArrowDown") { e.preventDefault(); setMentionCursor((c) => Math.min(c + 1, mentionMatches.length - 1)); return; }
+                        if (e.key === "ArrowUp") { e.preventDefault(); setMentionCursor((c) => Math.max(c - 1, 0)); return; }
+                        if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); if (mentionMatches[mentionCursor]) insertMention(mentionMatches[mentionCursor]); return; }
+                        if (e.key === "Escape") { setShowMentions(false); return; }
+                      }
                       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
                     }}
                     placeholder={`Message ${getConvName(activeConv)}...`}
@@ -729,22 +805,22 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                 </button>
               </div>
               <div className="text-text-3 text-[10px] mt-1 px-1">
-                <kbd className="bg-surface-2 px-1 py-0.5 rounded text-[9px]">Enter</kbd> to send · <kbd className="bg-surface-2 px-1 py-0.5 rounded text-[9px]">Shift+Enter</kbd> for new line
+                <kbd className="bg-surface-2 px-1 py-0.5 rounded text-[9px]">Enter</kbd> to send · <kbd className="bg-surface-2 px-1 py-0.5 rounded text-[9px]">Shift+Enter</kbd> for new line · @ to mention
               </div>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-8">
             <div className="text-[48px]">💬</div>
-            <div className="text-text font-heading font-bold text-[18px]">Messages</div>
-            <div className="text-text-3 text-[13px] max-w-[280px]">Send a direct message or start a group chat with your team.</div>
+            <div className="text-text font-heading font-bold text-[18px]">Messenger</div>
+            <div className="text-text-3 text-[13px] max-w-[280px]">Select a conversation or start a new one to get chatting.</div>
             <button onClick={() => setShowNewModal(true)} className="tfc-btn mt-2">Start a conversation</button>
             <button onClick={() => setMobileSidebarOpen(true)} className="md:hidden tfc-btn-ghost mt-1">View conversations</button>
           </div>
         )}
       </div>
 
-      {/* New Conversation Modal */}
+      {/* ── New Conversation Modal ── */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="bg-surface border border-border rounded-2xl w-full max-w-[440px] shadow-2xl">
@@ -758,40 +834,55 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
             </div>
 
             <div className="p-5 space-y-4">
+              {/* Type selector — DM and Group only (no channels) */}
               <div className="flex gap-2">
                 {(["dm", "group"] as const).map((t) => (
                   <button
                     key={t}
-                    onClick={() => { setNewType(t); setSelectedEmails([]); }}
+                    onClick={() => setNewType(t)}
                     className={`flex-1 py-2 px-3 rounded-lg text-[12px] font-semibold border transition-all cursor-pointer font-body ${
                       newType === t
                         ? "bg-red/10 border-red/40 text-red"
                         : "bg-surface-2 border-border text-text-3 hover:text-text hover:border-border-2"
                     }`}
                   >
-                    {t === "dm" ? "Direct Message" : "Group Chat"}
+                    {t === "dm" ? "Direct" : "Group"}
                   </button>
                 ))}
               </div>
 
+              {/* Group name */}
               {newType === "group" && (
-                <div>
-                  <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">Group name (optional)</label>
-                  <input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="e.g. Content Team"
-                    className="tfc-input w-full text-[13px]"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">Group name (optional)</label>
+                    <input
+                      autoFocus
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="e.g. Content Review"
+                      className="tfc-input w-full text-[13px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">Description (optional)</label>
+                    <input
+                      value={newDesc}
+                      onChange={(e) => setNewDesc(e.target.value)}
+                      placeholder="What's this group for?"
+                      className="tfc-input w-full text-[13px]"
+                    />
+                  </div>
+                </>
               )}
 
+              {/* Member selection */}
               <div>
                 <label className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase block mb-1.5">
-                  {newType === "dm" ? "Select team member" : "Add team members"}
+                  {newType === "dm" ? "Select person" : "Add members"}
                 </label>
                 <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                  {teamMembers.map((m) => {
+                  {allMembers.map((m) => {
                     const isSelected = selectedEmails.includes(m.email);
                     return (
                       <button
@@ -824,7 +915,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                       </button>
                     );
                   })}
-                  {teamMembers.length === 0 && (
+                  {allMembers.length === 0 && (
                     <div className="text-text-3 text-[12px] py-4 text-center">No team members found</div>
                   )}
                 </div>
