@@ -515,19 +515,19 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             </div>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          {/* Dates & Times */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <div>
-              <label className="tfc-label">Shoot Date</label>
-              <input type="date" className="tfc-input" aria-label="Shoot Date" value={shootDate} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <label className="tfc-label">Shoot Date & Time</label>
+              <input type="datetime-local" className="tfc-input" aria-label="Shoot Date & Time" value={shootDate} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
               <label className="tfc-label">Edit Deadline</label>
-              <input type="date" className="tfc-input" aria-label="Edit Deadline" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
+              <input type="datetime-local" className="tfc-input" aria-label="Edit Deadline" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
-              <label className="tfc-label">Publish Date</label>
-              <input type="date" className="tfc-input" aria-label="Publish Date" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <label className="tfc-label">Publish Date & Time</label>
+              <input type="datetime-local" className="tfc-input" aria-label="Publish Date & Time" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
           </div>
 

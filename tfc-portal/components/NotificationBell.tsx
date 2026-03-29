@@ -64,11 +64,15 @@ export function NotificationBell({ userEmail, userType }: Props) {
   useLayoutEffect(() => {
     if (open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const panelWidth = 380;
       const viewportWidth = window.innerWidth;
-      // Position right edge of panel at right edge of button, but don't go off-screen left
-      const right = Math.max(8, viewportWidth - rect.right - 2);
-      setDropdownPos({ top: rect.bottom + 8, right });
+      const isMobile = viewportWidth < 640;
+      if (isMobile) {
+        // Center on mobile — full width with 8px margin each side
+        setDropdownPos({ top: rect.bottom + 8, right: 8 });
+      } else {
+        const right = Math.max(8, viewportWidth - rect.right - 2);
+        setDropdownPos({ top: rect.bottom + 8, right });
+      }
     }
   }, [open]);
 
@@ -147,10 +151,11 @@ export function NotificationBell({ userEmail, userType }: Props) {
       {open && dropdownPos && (
         <div
           ref={panelRef}
-          className="fixed w-[calc(100vw-16px)] sm:w-[380px] bg-surface border border-border rounded-xl overflow-hidden z-[9999]"
+          className="fixed sm:w-[380px] bg-surface border border-border rounded-xl overflow-hidden z-[9999]"
           style={{
             top: dropdownPos.top,
             right: dropdownPos.right,
+            left: window.innerWidth < 640 ? 8 : "auto",
             boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
           }}
         >

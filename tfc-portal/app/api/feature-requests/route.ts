@@ -62,6 +62,32 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Notify owners/admins about the new request
+  try {
+    const { data: admins } = await supabase
+      .from("team_members")
+      .select("email")
+      .in("role", ["owner", "admin"]);
+    if (admins?.length) {
+      const notifications = admins
+        .filter((a) => a.email !== user.email) // don't notify self
+        .map((a) => ({
+          recipient_email: a.email,
+          recipient_type: "team" as const,
+          title: `New ${type}: ${title.trim()}`,
+          message: `${member?.name || user.email} submitted a ${type} request.`,
+          link: "/team/portal?tab=help",
+          type: "feature_request",
+        }));
+      if (notifications.length > 0) {
+        await supabase.from("notifications").insert(notifications);
+      }
+    }
+  } catch {
+    // Non-critical — don't fail the request if notification fails
+  }
+
   return NextResponse.json(data);
 }
 

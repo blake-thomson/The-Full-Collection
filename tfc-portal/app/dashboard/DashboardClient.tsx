@@ -195,6 +195,16 @@ export default function DashboardClient() {
 
   const handleAcceptIdea = async (idea: { title: string; description: string; platform: string; content_style: string; content_type: string; priority: string; hook: string; cta: string }) => {
     if (!client) return;
+
+    // Normalize AI-generated content_type to match DB enum values
+    const contentTypeMap: Record<string, string> = {
+      "short-form": "short_form", "short form": "short_form", "shortform": "short_form",
+      "long-form": "long_form", "long form": "long_form", "longform": "long_form",
+      "post/carousel": "carousel", "post": "carousel",
+    };
+    const rawType = (idea.content_type || "").toLowerCase().trim();
+    const normalizedType = contentTypeMap[rawType] || rawType.replace(/[-\s]/g, "_");
+
     try {
       const res = await fetch("/api/kanban", {
         method: "POST",
@@ -204,9 +214,9 @@ export default function DashboardClient() {
           column_id: "idea",
           title: idea.title,
           description: `${idea.description}\n\nHook: "${idea.hook}"${idea.cta ? `\n\nCTA: ${idea.cta}` : ""}`,
-          platform: idea.platform,
+          platform: idea.platform?.toLowerCase().trim(),
           content_style: idea.content_style,
-          content_type: idea.content_type,
+          content_type: normalizedType,
           priority: idea.priority || "medium",
         }),
       });
