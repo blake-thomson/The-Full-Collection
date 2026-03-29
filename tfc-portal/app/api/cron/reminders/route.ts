@@ -131,6 +131,103 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 4. Approaching shoot dates: shoot_date is tomorrow or in 2 days
+  const tomorrow = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const twoDays = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  const { data: upcomingShoots } = await supabase
+    .from("kanban_cards")
+    .select("id, title, client_id, shoot_date, assigned_editor")
+    .in("shoot_date", [tomorrow, twoDays])
+    .is("deleted_at", null);
+
+  if (upcomingShoots) {
+    const clientIds = [...new Set(upcomingShoots.map((c) => c.client_id))];
+    const { data: assignments } = await supabase
+      .from("client_assignments")
+      .select("client_id, team_member_email")
+      .in("client_id", clientIds);
+
+    const assignmentMap = new Map<string, string[]>();
+    assignments?.forEach((a) => {
+      const list = assignmentMap.get(a.client_id) || [];
+      list.push(a.team_member_email);
+      assignmentMap.set(a.client_id, list);
+    });
+
+    for (const card of upcomingShoots) {
+      const isT = card.shoot_date === tomorrow;
+      const teamEmails = assignmentMap.get(card.client_id) || [];
+      const recipients = card.assigned_editor
+        ? [card.assigned_editor, ...teamEmails.filter((e: string) => e !== card.assigned_editor)]
+        : teamEmails;
+
+      for (const email of [...new Set(recipients)]) {
+        notifications.push({
+          recipient_email: email,
+          recipient_type: "team",
+          title: isT ? "Shoot Tomorrow" : "Shoot in 2 Days",
+          message: `"${card.title}" has a shoot scheduled for ${card.shoot_date}.`,
+          type: "shoot_date",
+          link: `/team/portal?card=${card.id}`,
+        });
+      }
+    }
+  }
+
+  // 5. Approaching edit deadlines: edit_deadline is tomorrow
+  const { data: upcomingEdits } = await supabase
+    .from("kanban_cards")
+    .select("id, title, client_id, edit_deadline, assigned_editor")
+    .eq("edit_deadline", tomorrow)
+    .not("column_id", "in", '("published","scheduled","approved","ready_review")')
+    .is("deleted_at", null);
+
+  if (upcomingEdits) {
+    for (const card of upcomingEdits) {
+      if (card.assigned_editor) {
+        notifications.push({
+          recipient_email: card.assigned_editor,
+          recipient_type: "team",
+          title: "Edit Deadline Tomorrow",
+          message: `"${card.title}" has an edit deadline of ${card.edit_deadline}. Please submit for review.`,
+          type: "content_update",
+          link: `/team/portal?card=${card.id}`,
+        });
+      }
+    }
+  }
+
+  // 6. Approaching publish dates: publish_date is tomorrow — notify social media manager + admins
+  const { data: upcomingPublish } = await supabase
+    .from("kanban_cards")
+    .select("id, title, client_id, publish_date")
+    .eq("publish_date", tomorrow)
+    .not("column_id", "eq", "published")
+    .is("deleted_at", null);
+
+  if (upcomingPublish && upcomingPublish.length > 0) {
+    const { data: managers } = await supabase
+      .from("team_members")
+      .select("email")
+      .in("role", ["social_media_manager", "admin", "owner"]);
+
+    if (managers) {
+      for (const card of upcomingPublish) {
+        for (const m of managers) {
+          notifications.push({
+            recipient_email: m.email,
+            recipient_type: "team",
+            title: "Publish Date Tomorrow",
+            message: `"${card.title}" is scheduled to publish ${card.publish_date}.`,
+            type: "content_update",
+            link: `/team/portal?card=${card.id}`,
+          });
+        }
+      }
+    }
+  }
+
   // Batch insert all notifications
   let created = 0;
   if (notifications.length > 0) {
@@ -148,6 +245,9 @@ export async function GET(req: NextRequest) {
       overdue: overdueCards?.length || 0,
       stale_editing: staleCards?.length || 0,
       pending_review: pendingReview?.length || 0,
+      upcoming_shoots: upcomingShoots?.length || 0,
+      upcoming_edit_deadlines: upcomingEdits?.length || 0,
+      upcoming_publish: upcomingPublish?.length || 0,
     },
   });
 }

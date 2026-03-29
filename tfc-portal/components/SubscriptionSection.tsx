@@ -288,6 +288,31 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
               Your subscription will not renew after the period ends.
             </p>
           )}
+
+          {/* Manage Billing / Update Payment */}
+          {!isTeam && data.status && data.status !== "canceled" && (
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/stripe/portal", { method: "POST" });
+                  if (res.ok) {
+                    const { url } = await res.json();
+                    window.open(url, "_blank");
+                  }
+                } catch {}
+              }}
+              className="mt-4 w-full py-2.5 px-4 rounded-lg text-[12px] font-semibold cursor-pointer transition-colors"
+              style={{
+                background: "var(--color-surface-3)",
+                border: "1px solid var(--color-border-2)",
+                color: "var(--color-text-2)",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-2)"; }}
+            >
+              Manage Billing & Payment Method
+            </button>
+          )}
         </div>
       </div>
 
