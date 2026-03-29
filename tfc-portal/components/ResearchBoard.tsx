@@ -91,7 +91,8 @@ export function ResearchBoard({ clients }: Props) {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [columnCount, setColumnCount] = useState(3); // 2-6 columns
+  const [columnCount, setColumnCount] = useState(3);
+  const [editingItem, setEditingItem] = useState<ResearchItem | null>(null);
 
   // Form state
   const [formUrl, setFormUrl] = useState("");
@@ -133,7 +134,12 @@ export function ResearchBoard({ clients }: Props) {
     let result = items;
     if (filterClient !== "all") result = result.filter((i) => i.client_id === filterClient);
     if (filterType !== "all") result = result.filter((i) => i.type === filterType);
-    if (filterFormat !== "all") result = result.filter((i) => i.platform === filterFormat);
+    if (filterFormat !== "all") {
+      result = result.filter((i) => {
+        const val = (i.platform || "").toLowerCase().replace(/[\s-]/g, "_");
+        return val === filterFormat;
+      });
+    }
     return result;
   }, [items, filterClient, filterType, filterFormat]);
 
@@ -189,30 +195,69 @@ export function ResearchBoard({ clients }: Props) {
     if (!formTitle.trim()) return;
     setFormSaving(true);
     try {
-      const res = await fetch("/api/research", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: formUrl || undefined,
-          title: formTitle,
-          notes: formNotes || undefined,
-          type: formType || undefined,
-          format: formFormat || undefined,
-          tags: formTags.length ? formTags : undefined,
-          clientId: formClient || undefined,
-        }),
-      });
-      if (res.ok) {
-        const item = await res.json();
-        setItems((prev) => [item, ...prev]);
-        resetForm();
-        setShowForm(false);
+      if (editingItem) {
+        // Update existing item
+        const res = await fetch("/api/research", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingItem.id,
+            url: formUrl || undefined,
+            title: formTitle,
+            notes: formNotes || undefined,
+            type: formType || undefined,
+            format: formFormat || undefined,
+            tags: formTags.length ? formTags : undefined,
+            clientId: formClient || undefined,
+          }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i));
+          resetForm();
+          setShowForm(false);
+          setEditingItem(null);
+        }
+      } else {
+        // Create new
+        const res = await fetch("/api/research", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: formUrl || undefined,
+            title: formTitle,
+            notes: formNotes || undefined,
+            type: formType || undefined,
+            format: formFormat || undefined,
+            tags: formTags.length ? formTags : undefined,
+            clientId: formClient || undefined,
+          }),
+        });
+        if (res.ok) {
+          const item = await res.json();
+          setItems((prev) => [item, ...prev]);
+          resetForm();
+          setShowForm(false);
+        }
       }
     } catch {
       // silent
     } finally {
       setFormSaving(false);
     }
+  }
+
+  function openEdit(item: ResearchItem) {
+    setFormUrl(item.url || "");
+    setFormTitle(item.og_title || item.title || "");
+    setFormType(item.type || "");
+    setFormFormat(item.platform || "");
+    setFormTags(item.tags || []);
+    setFormClient(item.client_id || "");
+    setFormNotes(item.notes || "");
+    setOgPreview({ title: item.og_title || null, image: item.og_image || null });
+    setEditingItem(item);
+    setShowForm(true);
   }
 
   function resetForm() {
@@ -225,6 +270,7 @@ export function ResearchBoard({ clients }: Props) {
     setFormClient("");
     setFormNotes("");
     setOgPreview({ title: null, image: null });
+    setEditingItem(null);
   }
 
   async function handleDelete(id: string) {
@@ -520,6 +566,12 @@ export function ResearchBoard({ clients }: Props) {
                       {/* Actions */}
                       <div className="flex gap-2 pt-1">
                         <button
+                          onClick={() => openEdit(item)}
+                          className="flex-1 py-1.5 text-[11px] font-medium rounded-lg bg-surface-2 text-text-3 hover:text-text hover:bg-surface-3 border border-border transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
                           onClick={() => setDeleteConfirm(item.id)}
                           className="flex-1 py-1.5 text-[11px] font-medium rounded-lg bg-surface-2 text-text-3 hover:text-red hover:bg-[rgba(224,32,32,0.08)] border border-border transition-colors"
                         >
@@ -563,13 +615,13 @@ export function ResearchBoard({ clients }: Props) {
 
       {/* Save New Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setShowForm(false); setEditingItem(null); }}>
           <div
             className="w-full max-w-lg bg-bg border border-border rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-text">Save Research Item</h3>
+              <h3 className="text-base font-semibold text-text">{editingItem ? "Edit Research Item" : "Save Research Item"}</h3>
               <button
                 onClick={() => setShowForm(false)}
                 className="p-1 rounded-lg hover:bg-surface-2 text-text-3 hover:text-text transition-colors"
@@ -720,7 +772,7 @@ export function ResearchBoard({ clients }: Props) {
                 className="w-full py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                 style={{ background: "rgba(224,32,32,0.15)", color: "#E02020", border: "1px solid rgba(224,32,32,0.3)" }}
               >
-                {formSaving ? "Saving..." : "Save"}
+                {formSaving ? "Saving..." : editingItem ? "Update" : "Save"}
               </button>
             </div>
           </div>
