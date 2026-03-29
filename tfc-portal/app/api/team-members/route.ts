@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireTeamMember } from "@/lib/auth-helpers";
 
-// GET /api/team-members — list all team members (team members only)
+// GET /api/team-members — list all team members (team members or clients)
 export async function GET() {
   const serverSupabase = createServerSupabase();
   const { data: { user } } = await serverSupabase.auth.getUser();
@@ -13,8 +13,17 @@ export async function GET() {
 
   const supabase = createSupabaseAdmin();
 
+  // Allow team members
   const access = await requireTeamMember(user.email!, supabase);
-  if (!access.ok) return access.response;
+  if (!access.ok) {
+    // Also allow authenticated clients
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("email", user.email!)
+      .single();
+    if (!client) return access.response;
+  }
 
   const { data, error } = await supabase
     .from("team_members")
