@@ -21,7 +21,7 @@ const PLATFORM_META: Record<
   instagram: { name: "Instagram", color: "#E1306C" },
   tiktok: { name: "TikTok", color: "#000000", textColor: "#FFFFFF" },
   youtube: { name: "YouTube", color: "#FF0000" },
-  linkedin: { name: "LinkedIn", color: "#0A66C2" },
+  facebook: { name: "Facebook", color: "#1877F2" },
 };
 
 function getNextWeekday11am(): string {

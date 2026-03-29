@@ -44,8 +44,8 @@ export async function publishToYouTube(payload: PublishPayload) {
   return { success: true, platformPostId: null };
 }
 
-export async function publishToLinkedIn(payload: PublishPayload) {
-  console.log("[social-publisher] Would publish to LinkedIn:", {
+export async function publishToFacebook(payload: PublishPayload) {
+  console.log("[social-publisher] Would publish to Facebook:", {
     postId: payload.postId,
     caption: payload.caption,
     platformUserId: payload.platformUserId,
@@ -57,7 +57,7 @@ const publishers: Record<string, (p: PublishPayload) => Promise<{ success: boole
   instagram: publishToInstagram,
   tiktok: publishToTikTok,
   youtube: publishToYouTube,
-  linkedin: publishToLinkedIn,
+  facebook: publishToFacebook,
 };
 
 export async function publishToplatform(payload: PublishPayload) {

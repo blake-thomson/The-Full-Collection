@@ -20,10 +20,10 @@ const PLATFORM_CONFIG: Record<
     scopes: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly",
     clientIdEnv: "GOOGLE_CLIENT_ID",
   },
-  linkedin: {
-    authUrl: "https://www.linkedin.com/oauth/v2/authorization",
-    scopes: "w_member_social,r_liteprofile",
-    clientIdEnv: "LINKEDIN_CLIENT_ID",
+  facebook: {
+    authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
+    scopes: "pages_show_list,pages_read_engagement,pages_manage_posts,pages_read_user_content",
+    clientIdEnv: "META_APP_ID",
   },
 };
 

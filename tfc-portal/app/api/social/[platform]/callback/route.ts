@@ -15,7 +15,7 @@ const TOKEN_ENDPOINTS: Record<string, string> = {
   instagram: "https://graph.facebook.com/v18.0/oauth/access_token",
   tiktok: "https://open.tiktokapis.com/v2/oauth/token/",
   youtube: "https://oauth2.googleapis.com/token",
-  linkedin: "https://www.linkedin.com/oauth/v2/accessToken",
+  facebook: "https://graph.facebook.com/v18.0/oauth/access_token",
 };
 
 async function exchangeCode(
@@ -41,9 +41,9 @@ async function exchangeCode(
   } else if (platform === "youtube") {
     body.client_id = process.env.GOOGLE_CLIENT_ID!;
     body.client_secret = process.env.GOOGLE_CLIENT_SECRET!;
-  } else if (platform === "linkedin") {
-    body.client_id = process.env.LINKEDIN_CLIENT_ID!;
-    body.client_secret = process.env.LINKEDIN_CLIENT_SECRET!;
+  } else if (platform === "facebook") {
+    body.client_id = process.env.META_APP_ID!;
+    body.client_secret = process.env.META_APP_SECRET!;
   }
 
   const res = await fetch(endpoint, {
@@ -98,13 +98,12 @@ async function fetchAccountName(
       const ch = data.items?.[0];
       return { name: ch?.snippet?.title || "YouTube Channel", userId: ch?.id };
     }
-    if (platform === "linkedin") {
-      const res = await fetch("https://api.linkedin.com/v2/me", {
+    if (platform === "facebook") {
+      const res = await fetch("https://graph.facebook.com/v18.0/me?fields=id,name", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
-      const name = `${data.localizedFirstName || ""} ${data.localizedLastName || ""}`.trim();
-      return { name: name || "LinkedIn Profile", userId: data.id };
+      return { name: data.name || "Facebook Page", userId: data.id };
     }
     if (platform === "tiktok") {
       return { name: "TikTok Account" };
