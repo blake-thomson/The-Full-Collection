@@ -126,6 +126,15 @@ export function TeamMessenger({ currentUser }: Props) {
   const [deletingConv, setDeletingConv] = useState<string | null>(null);
   const [confirmDeleteConv, setConfirmDeleteConv] = useState<string | null>(null);
   const [trashBusy, setTrashBusy] = useState<string | null>(null);
+  // Client conversations (cross-portal — team members see client DMs here)
+  const [clientConvs, setClientConvs] = useState<{
+    id: string; name: string | null; type: "dm" | "group";
+    members: { member_email: string; member_name: string | null; member_type: string }[];
+    last_message: { content: string; sender_name: string | null; created_at: string } | null;
+    unread_count: number;
+  }[]>([]);
+  const [activeClientConv, setActiveClientConv] = useState<string | null>(null); // id of active client conv
+  const [convSource, setConvSource] = useState<"team" | "client">("team");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -147,6 +156,14 @@ export function TeamMessenger({ currentUser }: Props) {
 
   useEffect(() => { loadConversations(); }, []);
 
+  /* ── Load client conversations (cross-portal inbox) ── */
+  const loadClientConvs = useCallback(async () => {
+    const res = await fetch("/api/client-conversations");
+    if (res.ok) setClientConvs(await res.json());
+  }, []);
+
+  useEffect(() => { loadClientConvs(); }, []);
+
   /* ── Load all team members (for DM creation + @mentions) ── */
   useEffect(() => {
     (async () => {
@@ -156,22 +173,31 @@ export function TeamMessenger({ currentUser }: Props) {
   }, []);
 
   /* ── Load messages for active conversation ── */
-  const loadMessages = useCallback(async (convId: string) => {
+  const loadMessages = useCallback(async (convId: string, source: "team" | "client" = "team") => {
     setLoadingMessages(true);
-    const res = await fetch(`/api/team-messages?conversation_id=${convId}&limit=80`);
-    if (res.ok) setMessages(await res.json());
+    if (source === "client") {
+      const res = await fetch(`/api/client-messages?conversation_id=${convId}&limit=80`);
+      if (res.ok) setMessages(await res.json());
+      fetch("/api/client-conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: convId, action: "read" }),
+      });
+    } else {
+      const res = await fetch(`/api/team-messages?conversation_id=${convId}&limit=80`);
+      if (res.ok) setMessages(await res.json());
+      fetch("/api/team-conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: convId, action: "read" }),
+      });
+    }
     setLoadingMessages(false);
-    // Mark as read
-    fetch("/api/team-conversations", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversation_id: convId, action: "read" }),
-    });
   }, []);
 
   useEffect(() => {
     if (activeConv) {
-      loadMessages(activeConv.id);
+      loadMessages(activeConv.id, "team");
       setReplyTo(null);
     }
   }, [activeConv, loadMessages]);
@@ -211,6 +237,33 @@ export function TeamMessenger({ currentUser }: Props) {
     return () => { supabase.removeChannel(channel); };
   }, [activeConv, currentUser.email, supabase]);
 
+  /* ── Real-time for active CLIENT conversation ── */
+  useEffect(() => {
+    if (!activeClientConv) return;
+    const channel = supabase
+      .channel(`client_messages_${activeClientConv}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "client_messages",
+        filter: `conversation_id=eq.${activeClientConv}`,
+      }, async () => {
+        const res = await fetch(`/api/client-messages?conversation_id=${activeClientConv}&limit=1`);
+        if (res.ok) {
+          const latest = await res.json();
+          setMessages((prev) => {
+            const ids = new Set(prev.map((m) => m.id));
+            const newOnes = latest.filter((m: Message) => !ids.has(m.id));
+            return [...prev, ...newOnes];
+          });
+        }
+        // Refresh unread counts
+        loadClientConvs();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeClientConv, supabase, loadClientConvs]);
+
   /* ── Scroll to bottom on new messages ── */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -241,18 +294,21 @@ export function TeamMessenger({ currentUser }: Props) {
   };
 
   /* ── Send message ── */
+  const msgApi = convSource === "client" ? "/api/client-messages" : "/api/team-messages";
+
   const sendMessage = async () => {
-    if (!input.trim() || !activeConv || sending) return;
+    const convId = convSource === "client" ? activeClientConv : activeConv?.id;
+    if (!input.trim() || !convId || sending) return;
     setSending(true);
     const content = input.trim();
     setInput("");
     setReplyTo(null);
 
-    const res = await fetch("/api/team-messages", {
+    const res = await fetch(msgApi, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        conversation_id: activeConv.id,
+        conversation_id: convId,
         content,
         reply_to_id: replyTo?.id ?? null,
       }),
@@ -260,18 +316,24 @@ export function TeamMessenger({ currentUser }: Props) {
 
     if (res.ok) {
       const msg = await res.json();
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
-      });
-      // Update conversation's last message in sidebar
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeConv.id
-            ? { ...c, last_message: { content, sender_email: currentUser.email, created_at: msg.created_at }, unread_count: 0 }
-            : c
-        )
-      );
+      setMessages((prev) => prev.find((m) => m.id === msg.id) ? prev : [...prev, msg]);
+      if (convSource === "client") {
+        setClientConvs((prev) =>
+          prev.map((c) =>
+            c.id === convId
+              ? { ...c, last_message: { content, sender_name: currentUser.name, created_at: msg.created_at }, unread_count: 0 }
+              : c
+          )
+        );
+      } else if (activeConv) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === activeConv.id
+              ? { ...c, last_message: { content, sender_email: currentUser.email, created_at: msg.created_at }, unread_count: 0 }
+              : c
+          )
+        );
+      }
     }
     setSending(false);
   };
@@ -279,7 +341,7 @@ export function TeamMessenger({ currentUser }: Props) {
   /* ── Edit message ── */
   const saveEdit = async (id: string) => {
     if (!editContent.trim()) return;
-    await fetch("/api/team-messages", {
+    await fetch(msgApi, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, content: editContent.trim() }),
@@ -290,13 +352,13 @@ export function TeamMessenger({ currentUser }: Props) {
 
   /* ── Delete message (own only) ── */
   const deleteMessage = async (id: string) => {
-    await fetch(`/api/team-messages?id=${id}`, { method: "DELETE" });
+    await fetch(`${msgApi}?id=${id}`, { method: "DELETE" });
     setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
   /* ── Hide message (others' messages, per-user) ── */
   const hideMessage = async (id: string) => {
-    await fetch("/api/team-messages", {
+    await fetch(msgApi, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, action: "hide" }),
@@ -489,6 +551,50 @@ export function TeamMessenger({ currentUser }: Props) {
             + New group chat
           </button>
         </div>
+
+        {/* Client Messages — conversations clients started with this team member */}
+        {clientConvs.length > 0 && (
+          <div className="mb-2 mt-4">
+            <div className="px-4 py-1.5">
+              <span className="text-text-3 text-[10px] font-bold tracking-[0.12em] uppercase">Client Messages</span>
+            </div>
+            {clientConvs.map((conv) => {
+              const isActive = convSource === "client" && activeClientConv === conv.id;
+              const other = conv.members.find((m) => m.member_type === "client");
+              const displayName = conv.type === "dm"
+                ? (other?.member_name ?? "Client")
+                : (conv.name ?? "Group");
+              const hasUnread = conv.unread_count > 0;
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => {
+                    setActiveClientConv(conv.id);
+                    setConvSource("client");
+                    setActiveConv(null);
+                    setShowTrash(false);
+                    setMobileSidebarOpen(false);
+                    loadMessages(conv.id, "client");
+                    setReplyTo(null);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
+                    isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${isActive ? "bg-red/20 text-red" : "bg-surface-3 text-text-3"}`}>
+                    {displayName.slice(0, 2).toUpperCase()}
+                  </div>
+                  <span className={`flex-1 text-[13px] truncate ${hasUnread && !isActive ? "font-semibold text-text" : ""}`}>{displayName}</span>
+                  {hasUnread && !isActive && (
+                    <span className="bg-red text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      {conv.unread_count > 99 ? "99+" : conv.unread_count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Trash — owner/admin only */}
@@ -516,14 +622,14 @@ export function TeamMessenger({ currentUser }: Props) {
   const ConvRow = ({ conv }: { conv: Conversation }) => {
     const name = getConvName(conv);
     const avatar = getConvAvatar(conv);
-    const isActive = activeConv?.id === conv.id;
+    const isActive = convSource === "team" && activeConv?.id === conv.id;
     const hasUnread = conv.unread_count > 0;
     const canDelete = currentUser.role === "owner" || currentUser.role === "admin";
 
     return (
       <div className="relative group">
         <button
-          onClick={() => { setActiveConv(conv); setShowTrash(false); setMobileSidebarOpen(false); }}
+          onClick={() => { setActiveConv(conv); setActiveClientConv(null); setConvSource("team"); setShowTrash(false); setMobileSidebarOpen(false); }}
           className={`w-full flex items-center gap-2.5 px-4 py-2 text-left border-none cursor-pointer transition-all font-body ${
             isActive ? "bg-red/10 text-red" : "bg-transparent text-text-2 hover:bg-surface-2 hover:text-text"
           } ${confirmDeleteConv === conv.id ? "pr-[80px]" : ""}`}
@@ -611,7 +717,19 @@ export function TeamMessenger({ currentUser }: Props) {
 
       {/* ── Main chat area ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {activeConv ? (
+        {(activeConv || (convSource === "client" && activeClientConv)) ? (() => {
+          // Resolve display info for either team or client conversation
+          const clientConv = convSource === "client" ? clientConvs.find((c) => c.id === activeClientConv) : null;
+          const clientName = clientConv
+            ? (clientConv.type === "dm"
+              ? (clientConv.members.find((m) => m.member_type === "client")?.member_name ?? "Client")
+              : (clientConv.name ?? "Group"))
+            : null;
+          const convName = convSource === "client" ? clientName : (activeConv ? getConvName(activeConv) : "");
+          const convMemberCount = convSource === "client" ? (clientConv?.members.length ?? 0) : (activeConv?.members.length ?? 0);
+          const convType = convSource === "client" ? clientConv?.type : activeConv?.type;
+
+          return (
           <>
             {/* Chat header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-surface shrink-0">
@@ -624,28 +742,31 @@ export function TeamMessenger({ currentUser }: Props) {
                 </svg>
               </button>
 
-              {activeConv.type === "dm" && getConvAvatar(activeConv) ? (
+              {convType === "dm" && convSource === "team" && activeConv && getConvAvatar(activeConv) ? (
                 <Avatar name={getConvAvatar(activeConv)!.name} size={28} src={getConvAvatar(activeConv)!.src} />
-              ) : activeConv.type === "channel" ? (
+              ) : convType === "channel" ? (
                 <span className="text-text-2 text-[16px] font-bold">#</span>
               ) : (
                 <div className="w-7 h-7 rounded-full bg-surface-3 flex items-center justify-center text-[10px] font-bold text-text-3">
-                  {getConvName(activeConv).slice(0, 2).toUpperCase()}
+                  {(convName ?? "?").slice(0, 2).toUpperCase()}
                 </div>
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="text-text font-semibold text-[14px] truncate">{getConvName(activeConv)}</div>
-                {activeConv.description && (
+                <div className="text-text font-semibold text-[14px] truncate">{convName}</div>
+                {activeConv?.description && (
                   <div className="text-text-3 text-[11px] truncate">{activeConv.description}</div>
                 )}
-                {activeConv.type !== "dm" && (
-                  <div className="text-text-3 text-[11px]">{activeConv.members.length} member{activeConv.members.length !== 1 ? "s" : ""}</div>
+                {convType !== "dm" && (
+                  <div className="text-text-3 text-[11px]">{convMemberCount} member{convMemberCount !== 1 ? "s" : ""}</div>
+                )}
+                {convSource === "client" && (
+                  <div className="text-text-3 text-[10px]">Client conversation</div>
                 )}
               </div>
 
-              {/* Members avatars */}
-              {activeConv.type !== "dm" && activeConv.members.length > 0 && (
+              {/* Members avatars — team convs only */}
+              {convSource === "team" && activeConv && activeConv.type !== "dm" && activeConv.members.length > 0 && (
                 <div className="hidden sm:flex items-center">
                   {activeConv.members.slice(0, 4).map((m, i) => (
                     <div key={m.member_email} style={{ marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }}>
@@ -669,16 +790,16 @@ export function TeamMessenger({ currentUser }: Props) {
               {!loadingMessages && messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                   <div className="text-[32px]">
-                    {activeConv.type === "channel" ? "📣" : activeConv.type === "dm" ? "👋" : "💬"}
+                    {convType === "channel" ? "📣" : convType === "dm" ? "👋" : "💬"}
                   </div>
                   <div className="text-text font-semibold text-[14px]">
-                    {activeConv.type === "dm"
-                      ? `This is the beginning of your DM with ${getConvName(activeConv)}`
-                      : activeConv.type === "channel"
+                    {convType === "dm"
+                      ? `This is the beginning of your DM with ${convName}`
+                      : convType === "channel" && activeConv
                       ? `Welcome to #${activeConv.name}!`
-                      : `Welcome to ${activeConv.name}`}
+                      : `Welcome to ${convName}`}
                   </div>
-                  {activeConv.description && (
+                  {activeConv?.description && (
                     <div className="text-text-3 text-[12px] max-w-[300px]">{activeConv.description}</div>
                   )}
                   <div className="text-text-3 text-[12px]">Send the first message 👇</div>
@@ -690,8 +811,11 @@ export function TeamMessenger({ currentUser }: Props) {
                 const grouped = isGrouped(msg, prev);
                 const showDate = !prev || !isSameDay(prev.created_at, msg.created_at);
                 const isOwn = msg.sender_email === currentUser.email;
-                const senderName = msg.team_members?.name ?? msg.sender_email;
+                // Support both team messages (team_members join) and client messages (sender_name field)
+                const senderName = (msg as Record<string, unknown>).sender_name as string | undefined
+                  ?? msg.team_members?.name ?? msg.sender_email;
                 const senderRole = msg.team_members?.role ?? "";
+                const avatarSrc = msg.team_members?.avatar_url;
 
                 return (
                   <div key={msg.id}>
@@ -704,7 +828,7 @@ export function TeamMessenger({ currentUser }: Props) {
                       {/* Avatar column */}
                       <div className="w-8 shrink-0 pt-0.5">
                         {!grouped ? (
-                          <Avatar name={senderName} size={32} src={msg.team_members?.avatar_url} />
+                          <Avatar name={senderName} size={32} src={avatarSrc} />
                         ) : (
                           <span className="invisible text-[10px] text-text-3 group-hover:visible">
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -822,7 +946,7 @@ export function TeamMessenger({ currentUser }: Props) {
                     <polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 00-4-4H4" />
                   </svg>
                   <span className="text-text-3 text-[11px] flex-1 truncate">
-                    Replying to <strong className="text-text-2">{replyTo.team_members?.name ?? replyTo.sender_email}</strong>: {replyTo.content}
+                    Replying to <strong className="text-text-2">{(replyTo as Record<string, unknown>).sender_name as string ?? replyTo.team_members?.name ?? replyTo.sender_email}</strong>: {replyTo.content}
                   </span>
                   <button onClick={() => setReplyTo(null)} className="bg-transparent border-none cursor-pointer text-text-3 hover:text-text p-0.5">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -866,7 +990,7 @@ export function TeamMessenger({ currentUser }: Props) {
                       }
                       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
                     }}
-                    placeholder={`Message ${getConvName(activeConv)}...`}
+                    placeholder={`Message ${convName ?? "..."}...`}
                     rows={1}
                     style={{ resize: "none", minHeight: 42, maxHeight: 120 }}
                     className="tfc-textarea w-full text-[13px]"
@@ -899,7 +1023,8 @@ export function TeamMessenger({ currentUser }: Props) {
               </div>
             </div>
           </>
-        ) : showTrash ? (
+          );
+        })() : showTrash ? (
           /* Trash view */
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #1e1e1e", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
