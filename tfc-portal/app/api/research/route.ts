@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const clientId = req.nextUrl.searchParams.get("client_id");
   const type = req.nextUrl.searchParams.get("type");
-  const platform = req.nextUrl.searchParams.get("platform");
+  const format = req.nextUrl.searchParams.get("format");
 
   let query = admin
     .from("research_items")
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   if (clientId) query = query.eq("client_id", clientId);
   if (type) query = query.eq("type", type);
-  if (platform) query = query.eq("platform", platform);
+  if (format) query = query.eq("platform", format);
 
   const { data, error } = await query;
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   if (!teamCheck.ok) return teamCheck.response;
 
   const body = await req.json();
-  const { url, title, notes, type, platform, tags, contentPillars, clientId } = body;
+  const { url, title, notes, type, format, tags, contentPillars, clientId } = body;
 
   if (!title) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       title,
       notes: notes || null,
       type: type || null,
-      platform: platform || null,
+      platform: format || null,
       tags: tags || null,
       content_pillars: contentPillars || null,
       og_image: ogImage,

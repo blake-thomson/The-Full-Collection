@@ -35,11 +35,9 @@ const TYPE_OPTIONS = [
   { value: "other", label: "Other", color: "#6B7280" },
 ] as const;
 
-const PLATFORM_OPTIONS = [
-  { value: "instagram", label: "Instagram" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "youtube", label: "YouTube" },
-  { value: "linkedin", label: "LinkedIn" },
+const FORMAT_OPTIONS = [
+  { value: "short_form", label: "Short Form" },
+  { value: "long_form", label: "Long Form" },
 ] as const;
 
 const TYPE_COLORS: Record<string, string> = {
@@ -58,19 +56,31 @@ const TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const PLATFORM_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  linkedin: "LinkedIn",
+const FORMAT_LABELS: Record<string, string> = {
+  short_form: "Short Form",
+  long_form: "Long Form",
 };
+
+function getEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // TikTok
+  const ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+  if (ttMatch) return `https://www.tiktok.com/embed/v2/${ttMatch[1]}`;
+  // Instagram Reels/Posts
+  const igMatch = url.match(/instagram\.com\/(?:reel|p)\/([a-zA-Z0-9_-]+)/);
+  if (igMatch) return `https://www.instagram.com/p/${igMatch[1]}/embed`;
+  return null;
+}
 
 export function ResearchBoard({ clients }: Props) {
   const [items, setItems] = useState<ResearchItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterClient, setFilterClient] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterPlatform, setFilterPlatform] = useState<string>("all");
+  const [filterFormat, setFilterFormat] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -80,7 +90,7 @@ export function ResearchBoard({ clients }: Props) {
   const [formUrl, setFormUrl] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formType, setFormType] = useState("");
-  const [formPlatform, setFormPlatform] = useState("");
+  const [formFormat, setFormFormat] = useState("");
   const [formTags, setFormTags] = useState<string[]>([]);
   const [formTagInput, setFormTagInput] = useState("");
   const [formClient, setFormClient] = useState("");
@@ -116,9 +126,9 @@ export function ResearchBoard({ clients }: Props) {
     let result = items;
     if (filterClient !== "all") result = result.filter((i) => i.client_id === filterClient);
     if (filterType !== "all") result = result.filter((i) => i.type === filterType);
-    if (filterPlatform !== "all") result = result.filter((i) => i.platform === filterPlatform);
+    if (filterFormat !== "all") result = result.filter((i) => i.platform === filterFormat);
     return result;
-  }, [items, filterClient, filterType, filterPlatform]);
+  }, [items, filterClient, filterType, filterFormat]);
 
   const fetchOgPreview = useCallback(async (url: string) => {
     if (!url) {
@@ -180,7 +190,7 @@ export function ResearchBoard({ clients }: Props) {
           title: formTitle,
           notes: formNotes || undefined,
           type: formType || undefined,
-          platform: formPlatform || undefined,
+          format: formFormat || undefined,
           tags: formTags.length ? formTags : undefined,
           clientId: formClient || undefined,
         }),
@@ -202,7 +212,7 @@ export function ResearchBoard({ clients }: Props) {
     setFormUrl("");
     setFormTitle("");
     setFormType("");
-    setFormPlatform("");
+    setFormFormat("");
     setFormTags([]);
     setFormTagInput("");
     setFormClient("");
@@ -325,31 +335,31 @@ export function ResearchBoard({ clients }: Props) {
             </div>
           </div>
 
-          {/* Platform filter */}
+          {/* Format filter */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-medium text-text-3 uppercase tracking-wider">Platform</label>
+            <label className="text-[11px] font-medium text-text-3 uppercase tracking-wider">Format</label>
             <div className="space-y-1">
               <button
-                onClick={() => setFilterPlatform("all")}
+                onClick={() => setFilterFormat("all")}
                 className="w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors"
                 style={{
-                  background: filterPlatform === "all" ? "rgba(224,32,32,0.12)" : "transparent",
-                  color: filterPlatform === "all" ? "#E02020" : "var(--text-2, #a0a0a0)",
+                  background: filterFormat === "all" ? "rgba(224,32,32,0.12)" : "transparent",
+                  color: filterFormat === "all" ? "#E02020" : "var(--text-2, #a0a0a0)",
                 }}
               >
-                All Platforms
+                All Formats
               </button>
-              {PLATFORM_OPTIONS.map((p) => (
+              {FORMAT_OPTIONS.map((f) => (
                 <button
-                  key={p.value}
-                  onClick={() => setFilterPlatform(p.value)}
+                  key={f.value}
+                  onClick={() => setFilterFormat(f.value)}
                   className="w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors"
                   style={{
-                    background: filterPlatform === p.value ? "rgba(224,32,32,0.12)" : "transparent",
-                    color: filterPlatform === p.value ? "#E02020" : "var(--text-2, #a0a0a0)",
+                    background: filterFormat === f.value ? "rgba(224,32,32,0.12)" : "transparent",
+                    color: filterFormat === f.value ? "#E02020" : "var(--text-2, #a0a0a0)",
                   }}
                 >
-                  {p.label}
+                  {f.label}
                 </button>
               ))}
             </div>
@@ -375,17 +385,27 @@ export function ResearchBoard({ clients }: Props) {
               {filtered.map((item) => {
                 const typeColor = TYPE_COLORS[item.type || ""] || "#6B7280";
                 const typeLabel = TYPE_LABELS[item.type || ""] || "Other";
-                const platformLabel = PLATFORM_LABELS[item.platform || ""] || null;
+                const formatLabel = FORMAT_LABELS[item.platform || ""] || null;
                 const clientName = clients.find((c) => c.id === item.client_id)?.name;
                 const isExpanded = expandedNotes.has(item.id);
+                const embedUrl = item.url ? getEmbedUrl(item.url) : null;
 
                 return (
                   <div
                     key={item.id}
                     className="break-inside-avoid bg-surface border border-border rounded-xl overflow-hidden hover:border-[rgba(224,32,32,0.3)] transition-colors"
                   >
-                    {/* OG Image or gradient placeholder */}
-                    {item.og_image ? (
+                    {/* Video embed, OG image, or gradient placeholder */}
+                    {embedUrl ? (
+                      <div className="w-full aspect-[9/16] max-h-[320px] relative bg-black">
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : item.og_image ? (
                       <div className="w-full h-36 relative">
                         <img
                           src={item.og_image}
@@ -423,9 +443,9 @@ export function ResearchBoard({ clients }: Props) {
                         >
                           {typeLabel}
                         </span>
-                        {platformLabel && (
+                        {formatLabel && (
                           <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-surface-2 text-text-2 border border-border">
-                            {platformLabel}
+                            {formatLabel}
                           </span>
                         )}
                       </div>
@@ -589,19 +609,26 @@ export function ResearchBoard({ clients }: Props) {
                 </select>
               </div>
 
-              {/* Platform */}
+              {/* Format toggle */}
               <div>
-                <label className="text-[11px] font-medium text-text-3 uppercase tracking-wider mb-1 block">Platform</label>
-                <select
-                  value={formPlatform}
-                  onChange={(e) => setFormPlatform(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg text-text focus:outline-none focus:border-red"
-                >
-                  <option value="">Select platform...</option>
-                  {PLATFORM_OPTIONS.map((p) => (
-                    <option key={p.value} value={p.value}>{p.label}</option>
+                <label className="text-[11px] font-medium text-text-3 uppercase tracking-wider mb-1.5 block">Format</label>
+                <div className="flex gap-2">
+                  {FORMAT_OPTIONS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setFormFormat(formFormat === f.value ? "" : f.value)}
+                      className="flex-1 py-2 text-xs font-medium rounded-lg transition-colors border"
+                      style={{
+                        background: formFormat === f.value ? "rgba(224,32,32,0.12)" : "transparent",
+                        color: formFormat === f.value ? "#E02020" : "var(--color-text-2, #A8A49C)",
+                        borderColor: formFormat === f.value ? "rgba(224,32,32,0.3)" : "var(--color-border, #252525)",
+                      }}
+                    >
+                      {f.label}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
               {/* Tags */}
