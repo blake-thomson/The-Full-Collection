@@ -105,6 +105,7 @@ export function TeamMessenger({ currentUser }: Props) {
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [allMembers, setAllMembers] = useState<TeamMember[]>([]);
+  const [allClients, setAllClients] = useState<{ id: string; name: string; email: string }[]>([]);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newType, setNewType] = useState<"channel" | "dm" | "group">("dm");
   const [newName, setNewName] = useState("");
@@ -164,11 +165,18 @@ export function TeamMessenger({ currentUser }: Props) {
 
   useEffect(() => { loadClientConvs(); }, []);
 
-  /* ── Load all team members (for DM creation + @mentions) ── */
+  /* ── Load all team members + clients (for DM creation + @mentions) ── */
   useEffect(() => {
     (async () => {
       const res = await fetch("/api/team-members");
       if (res.ok) setAllMembers(await res.json());
+    })();
+    (async () => {
+      const res = await fetch("/api/clients");
+      if (res.ok) {
+        const data = await res.json();
+        setAllClients(Array.isArray(data) ? data.map((c: { id: string; name: string; email: string }) => ({ id: c.id, name: c.name, email: c.email })) : []);
+      }
     })();
   }, []);
 
@@ -373,27 +381,53 @@ export function TeamMessenger({ currentUser }: Props) {
     if ((newType === "dm" || newType === "group") && selectedEmails.length === 0) return;
     setCreating(true);
 
-    const res = await fetch("/api/team-conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: newType,
-        name: newType === "channel" ? newName.trim().toLowerCase().replace(/\s+/g, "-") : null,
-        description: newDesc.trim() || null,
-        member_emails: selectedEmails,
-      }),
-    });
+    // Check if any selected email belongs to a client
+    const selectedClient = allClients.find((c) => selectedEmails.includes(c.email));
 
-    if (res.ok) {
-      const conv = await res.json();
-      setConversations((prev) => {
-        const exists = prev.find((c) => c.id === conv.id);
-        return exists ? prev : [...prev, conv];
+    if (selectedClient && newType !== "channel") {
+      // Route to client conversations API
+      const res = await fetch("/api/client-conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: newType === "dm" ? "dm" : "group",
+          client_id: selectedClient.id,
+          member_emails: selectedEmails,
+        }),
       });
-      setActiveConv(conv);
-      setShowNewModal(false);
-      setNewName(""); setNewDesc(""); setSelectedEmails([]);
-      setMobileSidebarOpen(false);
+      if (res.ok) {
+        const conv = await res.json();
+        loadClientConvs();
+        setActiveClientConv(conv.id);
+        setConvSource("client");
+        setActiveConv(null);
+        setShowNewModal(false);
+        setNewName(""); setNewDesc(""); setSelectedEmails([]);
+        setMobileSidebarOpen(false);
+      }
+    } else {
+      // Regular team conversation
+      const res = await fetch("/api/team-conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: newType,
+          name: newType === "channel" ? newName.trim().toLowerCase().replace(/\s+/g, "-") : null,
+          description: newDesc.trim() || null,
+          member_emails: selectedEmails,
+        }),
+      });
+      if (res.ok) {
+        const conv = await res.json();
+        setConversations((prev) => {
+          const exists = prev.find((c) => c.id === conv.id);
+          return exists ? prev : [...prev, conv];
+        });
+        setActiveConv(conv);
+        setShowNewModal(false);
+        setNewName(""); setNewDesc(""); setSelectedEmails([]);
+        setMobileSidebarOpen(false);
+      }
     }
     setCreating(false);
   };
@@ -1206,6 +1240,10 @@ export function TeamMessenger({ currentUser }: Props) {
                   {newType === "dm" ? "Select person" : "Add members"}
                 </label>
                 <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                  {/* Team Members */}
+                  {newType !== "channel" && allMembers.filter((m) => m.email !== currentUser.email).length > 0 && (
+                    <div className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase px-1 pt-1 pb-0.5">Team</div>
+                  )}
                   {allMembers.filter((m) => m.email !== currentUser.email).map((m) => {
                     const isSelected = selectedEmails.includes(m.email);
                     return (
@@ -1230,6 +1268,43 @@ export function TeamMessenger({ currentUser }: Props) {
                         <div className="flex-1 min-w-0">
                           <div className="text-[13px] font-medium truncate">{m.name}</div>
                           <div className="text-[11px] text-text-3 truncate">{m.role}</div>
+                        </div>
+                        {isSelected && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {/* Clients */}
+                  {newType !== "channel" && allClients.length > 0 && (
+                    <div className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase px-1 pt-2 pb-0.5">Clients</div>
+                  )}
+                  {newType !== "channel" && allClients.map((c) => {
+                    const isSelected = selectedEmails.includes(c.email);
+                    return (
+                      <button
+                        key={c.email}
+                        onClick={() => {
+                          if (newType === "dm") {
+                            setSelectedEmails([c.email]);
+                          } else {
+                            setSelectedEmails((prev) =>
+                              isSelected ? prev.filter((e) => e !== c.email) : [...prev, c.email]
+                            );
+                          }
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left border cursor-pointer transition-all font-body ${
+                          isSelected
+                            ? "bg-red/10 border-red/30 text-red"
+                            : "bg-transparent border-border text-text-2 hover:bg-surface-2 hover:border-border-2"
+                        }`}
+                      >
+                        <Avatar name={c.name} size={26} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-medium truncate">{c.name}</div>
+                          <div className="text-[11px] text-text-3 truncate">Client</div>
                         </div>
                         {isSelected && (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
