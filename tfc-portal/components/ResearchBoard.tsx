@@ -61,17 +61,23 @@ const FORMAT_LABELS: Record<string, string> = {
   long_form: "Long Form",
 };
 
-function getEmbedUrl(url: string): string | null {
+function getEmbed(url: string): { embedUrl: string; aspect: "9/16" | "16/9" | "1/1" } | null {
   if (!url) return null;
-  // YouTube
-  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
-  // TikTok
+  // YouTube long-form
+  const ytLong = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (ytLong) return { embedUrl: `https://www.youtube.com/embed/${ytLong[1]}`, aspect: "16/9" };
+  // YouTube Shorts (vertical)
+  const ytShort = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
+  if (ytShort) return { embedUrl: `https://www.youtube.com/embed/${ytShort[1]}`, aspect: "9/16" };
+  // TikTok (vertical)
   const ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
-  if (ttMatch) return `https://www.tiktok.com/embed/v2/${ttMatch[1]}`;
-  // Instagram Reels/Posts
-  const igMatch = url.match(/instagram\.com\/(?:reel|p)\/([a-zA-Z0-9_-]+)/);
-  if (igMatch) return `https://www.instagram.com/p/${igMatch[1]}/embed`;
+  if (ttMatch) return { embedUrl: `https://www.tiktok.com/embed/v2/${ttMatch[1]}`, aspect: "9/16" };
+  // Instagram Reels (vertical)
+  const igReel = url.match(/instagram\.com\/reel\/([a-zA-Z0-9_-]+)/);
+  if (igReel) return { embedUrl: `https://www.instagram.com/reel/${igReel[1]}/embed`, aspect: "9/16" };
+  // Instagram Posts (square-ish)
+  const igPost = url.match(/instagram\.com\/p\/([a-zA-Z0-9_-]+)/);
+  if (igPost) return { embedUrl: `https://www.instagram.com/p/${igPost[1]}/embed`, aspect: "1/1" };
   return null;
 }
 
@@ -381,25 +387,25 @@ export function ResearchBoard({ clients }: Props) {
           )}
 
           {filtered.length > 0 && (
-            <div className="columns-1 md:columns-2 xl:columns-3 gap-3 space-y-3">
+            <div className="columns-1 md:columns-2 xl:columns-3 gap-3">
               {filtered.map((item) => {
                 const typeColor = TYPE_COLORS[item.type || ""] || "#6B7280";
                 const typeLabel = TYPE_LABELS[item.type || ""] || "Other";
                 const formatLabel = FORMAT_LABELS[item.platform || ""] || null;
                 const clientName = clients.find((c) => c.id === item.client_id)?.name;
                 const isExpanded = expandedNotes.has(item.id);
-                const embedUrl = item.url ? getEmbedUrl(item.url) : null;
+                const embed = item.url ? getEmbed(item.url) : null;
 
                 return (
                   <div
                     key={item.id}
-                    className="break-inside-avoid bg-surface border border-border rounded-xl overflow-hidden hover:border-[rgba(224,32,32,0.3)] transition-colors"
+                    className="break-inside-avoid mb-3 bg-surface border border-border rounded-xl overflow-hidden hover:border-[rgba(224,32,32,0.3)] transition-colors"
                   >
-                    {/* Video embed, OG image, or gradient placeholder */}
-                    {embedUrl ? (
-                      <div className="w-full aspect-[9/16] max-h-[320px] relative bg-black">
+                    {/* Video embed at native aspect ratio, OG image, or gradient */}
+                    {embed ? (
+                      <div className="w-full relative bg-black" style={{ aspectRatio: embed.aspect }}>
                         <iframe
-                          src={embedUrl}
+                          src={embed.embedUrl}
                           className="w-full h-full border-0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                           allowFullScreen
