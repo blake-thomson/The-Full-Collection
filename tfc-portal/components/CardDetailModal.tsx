@@ -2,6 +2,29 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { COLUMNS } from "@/lib/constants";
+import { openGooglePicker, type PickerResult } from "@/lib/google-picker";
+import PublishScheduler from "@/components/PublishScheduler";
+import TimeTracker from "@/components/TimeTracker";
+
+interface Attachment {
+  id: string;
+  card_id: string;
+  drive_file_id: string;
+  drive_file_name: string;
+  drive_mime_type: string | null;
+  drive_view_link: string | null;
+  drive_thumbnail_link: string | null;
+  drive_web_content_link: string | null;
+  drive_modified_time: string | null;
+  file_size: number | null;
+  label: string | null;
+  is_final: boolean;
+  linked_by: string;
+  linked_by_name: string;
+  linked_by_type: string;
+  version_notes: string | null;
+  created_at: string;
+}
 
 interface Comment {
   id: string;
@@ -95,6 +118,25 @@ const PRIORITY_CONFIG = {
   high: { label: "High", color: "#EF4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.25)" },
 };
 
+function getMimeIcon(mimeType: string | null): string {
+  if (!mimeType) return "\uD83D\uDCC4";
+  if (mimeType.startsWith("video/")) return "\uD83C\uDFA5";
+  if (mimeType.startsWith("image/")) return "\uD83D\uDDBC\uFE0F";
+  if (mimeType.startsWith("audio/")) return "\uD83C\uDFB5";
+  if (mimeType.includes("pdf")) return "\uD83D\uDCC4";
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return "\uD83D\uDCCA";
+  if (mimeType.includes("document") || mimeType.includes("word")) return "\uD83D\uDCC3";
+  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "\uD83D\uDCFD\uFE0F";
+  return "\uD83D\uDCC4";
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
 export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate, onDelete }: Props) {
   const [title, setTitle] = useState(card.title);
   const [status, setStatus] = useState(card.column_id);
@@ -121,6 +163,14 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // Attachments state
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [loadingAttachments, setLoadingAttachments] = useState(true);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(true);
+  const [attachingFile, setAttachingFile] = useState(false);
+  const [attachError, setAttachError] = useState("");
+  const [confirmUnlink, setConfirmUnlink] = useState<string | null>(null);
+
   // Inline AI state
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -132,7 +182,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const backdropRef = useRef<HTMLDivElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadComments(); }, [card.id]);
+  useEffect(() => { loadComments(); loadAttachments(); }, [card.id]);
   useEffect(() => { commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [comments]);
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !showAIPrompt) onClose(); };
@@ -150,6 +200,87 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
       if (res.ok) setComments(await res.json());
     } catch { setError("Failed to load comments."); }
     setLoadingComments(false);
+  };
+
+  const loadAttachments = async () => {
+    setLoadingAttachments(true);
+    try {
+      const res = await fetch(`/api/cards/${card.id}/attachments`);
+      if (res.ok) setAttachments(await res.json());
+    } catch { setAttachError("Failed to load attachments."); }
+    setLoadingAttachments(false);
+  };
+
+  const handleAttachFromDrive = async () => {
+    setAttachError("");
+    setAttachingFile(true);
+    try {
+      // Get valid token
+      const tokenRes = await fetch("/api/auth/google-token");
+      const tokenData = await tokenRes.json();
+      if (tokenData.error === "not_connected") {
+        setAttachError("Connect Google Drive first.");
+        setAttachingFile(false);
+        return;
+      }
+      if (!tokenData.accessToken) {
+        setAttachError("Could not get Drive access token.");
+        setAttachingFile(false);
+        return;
+      }
+
+      // Open picker
+      const picked: PickerResult | null = await openGooglePicker(tokenData.accessToken);
+      if (!picked) { setAttachingFile(false); return; }
+
+      // POST to attachments
+      const res = await fetch(`/api/cards/${card.id}/attachments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          driveFileId: picked.id,
+          driveFileName: picked.name,
+          driveMimeType: picked.mimeType,
+          driveViewLink: picked.url,
+          driveThumbnailLink: picked.thumbnailLink,
+          driveWebContentLink: picked.webContentLink,
+          driveModifiedTime: picked.modifiedTime,
+          fileSize: picked.size,
+        }),
+      });
+      if (res.ok) {
+        await loadAttachments();
+      } else {
+        setAttachError("Failed to save attachment.");
+      }
+    } catch {
+      setAttachError("Failed to attach file.");
+    }
+    setAttachingFile(false);
+  };
+
+  const updateAttachment = async (attachmentId: string, updates: { label?: string; isFinal?: boolean; notes?: string }) => {
+    try {
+      const res = await fetch(`/api/cards/${card.id}/attachments/${attachmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setAttachments((prev) => prev.map((a) => (a.id === attachmentId ? updated : a)));
+      }
+    } catch { setAttachError("Failed to update attachment."); }
+  };
+
+  const unlinkAttachment = async (attachmentId: string) => {
+    try {
+      const res = await fetch(`/api/cards/${card.id}/attachments/${attachmentId}`, { method: "DELETE" });
+      if (res.ok) {
+        setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+        setConfirmUnlink(null);
+      }
+    } catch { setAttachError("Failed to unlink attachment."); }
   };
 
   // Handle space on empty description to trigger AI
@@ -325,6 +456,20 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
               })}
             </div>
           </div>
+
+          {/* Review Content CTA for ready_review cards */}
+          {(card.column_id === "ready_review" || status === "ready_review") && (
+            <div className="mb-5">
+              <a
+                href={`/review/${card.id}`}
+                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl text-sm font-semibold no-underline transition-all"
+                style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                Review Content
+              </a>
+            </div>
+          )}
 
           {/* Description with inline AI */}
           <div className="mb-5">
@@ -557,6 +702,166 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             )}
           </div>
 
+          {/* Attachments */}
+          <div className="mb-5 rounded-xl border border-border bg-surface-2 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAttachmentsOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-transparent border-none cursor-pointer text-left"
+            >
+              <span className="tfc-label m-0 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                </svg>
+                Attachments
+                {attachments.length > 0 && (
+                  <span className="text-[10px] font-bold py-[1px] px-[6px] rounded-full bg-red/12 text-red border border-red/25">{attachments.length}</span>
+                )}
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={`text-text-3 transition-transform ${attachmentsOpen ? "rotate-180" : ""}`}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {attachmentsOpen && (
+              <div className="border-t border-border">
+                {/* Attachment list */}
+                {loadingAttachments && (
+                  <div className="px-4 py-6 text-text-3 text-[13px] text-center">Loading attachments...</div>
+                )}
+                {!loadingAttachments && attachments.length === 0 && (
+                  <div className="px-4 py-6 text-text-3 text-[13px] text-center">No files attached yet.</div>
+                )}
+                {!loadingAttachments && attachments.map((att) => (
+                  <div
+                    key={att.id}
+                    className={`px-4 py-3 border-b border-border last:border-b-0 ${att.is_final ? "ring-1 ring-[#10B981]/40 bg-[#10B981]/5" : ""}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Thumbnail */}
+                      <div className="w-10 h-10 rounded-lg bg-surface-3 border border-border flex items-center justify-center shrink-0 overflow-hidden">
+                        {att.drive_thumbnail_link ? (
+                          <img src={att.drive_thumbnail_link} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[16px]">{getMimeIcon(att.drive_mime_type)}</span>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-text text-[13px] font-semibold truncate">{att.drive_file_name}</span>
+                          {att.is_final && (
+                            <span className="text-[9px] font-bold tracking-wider uppercase py-[1px] px-[5px] rounded bg-[#10B981]/12 text-[#10B981] border border-[#10B981]/25 shrink-0">Final</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {att.label && (
+                            <span className="text-[9px] font-bold tracking-wider uppercase py-[1px] px-[5px] rounded bg-red/8 text-red border border-red/20">{att.label}</span>
+                          )}
+                          {att.file_size && (
+                            <span className="text-text-3 text-[11px]">{formatFileSize(att.file_size)}</span>
+                          )}
+                          <span className="text-text-3 text-[11px]">by {att.linked_by_name}</span>
+                        </div>
+
+                        {/* Controls row */}
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          {/* Label dropdown */}
+                          <select
+                            value={att.label || ""}
+                            onChange={(e) => updateAttachment(att.id, { label: e.target.value || undefined })}
+                            className="text-[10px] py-1 px-2 rounded-md bg-surface-3 border border-border text-text-2 cursor-pointer font-body outline-none"
+                            style={{ colorScheme: "dark" }}
+                          >
+                            <option value="">No label</option>
+                            <option value="Raw Footage">Raw Footage</option>
+                            <option value="Edited Cut">Edited Cut</option>
+                            <option value="Thumbnail">Thumbnail</option>
+                            <option value="Caption File">Caption File</option>
+                            <option value="Other">Other</option>
+                          </select>
+
+                          {/* Mark as Final toggle */}
+                          <button
+                            onClick={() => updateAttachment(att.id, { isFinal: !att.is_final })}
+                            className={`text-[10px] py-1 px-2 rounded-md border cursor-pointer font-body transition-colors ${
+                              att.is_final
+                                ? "bg-[#10B981]/12 border-[#10B981]/30 text-[#10B981]"
+                                : "bg-surface-3 border-border text-text-3 hover:text-text-2"
+                            }`}
+                          >
+                            {att.is_final ? "Final" : "Mark Final"}
+                          </button>
+
+                          {/* Open in Drive */}
+                          {att.drive_view_link && (
+                            <a
+                              href={att.drive_view_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] py-1 px-2 rounded-md bg-surface-3 border border-border text-text-3 hover:text-text-2 no-underline font-body transition-colors"
+                            >
+                              Open in Drive
+                            </a>
+                          )}
+
+                          {/* Unlink */}
+                          {confirmUnlink === att.id ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-text-3">Remove from card?</span>
+                              <button
+                                onClick={() => unlinkAttachment(att.id)}
+                                className="text-[10px] py-0.5 px-2 rounded bg-[#EF4444]/12 text-[#EF4444] border border-[#EF4444]/25 cursor-pointer font-body"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmUnlink(null)}
+                                className="text-[10px] py-0.5 px-2 rounded bg-surface-3 text-text-3 border border-border cursor-pointer font-body"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmUnlink(att.id)}
+                              className="text-[10px] py-1 px-2 rounded-md bg-surface-3 border border-border text-text-3 hover:text-[#EF4444] cursor-pointer font-body transition-colors"
+                            >
+                              Unlink
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Attach button */}
+                <div className="px-4 py-3">
+                  {attachError && <p className="text-[#EF4444] text-[11px] mb-2">{attachError}</p>}
+                  <button
+                    onClick={handleAttachFromDrive}
+                    disabled={attachingFile}
+                    className="tfc-btn text-[11px] py-2 px-4 w-full disabled:opacity-50"
+                  >
+                    {attachingFile ? "Opening picker..." : "Attach from Google Drive"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Time Tracking — team members only */}
+          {currentUser.type === "team" && (
+            <TimeTracker
+              cardId={card.id}
+              currentUserEmail={currentUser.email}
+              currentUserName={currentUser.name}
+            />
+          )}
+
           {/* Error */}
           {error && <p className="text-[#EF4444] text-[12px] mb-4">{error}</p>}
 
@@ -592,6 +897,20 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             </div>
           </div>
         </div>
+
+        {/* Publish Scheduler — shown when card is in the approved column */}
+        {card.column_id === "approved" && (
+          <div className="px-6 py-4 border-t border-border">
+            <PublishScheduler
+              cardId={card.id}
+              clientId={clientId}
+              onScheduled={() => {
+                onUpdate({ ...card, column_id: "scheduled" });
+                onClose();
+              }}
+            />
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0">

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Sans } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const syne = Syne({
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-bg font-body text-text antialiased">
         {children}
+        <Script src="https://apis.google.com/js/api.js" strategy="lazyOnload" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

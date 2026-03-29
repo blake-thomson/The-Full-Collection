@@ -383,6 +383,17 @@ export function Kanban({ clientId, editable = true, clientName, onCardClick, aut
                         {[card.content_style, card.content_type].filter(Boolean).join(" · ")}
                       </span>
                     )}
+                    {col.id === "ready_review" && (
+                      <a
+                        href={`/review/${card.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-2 flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[10px] font-bold tracking-[0.04em] uppercase cursor-pointer transition-all no-underline"
+                        style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.25)" }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        Review
+                      </a>
+                    )}
                   </div>
                 ))}
                 {editable && (

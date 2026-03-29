@@ -3,6 +3,7 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
 import { triggerKanbanNotifications, triggerShootDateNotifications } from "@/lib/kanban-notifications";
+import { executeTriggersForColumn } from "@/lib/execute-triggers";
 import type { ColumnId } from "@/lib/constants";
 
 // GET /api/kanban?client_id=...
@@ -164,7 +165,7 @@ export async function PATCH(req: NextRequest) {
     "due_date", "priority", "content_style", "content_type",
     "reference_url", "unedited_url", "edited_video_url",
     "assigned_editor", "shoot_date", "edit_deadline", "publish_date",
-    "shoot_location", "revision_notes", "is_evergreen",
+    "shoot_location", "revision_notes", "is_evergreen", "caption",
   ];
   for (const f of fields) {
     if (body[f] !== undefined) updates[f] = body[f];
@@ -185,6 +186,10 @@ export async function PATCH(req: NextRequest) {
   if (newColumnId && newColumnId !== card.column_id) {
     const cardTitle = (body.title as string | undefined) || card.title;
     triggerKanbanNotifications(card.client_id, cardTitle, newColumnId, id);
+    // Execute workflow automation triggers (best-effort, non-blocking)
+    executeTriggersForColumn(id, newColumnId, supabase).catch((err) =>
+      console.error("[kanban] trigger execution failed:", err)
+    );
   }
 
   // Fire shoot date notifications when shoot_date is newly set or changed
