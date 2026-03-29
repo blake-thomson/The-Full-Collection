@@ -1,6 +1,6 @@
 import React from "react";
 import { Resend } from "resend";
-import { renderAsync } from "@react-email/render";
+import { render } from "@react-email/render";
 import { TeamInviteEmail } from "@/emails/TeamInvite";
 import { ClientWelcomeEmail } from "@/emails/ClientWelcome";
 import { StatusNotificationEmail } from "@/emails/StatusNotification";
@@ -23,7 +23,7 @@ export async function sendTeamInvite({
   role: string;
   code: string;
 }) {
-  const html = await renderAsync(
+  const html = await render(
     React.createElement(TeamInviteEmail, {
       name,
       inviterName,
@@ -53,7 +53,7 @@ export async function sendClientWelcome({
   code: string;
   appUrl: string;
 }) {
-  const html = await renderAsync(
+  const html = await render(
     React.createElement(ClientWelcomeEmail, {
       name,
       email,
@@ -82,7 +82,7 @@ export async function sendStatusNotification({
   oldStatus: string;
   newStatus: string;
 }) {
-  const html = await renderAsync(
+  const html = await render(
     React.createElement(StatusNotificationEmail, {
       clientName,
       contentTitle,
@@ -106,7 +106,7 @@ export async function sendPasswordReset({
   to: string;
   resetLink: string;
 }) {
-  const html = await renderAsync(
+  const html = await render(
     React.createElement(PasswordResetEmail, {
       email: to,
       resetLink,
