@@ -91,6 +91,7 @@ export function ResearchBoard({ clients }: Props) {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [columnCount, setColumnCount] = useState(3); // 2-6 columns
 
   // Form state
   const [formUrl, setFormUrl] = useState("");
@@ -275,13 +276,33 @@ export function ResearchBoard({ clients }: Props) {
             {items.length}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="sm:hidden px-3 py-1.5 text-xs font-medium rounded-lg bg-surface-2 text-text-2 border border-border hover:text-text transition-colors"
           >
             Filters
           </button>
+          {/* Size controls */}
+          <div className="hidden sm:flex items-center gap-1 bg-surface-2 border border-border rounded-lg p-0.5">
+            <button
+              onClick={() => setColumnCount((c) => Math.min(c + 1, 6))}
+              disabled={columnCount >= 6}
+              className="w-7 h-7 flex items-center justify-center rounded text-text-3 hover:text-text hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-3"
+              title="Smaller cards"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+            <span className="text-[10px] text-text-3 font-medium w-4 text-center">{columnCount}</span>
+            <button
+              onClick={() => setColumnCount((c) => Math.max(c - 1, 1))}
+              disabled={columnCount <= 1}
+              className="w-7 h-7 flex items-center justify-center rounded text-text-3 hover:text-text hover:bg-surface-3 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-3"
+              title="Larger cards"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+          </div>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
             className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
@@ -387,7 +408,7 @@ export function ResearchBoard({ clients }: Props) {
           )}
 
           {filtered.length > 0 && (
-            <div className="columns-1 md:columns-2 xl:columns-3 gap-3">
+            <div className="gap-3" style={{ columnCount, columnGap: "0.75rem" }}>
               {filtered.map((item) => {
                 const typeColor = TYPE_COLORS[item.type || ""] || "#6B7280";
                 const typeLabel = TYPE_LABELS[item.type || ""] || "Other";
