@@ -10,6 +10,7 @@ interface SocialAccount {
   platform_user_id: string | null;
   connected: boolean;
   connected_at: string;
+  token_expiry: string | null;
 }
 
 interface Props {
@@ -102,6 +103,16 @@ export default function SocialAccounts({ clientId }: Props) {
   const getAccount = (platformId: string) =>
     accounts.find((a) => a.platform === platformId);
 
+  const getTokenStatus = (account: SocialAccount): "healthy" | "expiring" | "expired" => {
+    if (!account.token_expiry) return "healthy";
+    const expiry = new Date(account.token_expiry);
+    const now = new Date();
+    if (expiry < now) return "expired";
+    const threeDays = 3 * 24 * 60 * 60 * 1000;
+    if (expiry.getTime() - now.getTime() < threeDays) return "expiring";
+    return "healthy";
+  };
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -147,9 +158,28 @@ export default function SocialAccounts({ clientId }: Props) {
                 )}
               </div>
               {isConnected ? (
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-body shrink-0">
-                  Connected
-                </span>
+                (() => {
+                  const status = getTokenStatus(account);
+                  if (status === "expired") {
+                    return (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-body shrink-0">
+                        Expired
+                      </span>
+                    );
+                  }
+                  if (status === "expiring") {
+                    return (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-body shrink-0">
+                        Expiring Soon
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-body shrink-0">
+                      Connected
+                    </span>
+                  );
+                })()
               ) : (
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-2 text-text-3 font-body shrink-0">
                   Not Connected
@@ -158,16 +188,27 @@ export default function SocialAccounts({ clientId }: Props) {
             </div>
 
             {isConnected ? (
-              <button
-                onClick={() => handleDisconnect(account.id)}
-                disabled={disconnecting === account.id}
-                className="tfc-btn-ghost text-[12px] font-body w-full"
-                style={{ padding: "7px 0" }}
-              >
-                {disconnecting === account.id
-                  ? "Disconnecting..."
-                  : "Disconnect"}
-              </button>
+              <div className="flex gap-2">
+                {getTokenStatus(account) === "expired" && (
+                  <a
+                    href={`/api/social/${platform.id}/connect?client_id=${clientId}`}
+                    className="tfc-btn text-[12px] font-body flex-1 text-center block"
+                    style={{ padding: "7px 0", textDecoration: "none" }}
+                  >
+                    Reconnect
+                  </a>
+                )}
+                <button
+                  onClick={() => handleDisconnect(account.id)}
+                  disabled={disconnecting === account.id}
+                  className="tfc-btn-ghost text-[12px] font-body flex-1"
+                  style={{ padding: "7px 0" }}
+                >
+                  {disconnecting === account.id
+                    ? "Disconnecting..."
+                    : "Disconnect"}
+                </button>
+              </div>
             ) : (
               <a
                 href={`/api/social/${platform.id}/connect?client_id=${clientId}`}

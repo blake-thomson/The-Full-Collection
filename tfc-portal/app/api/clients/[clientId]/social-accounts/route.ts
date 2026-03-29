@@ -20,7 +20,7 @@ export async function GET(
 
   const { data, error } = await admin
     .from("client_social_accounts")
-    .select("id, client_id, platform, account_name, platform_user_id, connected, connected_at")
+    .select("id, client_id, platform, account_name, platform_user_id, connected, connected_at, token_expiry")
     .eq("client_id", params.clientId)
     .eq("connected", true)
     .order("connected_at", { ascending: false });
