@@ -165,16 +165,10 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
 
   return (
     <div>
-      <div className="flex gap-[3px] mb-7">
-        {[{ id: "team", label: "Team Members" }, { id: "clients", label: "Client Accounts" }].map((t) => (
-          <button key={t.id} className={`nav-tab${tab === t.id ? " active" : ""}`} onClick={() => { setTab(t.id); setLastInvite(null); setLastClient(null); }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Team Members header — no tab switcher, client accounts are in the sidebar */}
 
-      {/* TEAM MEMBERS TAB */}
-      {tab === "team" && (
+      {/* TEAM MEMBERS */}
+      {(
         <div>
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -374,82 +368,6 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
         </div>
       )}
 
-      {/* CLIENT ACCOUNTS TAB */}
-      {tab === "clients" && (
-        <div>
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-text font-heading text-[22px] font-[800] m-0 mb-1">Client Accounts</h2>
-              <p className="text-text-2 text-[13px] m-0">Accounts are created by TFC — clients cannot self-register</p>
-            </div>
-            {canManage && !showNewClient && (
-              <button className="tfc-btn py-[9px] px-5 text-xs" onClick={() => { setShowNewClient(true); setCErr(""); setLastClient(null); }}>
-                + Create Client
-              </button>
-            )}
-          </div>
-
-          {/* Success */}
-          {lastClient && (
-            <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.25)] rounded-[10px] p-4 mb-5">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-[#10B981] text-sm font-bold m-0 mb-1.5">Client account created for {lastClient.name}</p>
-                  <p className="text-text-2 text-[13px] m-0 mb-1">{lastClient.email}</p>
-                  <p className="text-text-3 text-xs m-0 mt-1">A welcome email with a password setup link is being sent to the client.</p>
-                </div>
-                <button onClick={() => setLastClient(null)} className="text-text-3 bg-transparent border-none cursor-pointer text-lg leading-none pl-3">×</button>
-              </div>
-            </div>
-          )}
-
-          {/* Create client form */}
-          {showNewClient && (
-            <div className="bg-surface-2 border border-border-2 rounded-xl p-[22px] mb-6">
-              <h3 className="text-text font-heading text-[15px] font-bold m-0 mb-1.5">New Client Account</h3>
-              <p className="text-text-2 text-[13px] m-0 mb-[18px] leading-relaxed">The client will receive a welcome email with a link to set their own password.</p>
-              <div className="grid grid-cols-2 gap-3.5 mb-[18px]">
-                <div><label className="tfc-label">Client Name</label><input className="tfc-input" value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Their full name" /></div>
-                <div><label className="tfc-label">Email Address</label><input className="tfc-input" type="email" value={cEmail} onChange={(e) => setCEmail(e.target.value)} placeholder="their@email.com" /></div>
-              </div>
-              {cErr && <div className="text-[#FCA5A5] text-[13px] mb-3 bg-[rgba(239,68,68,0.08)] py-2 px-3 rounded-[7px]">{cErr}</div>}
-              <div className="flex gap-2.5">
-                <button className="tfc-btn py-[9px] px-[22px] text-xs" onClick={createClient}>Create & Send Welcome Email →</button>
-                <button className="tfc-btn-ghost py-[9px] px-[18px] text-xs" onClick={() => { setShowNewClient(false); setCErr(""); }}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-          {/* Client list */}
-          <div className="bg-surface border border-border rounded-xl overflow-hidden">
-            {clients.length === 0 && <div className="p-9 text-center text-text-3 text-[13px]">No client accounts yet.</div>}
-            {clients.map((c) => (
-              <div key={c.id} className="flex items-center justify-between py-3.5 px-5 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <Avatar name={c.name} size={32} />
-                  <div>
-                    <div className="text-text text-sm font-medium">{c.name}</div>
-                    <div className="text-text-2 text-xs">{c.email}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="text-[11px] font-bold tracking-[0.06em] py-[3px] px-2.5 rounded-md uppercase"
-                    style={{
-                      background: c.onboarding_complete ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)",
-                      color: c.onboarding_complete ? "#10B981" : "#F59E0B",
-                      border: `1px solid ${c.onboarding_complete ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)"}`,
-                    }}
-                  >
-                    {c.onboarding_complete ? "Onboarded" : "Pending"}
-                  </span>
-                  <span className="text-text-3 text-xs">{c.created_at ? new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       {/* Delete confirmation modal */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.55)" }}>
