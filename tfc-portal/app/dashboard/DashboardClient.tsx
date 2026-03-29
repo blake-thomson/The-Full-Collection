@@ -157,10 +157,6 @@ export default function DashboardClient() {
         if (!c.onboarding_complete) { router.push("/onboarding"); return; }
         if (!c.profile_complete) { router.push("/welcome"); return; }
         setClient(c);
-      } else {
-        // No client record for this email — sign out so they can use the right account
-        await supabase.auth.signOut();
-        router.push("/login");
       }
     })();
   }, []);
