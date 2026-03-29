@@ -121,7 +121,6 @@ const CLIENT_TABS = [
   { id: "assignments", label: "Assignments" },
   { id: "activity", label: "Activity" },
   { id: "analytics", label: "Analytics" },
-  { id: "social", label: "Social Accounts" },
   { id: "reports", label: "Reports" },
   { id: "library", label: "Library" },
   { id: "trash", label: "Trash" },
@@ -857,13 +856,6 @@ export default function TeamPortalClient() {
                   </div>
                 )}
 
-                {/* Social Accounts */}
-                {clientTab === "social" && selected && (
-                  <div className="overflow-y-auto p-4 sm:p-6">
-                    <SocialAccounts clientId={selected.id} />
-                  </div>
-                )}
-
                 {/* Reports */}
                 {clientTab === "reports" && selected && (
                   <div className="overflow-y-auto p-4 sm:p-6">
@@ -908,6 +900,11 @@ export default function TeamPortalClient() {
                           <span className="text-[13px] font-semibold" style={{ color: row.color || "#F0EDE6" }}>{row.v}</span>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Social Accounts */}
+                    <div className="mt-6">
+                      <SocialAccounts clientId={selected.id} />
                     </div>
                   </div>
                 )}
