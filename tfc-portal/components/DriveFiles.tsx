@@ -165,9 +165,25 @@ export function DriveFiles({ folderId, onFileSelect, compact = false }: Props) {
     }
   };
 
+  // Check for drive_error in the URL
+  const driveError = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("drive_error")
+    : null;
+
   if (!connected && !loading) {
     return (
       <div className="text-center py-16">
+        {driveError && (
+          <div className="mb-6 mx-auto max-w-md p-4 rounded-xl bg-red/10 border border-red/20">
+            <p className="text-red text-sm font-semibold mb-1">Failed to connect Google Drive</p>
+            <p className="text-text-3 text-xs">
+              {driveError === "consent_denied" && "You denied access. Please try again and allow access to your Drive."}
+              {driveError === "token_exchange_failed" && "Could not complete authorization. Please try again."}
+              {driveError === "connect_failed" && "Connection failed. Please try again."}
+              {!["consent_denied", "token_exchange_failed", "connect_failed"].includes(driveError) && "An unexpected error occurred. Please try again."}
+            </p>
+          </div>
+        )}
         <div className="text-5xl mb-4">
           <svg className="mx-auto" width="48" height="48" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
             <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H1.2c0 1.55.4 3.1 1.2 4.5l4.2 9.35z" fill="#0066DA"/>

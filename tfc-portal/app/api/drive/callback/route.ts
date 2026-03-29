@@ -4,32 +4,35 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { encryptJson } from "@/lib/crypto";
 
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/drive/callback`;
-
 // GET — handle OAuth callback, exchange code for tokens, encrypt and store in DB
 export async function GET(req: NextRequest) {
-  const supabase = createServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  const { searchParams } = new URL(req.url);
-  const code = searchParams.get("code");
-  const error = searchParams.get("error");
-
-  if (error || !code) {
-    console.error("Google OAuth error:", error);
-    return NextResponse.redirect(new URL("/dashboard?tab=files&drive_error=consent_denied", req.url));
-  }
-
-  const oauth2 = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    REDIRECT_URI
-  );
-
   try {
+    const supabase = createServerSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    const { searchParams } = new URL(req.url);
+    const code = searchParams.get("code");
+    const error = searchParams.get("error");
+
+    if (error || !code) {
+      console.error("Google OAuth error:", error);
+      return NextResponse.redirect(new URL("/dashboard?tab=files&drive_error=consent_denied", req.url));
+    }
+
+    const origin = req.headers.get("x-forwarded-host")
+      ? `https://${req.headers.get("x-forwarded-host")}`
+      : new URL(req.url).origin;
+    const redirectUri = `${origin}/api/drive/callback`;
+
+    const oauth2 = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri
+    );
+
     const { tokens } = await oauth2.getToken(code);
 
     const tokenData = {
@@ -38,9 +41,7 @@ export async function GET(req: NextRequest) {
       expiry_date: tokens.expiry_date,
     };
 
-    // Encrypt before storing — never write plaintext OAuth tokens to the DB
     const encrypted = encryptJson(tokenData);
-
     const admin = createSupabaseAdmin();
 
     // Try to store in clients table first, then team_members
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
       .eq("email", user.email!);
     return NextResponse.redirect(new URL("/team/portal?tab=files", req.url));
   } catch (err) {
-    console.error("Google OAuth token exchange error:", err);
+    console.error("Google OAuth callback error:", err);
     return NextResponse.redirect(
       new URL("/dashboard?tab=files&drive_error=token_exchange_failed", req.url)
     );
