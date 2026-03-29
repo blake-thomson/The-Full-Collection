@@ -12,7 +12,7 @@ const PLATFORM_CONFIG: Record<
   },
   tiktok: {
     authUrl: "https://www.tiktok.com/v2/auth/authorize/",
-    scopes: "user.info.basic,video.publish,video.upload",
+    scopes: "user.info.basic,user.info.profile,user.info.stats,video.list,video.upload,video.publish",
     clientIdEnv: "TIKTOK_CLIENT_KEY",
   },
   youtube: {

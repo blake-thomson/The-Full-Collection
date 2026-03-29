@@ -12,10 +12,10 @@ interface TokenExchangeResult {
 }
 
 const TOKEN_ENDPOINTS: Record<string, string> = {
-  instagram: "https://graph.facebook.com/v18.0/oauth/access_token",
+  instagram: "https://graph.facebook.com/v21.0/oauth/access_token",
   tiktok: "https://open.tiktokapis.com/v2/oauth/token/",
   youtube: "https://oauth2.googleapis.com/token",
-  facebook: "https://graph.facebook.com/v18.0/oauth/access_token",
+  facebook: "https://graph.facebook.com/v21.0/oauth/access_token",
 };
 
 async function exchangeCode(
@@ -83,7 +83,7 @@ async function fetchAccountName(
   try {
     if (platform === "instagram") {
       const res = await fetch(
-        `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${accessToken}`
       );
       const data = await res.json();
       const page = data.data?.[0];
@@ -99,14 +99,20 @@ async function fetchAccountName(
       return { name: ch?.snippet?.title || "YouTube Channel", userId: ch?.id };
     }
     if (platform === "facebook") {
-      const res = await fetch("https://graph.facebook.com/v18.0/me?fields=id,name", {
+      const res = await fetch("https://graph.facebook.com/v21.0/me?fields=id,name", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
       return { name: data.name || "Facebook Page", userId: data.id };
     }
     if (platform === "tiktok") {
-      return { name: "TikTok Account" };
+      const res = await fetch(
+        "https://open.tiktokapis.com/v2/user/info/?fields=display_name,avatar_url",
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const data = await res.json();
+      const user = data.data?.user;
+      return { name: user?.display_name || "TikTok Account", userId: user?.open_id };
     }
   } catch {
     // Fallback
