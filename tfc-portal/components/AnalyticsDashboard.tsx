@@ -371,6 +371,7 @@ function DeltaBadge({ current, previous }: { current: number; previous: number }
 export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceProps) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [platform, setPlatform] = useState<string>("All");
   const [range, setRange] = useState("30");
   const [sortKey, setSortKey] = useState<SortKey>("views");
@@ -395,6 +396,25 @@ export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceP
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const syncFromPlatforms = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/social/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId }),
+      });
+      if (res.ok) {
+        // Refresh analytics data after sync
+        await fetchData();
+      }
+    } catch {
+      // silent
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -437,9 +457,19 @@ export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceP
           />
         </svg>
         <p className="text-text-2 text-[15px] font-medium mb-2">No analytics data yet</p>
-        <p className="text-text-3 text-[13px] text-center max-w-sm">
-          Analytics will appear once content is published and metrics are pulled from connected social accounts.
+        <p className="text-text-3 text-[13px] text-center max-w-sm mb-4">
+          Sync your connected social accounts to pull in metrics from your existing content.
         </p>
+        {isTeam && (
+          <button
+            onClick={syncFromPlatforms}
+            disabled={syncing}
+            className="tfc-btn text-[13px] font-body"
+            style={{ padding: "8px 20px" }}
+          >
+            {syncing ? "Syncing..." : "Sync from Platforms"}
+          </button>
+        )}
       </div>
     );
   }
@@ -476,6 +506,15 @@ export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceP
             </option>
           ))}
         </select>
+        {isTeam && (
+          <button
+            onClick={syncFromPlatforms}
+            disabled={syncing}
+            className="bg-surface-2 border border-border text-text-2 hover:text-text text-[12px] font-semibold rounded-lg px-3 py-1.5 transition-colors cursor-pointer font-body"
+          >
+            {syncing ? "Syncing..." : "↻ Sync"}
+          </button>
+        )}
       </div>
 
       {loading && (
