@@ -696,10 +696,10 @@ export default function TeamPortalClient() {
                     style={{ appearance: "none" }}
                   >
                     <div className="w-9 h-9 rounded-lg bg-surface-2 flex items-center justify-center text-text-3 text-[13px] font-bold font-body shrink-0">
-                      {c.business_name?.[0]?.toUpperCase() || c.name?.[0]?.toUpperCase() || "?"}
+                      {c.name?.[0]?.toUpperCase() || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-text text-[13px] font-semibold font-body m-0 truncate">{c.business_name || c.name}</p>
+                      <p className="text-text text-[13px] font-semibold font-body m-0 truncate">{c.name}</p>
                       <p className="text-text-3 text-[11px] font-body m-0">{c.email}</p>
                     </div>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3 shrink-0">
