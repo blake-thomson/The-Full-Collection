@@ -9,6 +9,7 @@ interface TrashCard {
   column_id: string;
   priority?: string;
   deleted_at: string;
+  deleted_by?: string | null;
 }
 
 interface TrashMessage {
@@ -17,6 +18,7 @@ interface TrashMessage {
   sender_name: string;
   sender_type: string;
   deleted_at: string;
+  deleted_by?: string | null;
 }
 
 interface TrashResource {
@@ -25,6 +27,7 @@ interface TrashResource {
   category?: string;
   type?: string;
   deleted_at: string;
+  deleted_by?: string | null;
 }
 
 interface Props {
@@ -261,6 +264,11 @@ export function TrashBin({ clientId }: Props) {
                     </p>
                     <p className="text-text-3 text-[11px] m-0 mt-0.5">
                       Deleted {timeAgo(item.data.deleted_at)}
+                      {item.data.deleted_by && (
+                        <span className="text-text-3 ml-1">
+                          by <span className="text-text-2">{item.data.deleted_by.split("@")[0]}</span>
+                        </span>
+                      )}
                       {days <= 7 && <span className="text-[#F59E0B] ml-1.5">({days}d left)</span>}
                     </p>
                   </div>

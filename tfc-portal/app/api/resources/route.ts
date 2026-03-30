@@ -84,7 +84,7 @@ export async function DELETE(req: NextRequest) {
 
   const { error } = await supabase
     .from("resources")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: new Date().toISOString(), deleted_by: user.email })
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
