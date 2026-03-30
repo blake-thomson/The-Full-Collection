@@ -28,7 +28,7 @@ import { TeamOverview } from "@/components/TeamOverview";
 import { ResearchBoard } from "@/components/ResearchBoard";
 import { ReportManager } from "@/components/ReportManager";
 import SocialAccounts from "@/components/SocialAccounts";
-import { EvergreenLibrary } from "@/components/EvergreenLibrary";
+
 import { PerformanceAnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { WorkflowTriggers } from "@/components/WorkflowTriggers";
 import { PermissionsMatrix } from "@/components/PermissionsMatrix";
@@ -104,7 +104,7 @@ const CLIENT_TABS = [
   { id: "activity", label: "Activity" },
   { id: "analytics", label: "Analytics" },
   { id: "reports", label: "Reports" },
-  { id: "library", label: "Library" },
+
   { id: "trash", label: "Trash" },
   { id: "info", label: "Account" },
 ];
@@ -849,12 +849,6 @@ export default function TeamPortalClient() {
                   </div>
                 )}
 
-                {/* Library */}
-                {clientTab === "library" && selected && (
-                  <div className="overflow-y-auto p-4 sm:p-6">
-                    <EvergreenLibrary clientId={selected.id} isTeam />
-                  </div>
-                )}
 
                 {/* Trash */}
                 {clientTab === "trash" && (

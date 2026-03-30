@@ -56,7 +56,7 @@ interface Card {
   publish_date?: string;
   shoot_location?: string;
   revision_notes?: string;
-  is_evergreen?: boolean;
+
 }
 
 interface CurrentUser {
@@ -155,7 +155,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [publishDate, setPublishDate] = useState(card.publish_date || "");
   const [shootLocation, setShootLocation] = useState(card.shoot_location || "");
   const [revisionNotes, setRevisionNotes] = useState(card.revision_notes || "");
-  const [isEvergreen, setIsEvergreen] = useState(card.is_evergreen ?? false);
+
   const [sendingToRevisions, setSendingToRevisions] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -352,7 +352,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           shoot_date: shootDate || null, edit_deadline: editDeadline || null,
           publish_date: publishDate || null, shoot_location: shootLocation.trim() || null,
           revision_notes: revisionNotes.trim() || null,
-          is_evergreen: isEvergreen,
         }),
       });
       if (res.ok) {
@@ -364,7 +363,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           shoot_date: shootDate || undefined, edit_deadline: editDeadline || undefined,
           publish_date: publishDate || undefined, shoot_location: shootLocation.trim() || undefined,
           revision_notes: revisionNotes.trim() || undefined,
-          is_evergreen: isEvergreen,
         });
       }
     } catch { setError("Failed to save changes."); }
@@ -627,27 +625,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             </div>
           </div>
 
-          {/* Evergreen toggle */}
-          <div className="mb-5">
-            <button
-              type="button"
-              onClick={() => setIsEvergreen((v) => !v)}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border cursor-pointer transition-all w-full text-left font-body ${
-                isEvergreen
-                  ? "bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]"
-                  : "bg-surface-2 border-border text-text-3 hover:text-text-2 hover:border-border-2"
-              }`}
-            >
-              <span className="text-[16px]">♻️</span>
-              <div className="flex-1">
-                <div className="text-[12px] font-semibold">Evergreen Content</div>
-                <div className="text-[10px] opacity-70">Flag this piece as reusable / recyclable content</div>
-              </div>
-              <div className={`w-8 h-4 rounded-full transition-colors flex items-center ${isEvergreen ? "bg-[#10B981]" : "bg-surface-3"}`}>
-                <div className={`w-3 h-3 rounded-full bg-white shadow transition-transform mx-0.5 ${isEvergreen ? "translate-x-4" : "translate-x-0"}`} />
-              </div>
-            </button>
-          </div>
 
           {/* Editor & Location */}
           <div className="grid grid-cols-2 gap-3 mb-5">

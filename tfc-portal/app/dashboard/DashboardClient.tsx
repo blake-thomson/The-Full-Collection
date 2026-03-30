@@ -20,7 +20,7 @@ import { TrashBin } from "@/components/TrashBin";
 import { FAQ } from "@/components/FAQ";
 import { IdeaSwiper } from "@/components/IdeaSwiper";
 import { useRealtimeKanban, useRealtimeMessages, useRealtimeNotifications } from "@/lib/use-realtime";
-import { EvergreenLibrary } from "@/components/EvergreenLibrary";
+
 import { PerformanceAnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { normalizeContentType } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
@@ -80,14 +80,6 @@ const TABS = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
-  },
-  {
-    id: "library", label: "Library",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
       </svg>
     ),
   },
@@ -201,7 +193,7 @@ export default function DashboardClient() {
   if (!client) return null;
 
   const currentUser: CurrentUser = { name: client.name, email: client.email, type: "client" };
-  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "analytics", "library", "help", "trash"];
+  const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "analytics", "help", "trash"];
 
   return (
     <div className="bg-bg h-screen flex overflow-hidden">
@@ -529,12 +521,6 @@ export default function DashboardClient() {
             </div>
           )}
 
-          {/* Library */}
-          {tab === "library" && (
-            <div className="h-full overflow-y-auto p-4 sm:p-6">
-              <EvergreenLibrary clientId={client.id} />
-            </div>
-          )}
 
           {/* Help / FAQ */}
           {tab === "help" && (
