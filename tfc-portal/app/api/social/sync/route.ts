@@ -246,6 +246,40 @@ async function syncInstagram(admin: Admin, clientId: string, platformUserId: str
     synced++;
   }
 
+  // Pull follower growth from account-level insights
+  try {
+    const since = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+    const until = Math.floor(Date.now() / 1000);
+    const followerRes = await fetch(
+      `https://graph.facebook.com/v21.0/${igUserId}/insights?metric=follower_count&period=day&since=${since}&until=${until}&access_token=${accessToken}`
+    );
+    if (followerRes.ok) {
+      const followerData = await followerRes.json();
+      const values = followerData.data?.[0]?.values || [];
+      if (values.length >= 2) {
+        const oldest = values[0]?.value || 0;
+        const newest = values[values.length - 1]?.value || 0;
+        const growth = newest - oldest;
+        // Attach follower growth to the most recent synced post's metrics
+        const { data: latestPost } = await admin
+          .from("scheduled_posts")
+          .select("id")
+          .eq("client_id", clientId)
+          .eq("platform", "instagram")
+          .eq("status", "posted")
+          .order("posted_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestPost) {
+          await admin
+            .from("post_metrics")
+            .update({ follower_growth: growth })
+            .eq("scheduled_post_id", latestPost.id);
+        }
+      }
+    }
+  } catch { /* follower insights may not be available */ }
+
   // Also sync Facebook Page posts
   try {
     const fbSynced = await syncFacebookPage(admin, clientId, platformUserId, accessToken, thirtyDaysAgo);
