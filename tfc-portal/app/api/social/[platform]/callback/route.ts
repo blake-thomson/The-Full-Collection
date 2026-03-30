@@ -60,7 +60,8 @@ async function exchangeCode(
     return {
       access_token: data.access_token,
       refresh_token: data.refresh_token,
-      expires_in: data.expires_in,
+      // Don't store expires_in — TikTok refresh tokens auto-renew (365 days),
+      // so the account stays connected. The cron publisher handles access token refresh.
       platform_user_id: data.open_id,
     };
   }
@@ -129,10 +130,11 @@ async function exchangeCode(
     }
   }
 
+  // YouTube: refresh token never expires, access token auto-refreshes via cron.
+  // Don't store expires_in so the UI shows "Connected" not "Expiring Soon".
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
-    expires_in: data.expires_in,
   };
 }
 
