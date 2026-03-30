@@ -35,7 +35,8 @@ export const metadata: Metadata = {
     title: "TFC Portal",
   },
   icons: {
-    apple: "/icons/icon-192.png",
+    icon: "/icon",
+    apple: "/apple-icon",
   },
 };
 
@@ -48,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="TFC Portal" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/apple-icon" />
         {/* Prevent flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('tfc-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}` }} />
       </head>
