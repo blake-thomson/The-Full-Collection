@@ -17,6 +17,7 @@ import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
+import { UnifiedTrashBin } from "@/components/UnifiedTrashBin";
 import { ClientAssignments } from "@/components/ClientAssignments";
 import { FAQ } from "@/components/FAQ";
 import { IdeaSwiper } from "@/components/IdeaSwiper";
@@ -677,37 +678,7 @@ export default function TeamPortalClient() {
           {/* ── RECENTLY DELETED ── */}
           {teamTab === "recently-deleted" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
-              <div className="mb-6">
-                <h2 className="text-text font-heading text-[22px] font-[800] m-0 mb-1 flex items-center gap-2">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                  </svg>
-                  Recently Deleted
-                </h2>
-                <p className="text-text-2 text-[13px] m-0">Select a client to view their deleted items</p>
-              </div>
-              <div className="flex flex-col gap-2">
-                {clients.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => { setSelected(c); setClientTab("trash"); }}
-                    className="w-full flex items-center gap-3 p-4 rounded-xl bg-surface border border-border hover:border-red/30 hover:bg-surface-2 transition-all cursor-pointer text-left"
-                    style={{ appearance: "none" }}
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-surface-2 flex items-center justify-center text-text-3 text-[13px] font-bold font-body shrink-0">
-                      {c.name?.[0]?.toUpperCase() || "?"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-text text-[13px] font-semibold font-body m-0 truncate">{c.name}</p>
-                      <p className="text-text-3 text-[11px] font-body m-0">{c.email}</p>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3 shrink-0">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </button>
-                ))}
-              </div>
+              <UnifiedTrashBin />
             </div>
           )}
 

@@ -214,9 +214,9 @@ export async function DELETE(req: NextRequest) {
   const now = new Date().toISOString();
 
   // Soft-delete all messages in the conversation
-  await admin.from("team_messages").update({ deleted_at: now }).eq("conversation_id", id).is("deleted_at", null);
+  await admin.from("team_messages").update({ deleted_at: now, deleted_by: actor.email }).eq("conversation_id", id).is("deleted_at", null);
   // Soft-delete the conversation
-  await admin.from("team_conversations").update({ deleted_at: now }).eq("id", id);
+  await admin.from("team_conversations").update({ deleted_at: now, deleted_by: actor.email }).eq("id", id);
 
   return NextResponse.json({ ok: true });
 }

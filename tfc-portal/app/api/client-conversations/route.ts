@@ -244,8 +244,8 @@ export async function DELETE(req: NextRequest) {
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const now = new Date().toISOString();
-  await admin.from("client_messages").update({ deleted_at: now }).eq("conversation_id", id).is("deleted_at", null);
-  await admin.from("client_conversations").update({ deleted_at: now }).eq("id", id);
+  await admin.from("client_messages").update({ deleted_at: now, deleted_by: actor.email }).eq("conversation_id", id).is("deleted_at", null);
+  await admin.from("client_conversations").update({ deleted_at: now, deleted_by: actor.email }).eq("id", id);
 
   return NextResponse.json({ ok: true });
 }

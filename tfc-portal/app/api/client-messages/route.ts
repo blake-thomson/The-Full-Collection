@@ -193,7 +193,7 @@ export async function DELETE(req: NextRequest) {
 
   await admin
     .from("client_messages")
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: new Date().toISOString(), deleted_by: actor.email })
     .eq("id", id);
 
   return NextResponse.json({ ok: true });

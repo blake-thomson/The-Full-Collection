@@ -162,6 +162,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await admin.from("team_messages").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  await admin.from("team_messages").update({ deleted_at: new Date().toISOString(), deleted_by: actor.email }).eq("id", id);
   return NextResponse.json({ ok: true });
 }
