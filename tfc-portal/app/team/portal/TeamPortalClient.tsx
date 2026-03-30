@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { Logo } from "@/components/ui/Logo";
 import { Avatar } from "@/components/ui/Avatar";
@@ -112,11 +112,12 @@ const CLIENT_TABS = [
 const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", editor: "#10B981", videographer: "#EC4899", smm: "#8B5CF6", social_media_manager: "#8B5CF6" };
 
 export default function TeamPortalClient() {
+  const searchParams = useSearchParams();
   const [teamUser, setTeamUser] = useState<TeamMember | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [selected, setSelected] = useState<Client | null>(null);
-  const [teamTab, setTeamTab] = useState("overview");
-  const [clientTab, setClientTab] = useState("intake");
+  const [teamTab, setTeamTab] = useState(() => searchParams.get("tab") || "overview");
+  const [clientTab, setClientTab] = useState(() => searchParams.get("view") || "intake");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -133,9 +134,37 @@ export default function TeamPortalClient() {
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
   const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
   const [myAssignedClientIds, setMyAssignedClientIds] = useState<string[]>([]);
+  const pendingClientId = useRef<string | null>(searchParams.get("client"));
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
+
+  /* ── Sync state → URL (runs on every tab/client/view change) ── */
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (showMyProfile) {
+      params.set("tab", "profile");
+    } else if (selected) {
+      params.set("tab", "clients");
+      params.set("client", selected.id);
+      params.set("view", clientTab);
+    } else {
+      params.set("tab", teamTab);
+    }
+    const url = `/team/portal?${params.toString()}`;
+    window.history.replaceState(null, "", url);
+  }, [teamTab, clientTab, selected, showMyProfile]);
+
+  /* ── Restore client from URL on first load ── */
+  useEffect(() => {
+    if (!pendingClientId.current || !clients.length) return;
+    const client = clients.find((c) => c.id === pendingClientId.current);
+    if (client) {
+      setSelected(client);
+      setTeamTab("clients");
+    }
+    pendingClientId.current = null;
+  }, [clients]);
 
   useEffect(() => {
     (async () => {
