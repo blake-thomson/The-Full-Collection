@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: {
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 30, // 30 days
         path: "/",
         sameSite: "lax" as const,
         secure: true,
@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public pages — no auth required
-  const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout", "/reset-password", "/setup", "/terms", "/privacy"];
+  const publicPaths = ["/login", "/team/login", "/team/setup", "/team/accept", "/checkout", "/reset-password", "/setup", "/terms", "/privacy", "/api/auth/callback"];
   if (publicPaths.some((p) => path.startsWith(p))) {
     return supabaseResponse;
   }
