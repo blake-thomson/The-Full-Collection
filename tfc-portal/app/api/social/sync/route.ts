@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
 type Admin = any;
 
 /**
- * Creates a kanban card + scheduled_post for an externally published piece of content.
+ * Creates a scheduled_post record for externally published content (no kanban card).
  * Returns the scheduled_post ID, or null if creation failed.
  */
 async function createSyncedPost(
@@ -121,32 +121,9 @@ async function createSyncedPost(
   postedAt: string,
   platformPostId: string
 ): Promise<string | null> {
-  // Create a kanban card in the "published" column
-  const { data: card, error: cardErr } = await admin
-    .from("kanban_cards")
-    .insert({
-      client_id: clientId,
-      column_id: "published",
-      title: title || `${platform} post`,
-      description: `Synced from ${platform}`,
-      platform: platform === "youtube" ? "youtube" : platform === "tiktok" ? "tiktok" : "instagram",
-      content_type: platform === "youtube" ? "long_form" : "short_form",
-      publish_date: postedAt.split("T")[0],
-      position: 0,
-    })
-    .select("id")
-    .single();
-
-  if (cardErr || !card) {
-    console.error(`[social/sync] Failed to create kanban card:`, cardErr?.message);
-    return null;
-  }
-
-  // Create the scheduled_post linked to the card
-  const { data: post, error: postErr } = await admin
+  const { data: post, error } = await admin
     .from("scheduled_posts")
     .insert({
-      card_id: card.id,
       client_id: clientId,
       platform,
       caption: title || "",
@@ -158,8 +135,8 @@ async function createSyncedPost(
     .select("id")
     .single();
 
-  if (postErr || !post) {
-    console.error(`[social/sync] Failed to create scheduled_post:`, postErr?.message);
+  if (error || !post) {
+    console.error(`[social/sync] Failed to create scheduled_post:`, error?.message);
     return null;
   }
 
