@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
       }
 
       // Check if token is expired and needs refresh
+      // Note: token_expiry is null for permanent tokens (e.g. Meta Page tokens) — skip refresh
       if (account.token_expiry && new Date(account.token_expiry) < new Date()) {
         const refreshed = await refreshToken(supabase, account);
         if (refreshed) {

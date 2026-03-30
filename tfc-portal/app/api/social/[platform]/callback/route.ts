@@ -65,21 +65,67 @@ async function exchangeCode(
     };
   }
 
-  // For Meta (Instagram): exchange short-lived token for long-lived token (60 days)
+  // For Meta (Instagram): get a PERMANENT Page Access Token
+  // 1. Exchange short-lived user token → long-lived user token (60 days)
+  // 2. Use long-lived user token to fetch Page Access Token (never expires)
+  // 3. Get the Instagram Business Account ID linked to the page
   if (platform === "instagram") {
     try {
+      // Step 1: Exchange for long-lived user token
       const llRes = await fetch(
         `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.META_APP_ID}&client_secret=${process.env.META_APP_SECRET}&fb_exchange_token=${data.access_token}`
       );
-      if (llRes.ok) {
-        const llData = await llRes.json();
-        return {
-          access_token: llData.access_token,
-          expires_in: llData.expires_in, // ~5184000 (60 days)
-        };
+      if (!llRes.ok) {
+        // Fall back to short-lived token if exchange fails
+        return { access_token: data.access_token, expires_in: data.expires_in };
       }
+      const llData = await llRes.json();
+      const longLivedUserToken = llData.access_token;
+
+      // Step 2: Fetch Pages to get the permanent Page Access Token
+      const pagesRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${longLivedUserToken}`
+      );
+      if (!pagesRes.ok) {
+        // Fall back to long-lived user token
+        return { access_token: longLivedUserToken, expires_in: llData.expires_in };
+      }
+      const pagesData = await pagesRes.json();
+      const page = pagesData.data?.[0];
+
+      if (!page?.access_token) {
+        // No pages found — fall back to long-lived user token
+        return { access_token: longLivedUserToken, expires_in: llData.expires_in };
+      }
+
+      // Page Access Token derived from a long-lived user token is PERMANENT
+      const pageToken = page.access_token;
+      const pageId = page.id;
+      const pageName = page.name;
+
+      // Step 3: Get the Instagram Business Account ID linked to this page
+      let igBusinessId: string | undefined;
+      try {
+        const igRes = await fetch(
+          `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageToken}`
+        );
+        if (igRes.ok) {
+          const igData = await igRes.json();
+          igBusinessId = igData.instagram_business_account?.id;
+        }
+      } catch {
+        // Not critical — we can still publish via the page
+      }
+
+      return {
+        access_token: pageToken,
+        // No expires_in = permanent token
+        platform_user_id: igBusinessId || pageId,
+        account_name: pageName,
+      };
     } catch {
       // Fall back to short-lived token
+      return { access_token: data.access_token, expires_in: data.expires_in };
     }
   }
 

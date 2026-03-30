@@ -97,6 +97,7 @@ export default function SocialAccounts({ clientId }: Props) {
     accounts.find((a) => a.platform === platformId);
 
   const getTokenStatus = (account: SocialAccount): "healthy" | "expiring" | "expired" => {
+    // No expiry = permanent token (e.g. Meta Page token) — always healthy
     if (!account.token_expiry) return "healthy";
     const expiry = new Date(account.token_expiry);
     const now = new Date();
