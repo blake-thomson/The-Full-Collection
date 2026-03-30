@@ -24,6 +24,7 @@ import { IdeaSwiper } from "@/components/IdeaSwiper";
 import { TeamMemberDetail } from "@/components/TeamMemberDetail";
 import { TeamMessenger } from "@/components/TeamMessenger";
 import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
+import { TeamOverview } from "@/components/TeamOverview";
 import { ResearchBoard } from "@/components/ResearchBoard";
 import { ReportManager } from "@/components/ReportManager";
 import SocialAccounts from "@/components/SocialAccounts";
@@ -557,57 +558,24 @@ export default function TeamPortalClient() {
 
           {/* ── OVERVIEW TAB ── */}
           {teamTab === "overview" && !selected && !showMyProfile && (
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-5 sm:p-[36px_32px]">
-                <h2 className="text-text font-heading text-[22px] font-[800] m-0 mb-1.5">Overview</h2>
-                <p className="text-text-2 text-[13px] m-0 mb-8">A snapshot of all client activity across The Full Collection.</p>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-9">
-                  {[
-                    { l: "Total Clients", v: totalClients, accent: false },
-                    { l: "Onboarded", v: onboarded, accent: false },
-                    { l: "Content Pieces", v: totalContent, accent: false },
-                    { l: "Published", v: totalPublished, accent: true },
-                  ].map((s) => (
-                    <div key={s.l} className="bg-surface border border-border rounded-xl p-[18px_20px]">
-                      <div className="text-text-3 text-[11px] font-bold tracking-[0.1em] uppercase mb-2">{s.l}</div>
-                      <div className={`font-heading text-[28px] sm:text-[32px] font-[800] leading-none ${s.accent ? "text-red" : "text-text"}`}>{s.v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <AnalyticsDashboard clientId="all" cards={allCards} activity={allActivity} />
-              {["owner", "admin"].includes(teamUser.role) && (
-                <ClientHealthDashboard clients={clients} teamMembers={allTeamMembers} />
-              )}
-              <div className="px-5 sm:px-8 pb-8">
-                <h3 className="text-text font-heading text-base font-bold m-0 mb-4">Content by Client</h3>
-                <div className="bg-surface border border-border rounded-xl overflow-hidden overflow-x-auto">
-                  <div className="grid gap-2 px-5 py-2.5 border-b border-border min-w-[600px]" style={{ gridTemplateColumns: `1fr ${COLUMNS.map(() => "60px").join(" ")}` }}>
-                    <span className="text-text-3 text-[11px] font-bold tracking-[0.08em] uppercase">Client</span>
-                    {COLUMNS.map((c) => <span key={c.id} className="text-text-3 text-[10px] font-bold tracking-[0.06em] uppercase text-center">{c.label.split(" ")[0]}</span>)}
-                  </div>
-                  {clients.length === 0 && <div className="p-7 text-text-3 text-[13px]">No clients yet.</div>}
-                  {clients.map((c) => (
-                    <div key={c.id} className="grid gap-2 px-5 py-3 border-b border-border items-center min-w-[600px]" style={{ gridTemplateColumns: `1fr ${COLUMNS.map(() => "60px").join(" ")}` }}>
-                      <div>
-                        <span className="text-text text-[13px] font-medium">{c.name}</span>
-                        <span className="text-text-3 text-[11px] ml-2 hidden sm:inline">{c.email}</span>
-                      </div>
-                      {COLUMNS.map((col) => {
-                        const count = c.kanbanCards?.filter((k) => k.column_id === col.id).length || 0;
-                        return (
-                          <div key={col.id} className="text-center">
-                            {count > 0
-                              ? <span className="inline-block rounded-md text-xs font-semibold py-[2px] px-2 min-w-[24px]" style={{ background: `${col.color}22`, color: col.color }}>{count}</span>
-                              : <span className="text-text-3 text-xs">—</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <TeamOverview
+              teamUser={teamUser}
+              clients={clients}
+              allCards={allCards}
+              allActivity={allActivity}
+              allTeamMembers={allTeamMembers}
+              onNavigateToClient={(clientId, cardId) => {
+                const client = clients.find((c) => c.id === clientId);
+                if (client) {
+                  setSelected(client);
+                  setClientTab("kanban");
+                  if (cardId) {
+                    const card = allCards.find((c) => c.id === cardId);
+                    if (card) setSelectedCard(card);
+                  }
+                }
+              }}
+            />
           )}
 
           {/* ── FILES TAB ── */}

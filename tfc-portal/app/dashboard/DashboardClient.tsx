@@ -477,11 +477,8 @@ export default function DashboardClient() {
             <ClientHome
               clientName={client.name}
               cards={kanbanCards}
-              onSubmitIdea={() => { setTab("kanban"); setOpenCreateCard(true); setKanbanKey((k) => k + 1); }}
-              onGenerateIdeas={() => setShowIdeaSwiper(true)}
-              onViewCalendar={() => setTab("calendar")}
-              onMessageTeam={() => setTab("messages")}
               onCardClick={(card) => setSelectedCard(card as KanbanCard)}
+              onMessageTeam={() => setTab("messages")}
             />
           )}
 
