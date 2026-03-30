@@ -40,9 +40,8 @@ const PLATFORM_COLORS: Record<string, string> = {
   Instagram: "#E1306C",
   TikTok: "#00F2EA",
   YouTube: "#FF0000",
-  LinkedIn: "#0A66C2",
-  "Twitter / X": "#1DA1F2",
   Facebook: "#1877F2",
+  "Twitter / X": "#1DA1F2",
   Podcast: "#8B5CF6",
   Blog: "#10B981",
 };
@@ -330,7 +329,7 @@ interface PerformanceProps {
   isTeam?: boolean;
 }
 
-const PLATFORMS = ["All", "Instagram", "TikTok", "YouTube", "LinkedIn"] as const;
+const PLATFORMS = ["All", "Instagram", "Facebook", "TikTok", "YouTube"] as const;
 const RANGES = [
   { label: "Last 7 Days", value: "7" },
   { label: "Last 30 Days", value: "30" },
@@ -339,9 +338,9 @@ const RANGES = [
 
 const PERF_PLATFORM_COLORS: Record<string, string> = {
   instagram: "#E1306C",
+  facebook: "#1877F2",
   tiktok: "#000000",
   youtube: "#FF0000",
-  linkedin: "#0A66C2",
 };
 
 type SortKey = "title" | "platform" | "views" | "likes" | "shares" | "engagementRate" | "postedAt";

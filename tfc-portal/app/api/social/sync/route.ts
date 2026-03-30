@@ -58,23 +58,31 @@ export async function POST(req: NextRequest) {
 
     let token: string = accessToken;
 
-    // For YouTube, refresh the access token using the refresh token
-    if (account.platform === "youtube" && account.refresh_token) {
+    // Refresh short-lived access tokens using stored refresh tokens
+    if ((account.platform === "youtube" || account.platform === "tiktok") && account.refresh_token) {
       try {
         let refreshToken: string | null = null;
         const storedRefresh = typeof account.refresh_token === "string"
           ? JSON.parse(account.refresh_token) : account.refresh_token;
         refreshToken = isEncrypted(storedRefresh) ? decryptJson<string>(storedRefresh) : storedRefresh;
         if (refreshToken) {
-          const res = await fetch("https://oauth2.googleapis.com/token", {
+          const body: Record<string, string> = { grant_type: "refresh_token", refresh_token: refreshToken };
+          let tokenUrl: string;
+
+          if (account.platform === "youtube") {
+            tokenUrl = "https://oauth2.googleapis.com/token";
+            body.client_id = process.env.GOOGLE_CLIENT_ID!;
+            body.client_secret = process.env.GOOGLE_CLIENT_SECRET!;
+          } else {
+            tokenUrl = "https://open.tiktokapis.com/v2/oauth/token/";
+            body.client_key = process.env.TIKTOK_CLIENT_KEY!;
+            body.client_secret = process.env.TIKTOK_CLIENT_SECRET!;
+          }
+
+          const res = await fetch(tokenUrl, {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              grant_type: "refresh_token",
-              refresh_token: refreshToken,
-              client_id: process.env.GOOGLE_CLIENT_ID!,
-              client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            }).toString(),
+            body: new URLSearchParams(body).toString(),
           });
           if (res.ok) {
             const data = await res.json();
@@ -279,19 +287,35 @@ async function syncFacebookPage(admin: Admin, clientId: string, pageId: string, 
       scheduledPostId = newId;
     }
 
+    // Pull post-level insights (reach, impressions)
+    let reach = 0, impressions = 0;
+    try {
+      const insightsRes = await fetch(
+        `https://graph.facebook.com/v21.0/${post.id}/insights?metric=post_impressions,post_impressions_unique&access_token=${accessToken}`
+      );
+      if (insightsRes.ok) {
+        const insightsData = await insightsRes.json();
+        for (const insight of insightsData.data || []) {
+          const val = insight.values?.[0]?.value || 0;
+          if (insight.name === "post_impressions") impressions = val;
+          if (insight.name === "post_impressions_unique") reach = val;
+        }
+      }
+    } catch { /* insights may not be available */ }
+
     await admin.from("post_metrics").upsert(
       {
         scheduled_post_id: scheduledPostId,
         client_id: clientId,
         platform: "facebook",
         pulled_at: new Date().toISOString(),
-        views: 0,
+        views: impressions,
         likes: post.likes?.summary?.total_count || 0,
         comments: post.comments?.summary?.total_count || 0,
         shares: post.shares?.count || 0,
         saves: 0,
-        reach: 0,
-        impressions: 0,
+        reach,
+        impressions,
       },
       { onConflict: "scheduled_post_id" }
     );
