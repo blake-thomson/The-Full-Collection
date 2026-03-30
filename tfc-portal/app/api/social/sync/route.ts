@@ -110,6 +110,63 @@ export async function POST(req: NextRequest) {
 type Admin = any;
 
 /**
+ * Creates a kanban card + scheduled_post for an externally published piece of content.
+ * Returns the scheduled_post ID, or null if creation failed.
+ */
+async function createSyncedPost(
+  admin: Admin,
+  clientId: string,
+  platform: string,
+  title: string,
+  postedAt: string,
+  platformPostId: string
+): Promise<string | null> {
+  // Create a kanban card in the "published" column
+  const { data: card, error: cardErr } = await admin
+    .from("kanban_cards")
+    .insert({
+      client_id: clientId,
+      column_id: "published",
+      title: title || `${platform} post`,
+      description: `Synced from ${platform}`,
+      platform: platform === "youtube" ? "youtube" : platform === "tiktok" ? "tiktok" : "instagram",
+      content_type: platform === "youtube" ? "long_form" : "short_form",
+      publish_date: postedAt.split("T")[0],
+      position: 0,
+    })
+    .select("id")
+    .single();
+
+  if (cardErr || !card) {
+    console.error(`[social/sync] Failed to create kanban card:`, cardErr?.message);
+    return null;
+  }
+
+  // Create the scheduled_post linked to the card
+  const { data: post, error: postErr } = await admin
+    .from("scheduled_posts")
+    .insert({
+      card_id: card.id,
+      client_id: clientId,
+      platform,
+      caption: title || "",
+      status: "posted",
+      posted_at: postedAt,
+      platform_post_id: platformPostId,
+      scheduled_for: postedAt,
+    })
+    .select("id")
+    .single();
+
+  if (postErr || !post) {
+    console.error(`[social/sync] Failed to create scheduled_post:`, postErr?.message);
+    return null;
+  }
+
+  return post.id;
+}
+
+/**
  * Instagram — Fetch recent media from the IG Business Account and pull insights
  */
 async function syncInstagram(admin: Admin, clientId: string, platformUserId: string, accessToken: string): Promise<number> {
@@ -158,23 +215,10 @@ async function syncInstagram(admin: Admin, clientId: string, platformUserId: str
     if (existing) {
       scheduledPostId = existing.id;
     } else {
-      // Create a scheduled_posts record for this external post
-      const { data: newPost, error } = await admin
-        .from("scheduled_posts")
-        .insert({
-          client_id: clientId,
-          platform: "instagram",
-          caption: post.caption || "",
-          status: "posted",
-          posted_at: post.timestamp,
-          platform_post_id: post.id,
-          scheduled_for: post.timestamp,
-        })
-        .select("id")
-        .single();
-
-      if (error || !newPost) continue;
-      scheduledPostId = newPost.id;
+      const caption = (post.caption || "").substring(0, 100);
+      const newId = await createSyncedPost(admin, clientId, "instagram", caption, post.timestamp, post.id);
+      if (!newId) continue;
+      scheduledPostId = newId;
     }
 
     // Pull insights for this media
@@ -250,21 +294,10 @@ async function syncFacebookPage(admin: Admin, clientId: string, pageId: string, 
     if (existing) {
       scheduledPostId = existing.id;
     } else {
-      const { data: newPost, error } = await admin
-        .from("scheduled_posts")
-        .insert({
-          client_id: clientId,
-          platform: "facebook",
-          caption: post.message || "",
-          status: "posted",
-          posted_at: post.created_time,
-          platform_post_id: post.id,
-          scheduled_for: post.created_time,
-        })
-        .select("id")
-        .single();
-      if (error || !newPost) continue;
-      scheduledPostId = newPost.id;
+      const message = (post.message || "Facebook post").substring(0, 100);
+      const newId = await createSyncedPost(admin, clientId, "facebook", message, post.created_time, post.id);
+      if (!newId) continue;
+      scheduledPostId = newId;
     }
 
     await admin.from("post_metrics").upsert(
@@ -339,21 +372,10 @@ async function syncYouTube(admin: Admin, clientId: string, accessToken: string):
     if (existing) {
       scheduledPostId = existing.id;
     } else {
-      const { data: newPost, error } = await admin
-        .from("scheduled_posts")
-        .insert({
-          client_id: clientId,
-          platform: "youtube",
-          caption: video.snippet?.title || "",
-          status: "posted",
-          posted_at: video.snippet?.publishedAt,
-          platform_post_id: video.id,
-          scheduled_for: video.snippet?.publishedAt,
-        })
-        .select("id")
-        .single();
-      if (error || !newPost) continue;
-      scheduledPostId = newPost.id;
+      const title = video.snippet?.title || "YouTube video";
+      const newId = await createSyncedPost(admin, clientId, "youtube", title, video.snippet?.publishedAt, video.id);
+      if (!newId) continue;
+      scheduledPostId = newId;
     }
 
     const stats = video.statistics || {};
@@ -420,21 +442,10 @@ async function syncTikTok(admin: Admin, clientId: string, accessToken: string): 
       scheduledPostId = existing.id;
     } else {
       const postedAt = new Date(video.create_time * 1000).toISOString();
-      const { data: newPost, error } = await admin
-        .from("scheduled_posts")
-        .insert({
-          client_id: clientId,
-          platform: "tiktok",
-          caption: video.title || "",
-          status: "posted",
-          posted_at: postedAt,
-          platform_post_id: video.id,
-          scheduled_for: postedAt,
-        })
-        .select("id")
-        .single();
-      if (error || !newPost) continue;
-      scheduledPostId = newPost.id;
+      const title = video.title || "TikTok video";
+      const newId = await createSyncedPost(admin, clientId, "tiktok", title, postedAt, video.id);
+      if (!newId) continue;
+      scheduledPostId = newId;
     }
 
     await admin.from("post_metrics").upsert(

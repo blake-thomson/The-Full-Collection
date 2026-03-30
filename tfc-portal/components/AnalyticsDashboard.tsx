@@ -372,6 +372,7 @@ export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceP
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [platform, setPlatform] = useState<string>("All");
   const [range, setRange] = useState("30");
   const [sortKey, setSortKey] = useState<SortKey>("views");
@@ -399,20 +400,30 @@ export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceP
 
   const syncFromPlatforms = async () => {
     setSyncing(true);
+    setSyncResult(null);
     try {
       const res = await fetch("/api/social/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ client_id: clientId }),
       });
+      const json = await res.json();
       if (res.ok) {
-        // Refresh analytics data after sync
+        const total = json.synced || 0;
+        const details = (json.results || [])
+          .filter((r: { synced: number }) => r.synced > 0)
+          .map((r: { platform: string; synced: number }) => `${r.platform}: ${r.synced}`)
+          .join(", ");
+        setSyncResult(total > 0 ? `Synced ${total} posts (${details})` : "No new posts found to sync");
         await fetchData();
+      } else {
+        setSyncResult(json.error || "Sync failed");
       }
     } catch {
-      // silent
+      setSyncResult("Sync failed — check connection");
     } finally {
       setSyncing(false);
+      setTimeout(() => setSyncResult(null), 8000);
     }
   };
 
@@ -469,6 +480,9 @@ export function PerformanceAnalyticsDashboard({ clientId, isTeam }: PerformanceP
           >
             {syncing ? "Syncing..." : "Sync from Platforms"}
           </button>
+        )}
+        {syncResult && (
+          <p className="text-text-3 text-[12px] mt-3">{syncResult}</p>
         )}
       </div>
     );
