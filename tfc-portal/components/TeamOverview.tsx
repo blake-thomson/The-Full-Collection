@@ -27,6 +27,7 @@ interface Props {
   allCards: KanbanCard[];
   allActivity: ActivityItem[];
   allTeamMembers: TeamMember[];
+  myAssignedClientIds: string[];
   onNavigateToClient: (clientId: string, cardId?: string) => void;
 }
 
@@ -37,7 +38,7 @@ const COL_META: Record<string, { label: string; color: string }> = Object.fromEn
 /* ── Pipeline bucket definitions ── */
 const PIPELINE_BUCKETS = [
   { key: "ideas", label: "Ideas", columns: ["idea"], color: "#6B7280" },
-  { key: "production", label: "In Production", columns: ["filmed", "editing", "edited_qcc"], color: "#3B82F6" },
+  { key: "production", label: "In Production", columns: ["filmed", "ready_to_edit", "editing", "edited_qcc"], color: "#3B82F6" },
   { key: "action", label: "Needs Action", columns: ["ready_review", "revise"], color: "#F59E0B" },
   { key: "ship", label: "Ready to Ship", columns: ["approved", "scheduled"], color: "#10B981" },
   { key: "published", label: "Published", columns: ["published"], color: "var(--color-red)" },
@@ -60,14 +61,93 @@ function daysSince(iso?: string): number | null {
   return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeamMembers, onNavigateToClient }: Props) {
+function formatDate(dateStr: string): string {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/* ── Focus card row component ── */
+function FocusCard({ item, isLast, onNavigate }: {
+  item: { card: KanbanCard; clientName: string; clientId: string; reason: string; tag?: string; tagColor?: string };
+  isLast: boolean;
+  onNavigate: (clientId: string, cardId?: string) => void;
+}) {
+  const col = COL_META[item.card.column_id];
+  const isOverdue = item.reason === "Overdue";
+  return (
+    <button
+      onClick={() => onNavigate(item.clientId, item.card.id)}
+      className="w-full flex items-center gap-3 px-4 py-3 bg-transparent border-none cursor-pointer text-left font-body transition-colors hover:bg-surface-2"
+      style={{ borderBottom: isLast ? "none" : "1px solid var(--color-border)" }}
+    >
+      <div className="w-[4px] self-stretch rounded-full shrink-0" style={{ background: isOverdue ? "#EF4444" : col?.color || "#6B7280" }} />
+      <div className="flex-1 min-w-0">
+        <p className="text-text text-[13px] font-medium m-0 truncate">{item.card.title}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-text-3 text-[11px]">{item.clientName}</span>
+          <span className="text-[9px] font-bold py-[1px] px-1.5 rounded" style={{ background: `${col?.color || "#6B7280"}18`, color: col?.color || "#6B7280" }}>
+            {col?.label || item.card.column_id}
+          </span>
+        </div>
+      </div>
+      <div className="shrink-0 text-right">
+        <span className={`text-[11px] font-semibold ${isOverdue ? "text-[#EF4444]" : "text-text-3"}`}>
+          {item.reason}
+        </span>
+        {(item.card.due_date || item.card.shoot_date || item.card.publish_date) && (
+          <div className="text-text-3 text-[10px] mt-0.5">
+            {formatDate(item.card.due_date || item.card.shoot_date || item.card.publish_date || "")}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/* ── Focus section wrapper ── */
+function FocusSection({ title, items, emptyMessage, onNavigate }: {
+  title: string;
+  items: { card: KanbanCard; clientName: string; clientId: string; reason: string }[];
+  emptyMessage: string;
+  onNavigate: (clientId: string, cardId?: string) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="mb-5">
+        <h3 className="text-text-3 text-[10px] font-bold tracking-[0.1em] uppercase mb-2">{title}</h3>
+        <div className="bg-surface border border-border rounded-xl p-5 text-center">
+          <p className="text-text-3 text-[12px] m-0">{emptyMessage}</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-5">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-text-3 text-[10px] font-bold tracking-[0.1em] uppercase m-0">{title}</h3>
+        <span className="text-text-3 text-[10px] font-medium">{items.length}</span>
+      </div>
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        {items.map((item, i) => (
+          <FocusCard key={item.card.id} item={item} isLast={i === items.length - 1} onNavigate={onNavigate} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeamMembers, myAssignedClientIds, onNavigateToClient }: Props) {
   const [pulseTab, setPulseTab] = useState<"activity" | "health">("activity");
   const isAdmin = ["owner", "admin"].includes(teamUser.role);
   const isEditor = teamUser.role === "editor";
   const isSMM = ["smm", "social_media_manager"].includes(teamUser.role);
+  const isPM = teamUser.role === "project_manager";
+  const isVideographer = teamUser.role === "videographer";
 
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
   const greeting = today.getHours() < 12 ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
 
   /* ── Find which client owns a card ── */
@@ -81,66 +161,171 @@ export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeam
     return map;
   }, [clients]);
 
-  /* ── Section 1: Focus items ── */
-  const focusItems = useMemo(() => {
+  /* ── My assigned clients set for fast lookup ── */
+  const myClientIds = useMemo(() => new Set(myAssignedClientIds), [myAssignedClientIds]);
+
+  /* ── Helper: is card for one of my assigned clients ── */
+  const isMyClient = (cardId: string) => {
+    const owner = cardClientMap[cardId];
+    return owner ? myClientIds.has(owner.clientId) : false;
+  };
+
+  /* ═══ ROLE-SPECIFIC FOCUS ITEMS ═══ */
+
+  /* ── Editor focus: Revisions first, then ready-to-edit ── */
+  const editorFocus = useMemo(() => {
+    if (!isEditor) return { revisions: [], readyToEdit: [] };
+    const revisions: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const readyToEdit: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+
+    for (const card of allCards) {
+      const owner = cardClientMap[card.id];
+      if (!owner) continue;
+      const isAssignedToMe = card.assigned_editor === teamUser.email || card.assigned_editor === teamUser.name;
+      if (!isAssignedToMe) continue;
+
+      const isOverdue = (card.edit_deadline && card.edit_deadline < todayStr) || (card.due_date && card.due_date < todayStr);
+
+      if (card.column_id === "revise") {
+        revisions.push({ card, ...owner, reason: isOverdue ? "Overdue" : "Revision requested" });
+      } else if (["ready_to_edit", "editing"].includes(card.column_id)) {
+        readyToEdit.push({ card, ...owner, reason: isOverdue ? "Overdue" : card.column_id === "editing" ? "In progress" : "Ready to edit" });
+      } else if (card.column_id === "edited_qcc") {
+        readyToEdit.push({ card, ...owner, reason: "In QCC" });
+      }
+    }
+
+    const sortByUrgency = (a: { card: KanbanCard; reason: string }, b: { card: KanbanCard; reason: string }) => {
+      const aOverdue = a.reason === "Overdue" ? 0 : 1;
+      const bOverdue = b.reason === "Overdue" ? 0 : 1;
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+      return (a.card.edit_deadline || a.card.due_date || "z").localeCompare(b.card.edit_deadline || b.card.due_date || "z");
+    };
+
+    return { revisions: revisions.sort(sortByUrgency), readyToEdit: readyToEdit.sort(sortByUrgency) };
+  }, [isEditor, allCards, cardClientMap, teamUser, todayStr]);
+
+  /* ── Videographer focus: Shoots today + tomorrow ── */
+  const videographerFocus = useMemo(() => {
+    if (!isVideographer) return { shootsToday: [], shootsTomorrow: [] };
+    const shootsToday: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const shootsTomorrow: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+
+    for (const card of allCards) {
+      const owner = cardClientMap[card.id];
+      if (!owner) continue;
+      if (!card.shoot_date) continue;
+      // Only show shoots for clients I'm assigned to, or all if no assignments yet
+      if (myClientIds.size > 0 && !myClientIds.has(owner.clientId)) continue;
+
+      if (card.shoot_date === todayStr) {
+        shootsToday.push({
+          card, ...owner,
+          reason: card.shoot_location ? card.shoot_location : "Shoot today",
+        });
+      } else if (card.shoot_date === tomorrowStr) {
+        shootsTomorrow.push({
+          card, ...owner,
+          reason: card.shoot_location ? card.shoot_location : "Shoot tomorrow",
+        });
+      }
+    }
+
+    return { shootsToday, shootsTomorrow };
+  }, [isVideographer, allCards, cardClientMap, todayStr, tomorrowStr, myClientIds]);
+
+  /* ── Project Manager focus: Filmed + Edited QCC for assigned clients ── */
+  const pmFocus = useMemo(() => {
+    if (!isPM) return { filmed: [] as { card: KanbanCard; clientName: string; clientId: string; reason: string }[], qcc: [] as { card: KanbanCard; clientName: string; clientId: string; reason: string }[] };
+    const filmed: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const qcc: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+
+    for (const card of allCards) {
+      const owner = cardClientMap[card.id];
+      if (!owner) continue;
+      if (myClientIds.size > 0 && !myClientIds.has(owner.clientId)) continue;
+
+      if (card.column_id === "filmed") {
+        filmed.push({ card, ...owner, reason: "Just filmed" });
+      } else if (card.column_id === "edited_qcc") {
+        const isOverdue = (card.due_date && card.due_date < todayStr);
+        qcc.push({ card, ...owner, reason: isOverdue ? "Overdue" : "Needs QC review" });
+      }
+    }
+
+    const sortFn = (a: { card: KanbanCard; reason: string }, b: { card: KanbanCard; reason: string }) => {
+      const aOverdue = a.reason === "Overdue" ? 0 : 1;
+      const bOverdue = b.reason === "Overdue" ? 0 : 1;
+      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
+      return (a.card.due_date || "z").localeCompare(b.card.due_date || "z");
+    };
+
+    return { filmed: filmed.sort(sortFn), qcc: qcc.sort(sortFn) };
+  }, [isPM, allCards, cardClientMap, myClientIds, todayStr]);
+
+  /* ── SMM focus: Approved for Publish for assigned clients ── */
+  const smmFocus = useMemo(() => {
+    if (!isSMM) return [];
     const items: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
-    const now = new Date();
+
+    for (const card of allCards) {
+      const owner = cardClientMap[card.id];
+      if (!owner) continue;
+      if (myClientIds.size > 0 && !myClientIds.has(owner.clientId)) continue;
+
+      if (card.column_id === "approved") {
+        items.push({ card, ...owner, reason: "Approved for publish" });
+      }
+    }
+
+    return items.sort((a, b) => (a.card.publish_date || "z").localeCompare(b.card.publish_date || "z"));
+  }, [isSMM, allCards, cardClientMap, myClientIds]);
+
+  /* ── Admin/Owner focus: Full stack overview ── */
+  const adminFocus = useMemo(() => {
+    if (!isAdmin) return { overdue: [], revisions: [], waitingOnClient: [], publishingSoon: [], unassigned: [] };
+    const overdue: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const revisions: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const waitingOnClient: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const publishingSoon: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
+    const unassigned: { card: KanbanCard; clientName: string; clientId: string; reason: string }[] = [];
 
     for (const card of allCards) {
       const owner = cardClientMap[card.id];
       if (!owner) continue;
 
-      const col = card.column_id;
-      const isAssignedToMe = card.assigned_editor === teamUser.email || card.assigned_editor === teamUser.name;
       const isOverdue = (card.due_date && card.due_date < todayStr) || (card.edit_deadline && card.edit_deadline < todayStr);
-      const publishingSoon = card.publish_date && card.publish_date >= todayStr &&
-        (new Date(card.publish_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24) <= 3;
+      const isPublishingSoon = card.publish_date && card.publish_date >= todayStr &&
+        (new Date(card.publish_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24) <= 3;
 
-      if (isEditor) {
-        if (["filmed", "editing", "edited_qcc", "revise"].includes(col) && isAssignedToMe) {
-          items.push({ card, ...owner, reason: isOverdue ? "Overdue" : col === "revise" ? "Revision requested" : "In your queue" });
-        }
-      } else if (isSMM) {
-        if (["approved", "scheduled"].includes(col)) {
-          items.push({ card, ...owner, reason: publishingSoon ? "Publishing soon" : "Ready to schedule" });
-        }
+      if (card.column_id === "revise") {
+        revisions.push({ card, ...owner, reason: isOverdue ? "Overdue" : "Revision requested" });
+      } else if (card.column_id === "ready_review") {
+        waitingOnClient.push({ card, ...owner, reason: isOverdue ? "Overdue" : "Waiting on client" });
+      } else if (isOverdue && !["published", "idea"].includes(card.column_id)) {
+        overdue.push({ card, ...owner, reason: "Overdue" });
+      } else if (isPublishingSoon && card.column_id === "scheduled") {
+        publishingSoon.push({ card, ...owner, reason: "Publishing soon" });
       }
 
-      if (isAdmin) {
-        if (col === "revise") {
-          items.push({ card, ...owner, reason: "Revision requested" });
-        } else if (col === "ready_review") {
-          items.push({ card, ...owner, reason: "Waiting on client" });
-        } else if (isOverdue && !["published", "idea"].includes(col)) {
-          items.push({ card, ...owner, reason: "Overdue" });
-        } else if (publishingSoon && col === "scheduled") {
-          items.push({ card, ...owner, reason: "Publishing soon" });
-        }
+      // Flag cards in production with no assigned editor
+      if (["filmed", "ready_to_edit", "editing", "edited_qcc"].includes(card.column_id) && !card.assigned_editor) {
+        unassigned.push({ card, ...owner, reason: "No editor assigned" });
       }
     }
 
-    // Deduplicate by card id
-    const seen = new Set<string>();
-    const unique = items.filter((item) => {
-      if (seen.has(item.card.id)) return false;
-      seen.add(item.card.id);
-      return true;
-    });
+    return { overdue, revisions, waitingOnClient, publishingSoon, unassigned };
+  }, [isAdmin, allCards, cardClientMap, todayStr, today]);
 
-    // Sort: overdue first, then by priority, then by due date
-    return unique.sort((a, b) => {
-      const aOverdue = a.reason === "Overdue" ? 0 : 1;
-      const bOverdue = b.reason === "Overdue" ? 0 : 1;
-      if (aOverdue !== bOverdue) return aOverdue - bOverdue;
-
-      const priOrder = { high: 0, medium: 1, low: 2 };
-      const aPri = priOrder[a.card.priority || "medium"] ?? 1;
-      const bPri = priOrder[b.card.priority || "medium"] ?? 1;
-      if (aPri !== bPri) return aPri - bPri;
-
-      return (a.card.due_date || "z").localeCompare(b.card.due_date || "z");
-    }).slice(0, 7);
-  }, [allCards, cardClientMap, teamUser, todayStr, isEditor, isSMM, isAdmin]);
+  /* ── Total focus count for greeting ── */
+  const focusCount = useMemo(() => {
+    if (isEditor) return editorFocus.revisions.length + editorFocus.readyToEdit.length;
+    if (isVideographer) return videographerFocus.shootsToday.length + videographerFocus.shootsTomorrow.length;
+    if (isPM) return pmFocus.filmed.length + pmFocus.qcc.length;
+    if (isSMM) return smmFocus.length;
+    if (isAdmin) return adminFocus.overdue.length + adminFocus.revisions.length + adminFocus.waitingOnClient.length + adminFocus.publishingSoon.length + adminFocus.unassigned.length;
+    return 0;
+  }, [isEditor, isVideographer, isPM, isSMM, isAdmin, editorFocus, videographerFocus, pmFocus, smmFocus, adminFocus]);
 
   /* ── Section 2: Pipeline counts ── */
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -152,10 +337,10 @@ export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeam
       } else {
         count = allCards.filter((c) => bucket.columns.includes(c.column_id)).length;
       }
-      const emphasized = (isEditor && bucket.key === "production") || (isSMM && bucket.key === "ship") || (isAdmin && bucket.key === "action");
+      const emphasized = (isEditor && bucket.key === "production") || (isSMM && bucket.key === "ship") || (isAdmin && bucket.key === "action") || (isPM && bucket.key === "production") || (isVideographer && bucket.key === "ideas");
       return { ...bucket, count, emphasized };
     });
-  }, [allCards, isEditor, isSMM, isAdmin, startOfMonth]);
+  }, [allCards, isEditor, isSMM, isAdmin, isPM, isVideographer, startOfMonth]);
 
   /* ── Section 3: Client health ── */
   const clientHealth = useMemo(() => {
@@ -172,7 +357,26 @@ export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeam
     });
   }, [clients]);
 
-  const focusCount = focusItems.length;
+  /* ── Role description for subtitle ── */
+  const roleSubtitle = useMemo(() => {
+    if (isEditor) return focusCount > 0 ? `${focusCount} item${focusCount !== 1 ? "s" : ""} in your editing queue` : "Your editing queue is clear";
+    if (isVideographer) {
+      const todayCount = videographerFocus.shootsToday.length;
+      const tomorrowCount = videographerFocus.shootsTomorrow.length;
+      if (todayCount > 0) return `${todayCount} shoot${todayCount !== 1 ? "s" : ""} on the board today`;
+      if (tomorrowCount > 0) return `Nothing today — ${tomorrowCount} shoot${tomorrowCount !== 1 ? "s" : ""} tomorrow`;
+      return "No shoots scheduled for today or tomorrow";
+    }
+    if (isPM) {
+      const total = pmFocus.filmed.length + pmFocus.qcc.length;
+      return total > 0 ? `${total} project${total !== 1 ? "s" : ""} need your attention` : "All projects are moving through the pipeline";
+    }
+    if (isSMM) {
+      return smmFocus.length > 0 ? `${smmFocus.length} project${smmFocus.length !== 1 ? "s" : ""} approved for publish` : "No content waiting to be published";
+    }
+    if (isAdmin) return focusCount > 0 ? `${focusCount} item${focusCount !== 1 ? "s" : ""} across the pipeline need attention` : "All clear — the team is on track";
+    return focusCount > 0 ? `${focusCount} item${focusCount !== 1 ? "s" : ""} need your attention` : "All clear — nothing urgent today";
+  }, [isEditor, isVideographer, isPM, isSMM, isAdmin, focusCount, videographerFocus, pmFocus, smmFocus]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -184,58 +388,122 @@ export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeam
             <h1 className="text-text font-heading text-[22px] sm:text-[26px] font-[800] m-0 leading-tight">
               {greeting}, {teamUser.name.split(" ")[0]}
             </h1>
-            <p className="text-text-3 text-[13px] m-0 mt-1">
-              {focusCount > 0
-                ? `${focusCount} item${focusCount !== 1 ? "s" : ""} need${focusCount === 1 ? "s" : ""} your attention`
-                : "All clear — nothing urgent today"}
-            </p>
+            <p className="text-text-3 text-[13px] m-0 mt-1">{roleSubtitle}</p>
           </div>
 
-          {/* ── Section 1: Your Focus ── */}
+          {/* ═══ ROLE-SPECIFIC FOCUS ═══ */}
           <div className="mb-6">
             <h2 className="text-text-3 text-[11px] font-bold tracking-[0.1em] uppercase mb-3">Your Focus</h2>
-            {focusItems.length === 0 ? (
+
+            {/* ── EDITOR ── */}
+            {isEditor && (
+              <>
+                <FocusSection
+                  title="Revisions — Push These Over the Finish Line"
+                  items={editorFocus.revisions}
+                  emptyMessage="No revisions right now"
+                  onNavigate={onNavigateToClient}
+                />
+                <FocusSection
+                  title="Ready to Edit"
+                  items={editorFocus.readyToEdit}
+                  emptyMessage="Nothing in your editing queue"
+                  onNavigate={onNavigateToClient}
+                />
+              </>
+            )}
+
+            {/* ── VIDEOGRAPHER ── */}
+            {isVideographer && (
+              <>
+                <FocusSection
+                  title="Shoots Today"
+                  items={videographerFocus.shootsToday}
+                  emptyMessage="No shoots scheduled for today"
+                  onNavigate={onNavigateToClient}
+                />
+                <FocusSection
+                  title="Coming Up Tomorrow"
+                  items={videographerFocus.shootsTomorrow}
+                  emptyMessage="No shoots tomorrow"
+                  onNavigate={onNavigateToClient}
+                />
+              </>
+            )}
+
+            {/* ── PROJECT MANAGER ── */}
+            {isPM && (
+              <>
+                <FocusSection
+                  title="Edited QCC — Needs Your Review"
+                  items={pmFocus.qcc}
+                  emptyMessage="No projects in QCC right now"
+                  onNavigate={onNavigateToClient}
+                />
+                <FocusSection
+                  title="Just Filmed"
+                  items={pmFocus.filmed}
+                  emptyMessage="Nothing recently filmed"
+                  onNavigate={onNavigateToClient}
+                />
+              </>
+            )}
+
+            {/* ── SOCIAL MEDIA MANAGER ── */}
+            {isSMM && (
+              <FocusSection
+                title="Approved for Publish"
+                items={smmFocus}
+                emptyMessage="No content waiting to be published"
+                onNavigate={onNavigateToClient}
+              />
+            )}
+
+            {/* ── ADMIN / OWNER ── */}
+            {isAdmin && (
+              <>
+                {adminFocus.overdue.length > 0 && (
+                  <FocusSection
+                    title="Overdue"
+                    items={adminFocus.overdue}
+                    emptyMessage=""
+                    onNavigate={onNavigateToClient}
+                  />
+                )}
+                <FocusSection
+                  title="Revisions — Almost Done"
+                  items={adminFocus.revisions}
+                  emptyMessage="No revisions pending"
+                  onNavigate={onNavigateToClient}
+                />
+                <FocusSection
+                  title="Waiting on Client"
+                  items={adminFocus.waitingOnClient}
+                  emptyMessage="No items waiting on client review"
+                  onNavigate={onNavigateToClient}
+                />
+                <FocusSection
+                  title="Publishing Soon"
+                  items={adminFocus.publishingSoon}
+                  emptyMessage="Nothing publishing in the next 3 days"
+                  onNavigate={onNavigateToClient}
+                />
+                {adminFocus.unassigned.length > 0 && (
+                  <FocusSection
+                    title="Unassigned — Needs an Editor"
+                    items={adminFocus.unassigned}
+                    emptyMessage=""
+                    onNavigate={onNavigateToClient}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Fallback for roles not yet handled */}
+            {!isEditor && !isVideographer && !isPM && !isSMM && !isAdmin && (
               <div className="bg-surface border border-border rounded-xl p-6 text-center">
                 <div className="text-[28px] mb-2">✓</div>
                 <p className="text-text-2 text-[13px] m-0">Nothing needs your attention right now</p>
-                <p className="text-text-3 text-[11px] m-0 mt-1">Your pipeline is on track</p>
-              </div>
-            ) : (
-              <div className="bg-surface border border-border rounded-xl overflow-hidden">
-                {focusItems.map((item, i) => {
-                  const col = COL_META[item.card.column_id];
-                  const isOverdue = item.reason === "Overdue";
-                  return (
-                    <button
-                      key={item.card.id}
-                      onClick={() => onNavigateToClient(item.clientId, item.card.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-transparent border-none cursor-pointer text-left font-body transition-colors hover:bg-surface-2"
-                      style={{ borderBottom: i < focusItems.length - 1 ? "1px solid var(--color-border)" : "none" }}
-                    >
-                      {/* Stage color bar */}
-                      <div className="w-[4px] self-stretch rounded-full shrink-0" style={{ background: isOverdue ? "#EF4444" : col?.color || "#6B7280" }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-text text-[13px] font-medium m-0 truncate">{item.card.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-text-3 text-[11px]">{item.clientName}</span>
-                          <span className="text-[9px] font-bold py-[1px] px-1.5 rounded" style={{ background: `${col?.color || "#6B7280"}18`, color: col?.color || "#6B7280" }}>
-                            {col?.label || item.card.column_id}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <span className={`text-[11px] font-semibold ${isOverdue ? "text-[#EF4444]" : "text-text-3"}`}>
-                          {item.reason}
-                        </span>
-                        {item.card.due_date && (
-                          <div className="text-text-3 text-[10px] mt-0.5">
-                            {new Date(item.card.due_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
               </div>
             )}
           </div>
@@ -326,7 +594,6 @@ export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeam
                       className="w-full flex items-center gap-3 px-4 py-3 bg-transparent border-none cursor-pointer text-left font-body transition-colors hover:bg-surface-2"
                       style={{ borderBottom: i < clientHealth.length - 1 ? "1px solid var(--color-border)" : "none" }}
                     >
-                      {/* Health dot */}
                       <div className="w-2 h-2 rounded-full shrink-0" style={{
                         background: c.days === null ? "#6B7280" : c.days <= 3 ? "#10B981" : c.days <= 14 ? "#F59E0B" : "#EF4444",
                       }} />

@@ -1,6 +1,7 @@
 export const COLUMNS = [
   { id: "idea", label: "Idea", color: "#6B7280" },
   { id: "filmed", label: "Filmed", color: "#3B82F6" },
+  { id: "ready_to_edit", label: "Ready to Edit", color: "#60A5FA" },
   { id: "editing", label: "Editing", color: "#F59E0B" },
   { id: "edited_qcc", label: "Edited QCC", color: "#A78BFA" },
   { id: "ready_review", label: "Ready for Review", color: "#EC4899" },
@@ -108,6 +109,7 @@ export const ROLE_META: Record<string, { label: string; color: string; emoji: st
   admin: { label: "Admin", color: "#FF3B3B", emoji: "🛡️", welcomeLine: "You keep everything running smooth. Let's get your profile set up." },
   project_manager: { label: "Project Manager", color: "#3B82F6", emoji: "📋", welcomeLine: "You keep the pipeline moving. Let's get your profile set up so the team knows who's keeping them on track." },
   editor: { label: "Editor", color: "#10B981", emoji: "🎬", welcomeLine: "The magic happens in the edit bay. Let's get your profile looking as good as your cuts." },
+  videographer: { label: "Videographer", color: "#EC4899", emoji: "🎥", welcomeLine: "You capture the vision. Let's get your profile set up so the team knows who's behind the lens." },
   smm: { label: "Social Media Manager", color: "#8B5CF6", emoji: "📱", welcomeLine: "You're the voice of the brand. Let's make sure your profile matches the energy." },
   social_media_manager: { label: "Social Media Manager", color: "#8B5CF6", emoji: "📱", welcomeLine: "You're the voice of the brand. Let's make sure your profile matches the energy." },
 };

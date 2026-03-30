@@ -28,9 +28,14 @@ type NotificationRule = {
  */
 const COLUMN_RULES: Partial<Record<ColumnId, NotificationRule>> = {
   filmed: {
+    targetRoles: ["project_manager"],
+    title: (t) => `Content Filmed`,
+    message: (t) => `"${t}" has been filmed and is ready for the next step.`,
+  },
+  ready_to_edit: {
     targetRoles: ["editor"],
     title: (t) => `Ready for Editing`,
-    message: (t) => `"${t}" has been filmed and is ready for editing.`,
+    message: (t) => `"${t}" is ready for editing.`,
   },
   edited_qcc: {
     targetRoles: ["admin", "owner"],

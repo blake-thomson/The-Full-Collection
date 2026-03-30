@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
   idea: "#6B7280",
   scripted: "#8B5CF6",
   filmed: "#3B82F6",
+  ready_to_edit: "#60A5FA",
   editing: "#F59E0B",
   review: "#EC4899",
   approved: "#10B981",

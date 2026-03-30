@@ -69,12 +69,12 @@ function Icon({ d, size = 18 }: { d: string | string[]; size?: number }) {
 
 const NAV_ITEMS = [
   {
-    id: "clients", label: "All Clients",
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
-  },
-  {
     id: "overview", label: "Overview",
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+  },
+  {
+    id: "clients", label: "All Clients",
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
   },
   {
     id: "messenger", label: "Messenger",
@@ -109,13 +109,13 @@ const CLIENT_TABS = [
   { id: "info", label: "Account" },
 ];
 
-const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", editor: "#10B981", smm: "#8B5CF6" };
+const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", editor: "#10B981", videographer: "#EC4899", smm: "#8B5CF6", social_media_manager: "#8B5CF6" };
 
 export default function TeamPortalClient() {
   const [teamUser, setTeamUser] = useState<TeamMember | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [selected, setSelected] = useState<Client | null>(null);
-  const [teamTab, setTeamTab] = useState("clients");
+  const [teamTab, setTeamTab] = useState("overview");
   const [clientTab, setClientTab] = useState("intake");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -132,6 +132,7 @@ export default function TeamPortalClient() {
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
   const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
+  const [myAssignedClientIds, setMyAssignedClientIds] = useState<string[]>([]);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -174,6 +175,15 @@ export default function TeamPortalClient() {
       if (res.ok) setAllTeamMembers(await res.json());
     })();
   }, []);
+
+  // Fetch which clients the current team member is assigned to
+  useEffect(() => {
+    if (!teamUser) return;
+    (async () => {
+      const res = await fetch("/api/client-assignments/mine");
+      if (res.ok) setMyAssignedClientIds(await res.json());
+    })();
+  }, [teamUser]);
 
   const loadClientDetails = useCallback(async (clientId: string) => {
     try {
@@ -564,6 +574,7 @@ export default function TeamPortalClient() {
               allCards={allCards}
               allActivity={allActivity}
               allTeamMembers={allTeamMembers}
+              myAssignedClientIds={myAssignedClientIds}
               onNavigateToClient={(clientId, cardId) => {
                 const client = clients.find((c) => c.id === clientId);
                 if (client) {

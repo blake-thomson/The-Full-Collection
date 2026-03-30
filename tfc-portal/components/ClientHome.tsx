@@ -30,7 +30,7 @@ const COL_META: Record<string, { label: string; color: string }> = Object.fromEn
 
 const PIPELINE_STAGES = [
   { label: "Filming", columns: ["filmed"], color: "#3B82F6" },
-  { label: "Editing", columns: ["editing", "edited_qcc"], color: "#F59E0B" },
+  { label: "Editing", columns: ["ready_to_edit", "editing", "edited_qcc"], color: "#F59E0B" },
   { label: "In Review", columns: ["ready_review"], color: "#EC4899" },
   { label: "Scheduled", columns: ["approved", "scheduled"], color: "#10B981" },
   { label: "Published", columns: ["published"], color: "var(--color-red)" },
