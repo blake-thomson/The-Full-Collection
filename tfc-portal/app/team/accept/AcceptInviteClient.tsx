@@ -71,7 +71,7 @@ export default function AcceptInviteClient() {
         <div className="text-center mb-9">
           <Logo size={15} sub="Team Portal" />
         </div>
-        <div className="bg-surface border border-[rgba(224,32,32,0.3)] rounded-2xl p-[32px_28px]">
+        <div className="bg-surface border border-red/30 rounded-2xl p-[32px_28px]">
           <div className="flex justify-center mb-4">
             <span className="team-badge">Team Invite</span>
           </div>

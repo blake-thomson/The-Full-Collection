@@ -309,7 +309,7 @@ export function Kanban({ clientId, editable = true, clientName, onCardClick, aut
               className="w-[210px] shrink-0 rounded-xl flex flex-col transition-all"
               style={{
                 background: isOver ? "rgba(224,32,32,0.04)" : "#111111",
-                border: `1px solid ${isOver ? "#E02020" : "#252525"}`,
+                border: `1px solid ${isOver ? "var(--color-red)" : "#252525"}`,
                 maxHeight: "calc(100vh - 220px)",
               }}
               onDragOver={(e) => { e.preventDefault(); setDragOver(col.id); }}

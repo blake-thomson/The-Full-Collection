@@ -88,7 +88,7 @@ export function AICaptionGenerator({ cardId, cardColumnId }: Props) {
         <select
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
-          className="px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text focus:outline-none focus:border-[#E02020]"
+          className="px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text focus:outline-none focus:border-red"
         >
           {PLATFORMS.map((p) => (
             <option key={p} value={p}>
@@ -99,7 +99,7 @@ export function AICaptionGenerator({ cardId, cardColumnId }: Props) {
         <button
           onClick={handleGenerate}
           disabled={loading}
-          className="px-4 py-2 text-sm bg-[#E02020] text-white rounded-lg hover:bg-[#c41a1a] transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-sm bg-red text-white rounded-lg hover:bg-[#c41a1a] transition-colors disabled:opacity-50"
         >
           {loading ? "Generating..." : "Generate Caption"}
         </button>
@@ -129,7 +129,7 @@ export function AICaptionGenerator({ cardId, cardColumnId }: Props) {
             value={editedCaption}
             onChange={(e) => setEditedCaption(e.target.value)}
             rows={6}
-            className="w-full px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text placeholder:text-text-3 focus:outline-none focus:border-[#E02020] resize-y"
+            className="w-full px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text placeholder:text-text-3 focus:outline-none focus:border-red resize-y"
           />
 
           {/* Hashtags */}
@@ -142,7 +142,7 @@ export function AICaptionGenerator({ cardId, cardColumnId }: Props) {
                 #{tag}
                 <button
                   onClick={() => removeHashtag(i)}
-                  className="text-text-3 hover:text-[#E02020] ml-0.5"
+                  className="text-text-3 hover:text-red ml-0.5"
                 >
                   x
                 </button>
@@ -161,7 +161,7 @@ export function AICaptionGenerator({ cardId, cardColumnId }: Props) {
             </button>
             <button
               onClick={handleCopy}
-              className="px-4 py-2 text-sm bg-surface-2 border border-border text-text-2 rounded-lg hover:text-text hover:border-[#E02020] transition-colors"
+              className="px-4 py-2 text-sm bg-surface-2 border border-border text-text-2 rounded-lg hover:text-text hover:border-red transition-colors"
             >
               {copied ? "Copied!" : "Copy"}
             </button>

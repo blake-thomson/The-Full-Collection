@@ -8,7 +8,7 @@ export default function CheckoutSuccessPage() {
       <div className="max-w-md w-full text-center">
         {/* Success Icon */}
         <div className="w-20 h-20 rounded-full bg-red/10 border-2 border-red/30 flex items-center justify-center mx-auto mb-6">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-red)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>

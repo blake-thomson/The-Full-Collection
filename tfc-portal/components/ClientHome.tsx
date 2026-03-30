@@ -73,7 +73,7 @@ export function ClientHome({ clientName, cards, activities = [], onSubmitIdea, o
       { label: "Total Content", value: total, color: "#F0EDE6" },
       { label: "In Production", value: inProduction, color: "#3B82F6" },
       { label: "Ready for Review", value: readyForReview, color: "#EC4899" },
-      { label: "Published This Month", value: published, color: "#E02020" },
+      { label: "Published This Month", value: published, color: "var(--color-red)" },
     ];
   }, [cards]);
 
@@ -150,7 +150,7 @@ export function ClientHome({ clientName, cards, activities = [], onSubmitIdea, o
             className="bg-surface border border-border rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all hover:border-red hover:bg-[rgba(224,32,32,0.04)] text-left font-body group"
           >
             <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "rgba(224,32,32,0.12)" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
             </div>

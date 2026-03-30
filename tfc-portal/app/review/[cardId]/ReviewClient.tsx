@@ -442,8 +442,7 @@ export default function ReviewClient() {
               <button
                 onClick={addComment}
                 disabled={!newComment.trim() || submittingComment}
-                className="self-end py-2.5 px-4 rounded-lg text-xs font-semibold cursor-pointer border-none font-body disabled:opacity-40 transition-colors"
-                style={{ background: "#E02020", color: "#fff" }}
+                className="self-end py-2.5 px-4 rounded-lg text-xs font-semibold cursor-pointer border-none font-body disabled:opacity-40 transition-colors bg-red text-white"
               >
                 {submittingComment ? "..." : "Send"}
               </button>

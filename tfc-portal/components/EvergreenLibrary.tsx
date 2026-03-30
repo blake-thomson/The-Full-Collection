@@ -182,7 +182,7 @@ export function EvergreenLibrary({ clientId, isTeam }: Props) {
               className="px-3 py-1.5 text-xs font-medium rounded-full transition-colors"
               style={{
                 background: platformFilter === p ? "rgba(224,32,32,0.15)" : "var(--surface-2, #1e1e1e)",
-                color: platformFilter === p ? "#E02020" : "var(--text-2, #a0a0a0)",
+                color: platformFilter === p ? "var(--color-red)" : "var(--text-2, #a0a0a0)",
                 border: `1px solid ${platformFilter === p ? "rgba(224,32,32,0.3)" : "var(--border, #2a2a2a)"}`,
               }}
             >
@@ -329,7 +329,7 @@ export function EvergreenLibrary({ clientId, isTeam }: Props) {
                         className="w-full py-2 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                         style={{
                           background: isCreated ? "rgba(16,185,129,0.15)" : "rgba(224,32,32,0.12)",
-                          color: isCreated ? "#10B981" : "#E02020",
+                          color: isCreated ? "#10B981" : "var(--color-red)",
                           border: `1px solid ${isCreated ? "rgba(16,185,129,0.3)" : "rgba(224,32,32,0.3)"}`,
                         }}
                       >

@@ -110,7 +110,7 @@ export function ClientAssignments({ clientId }: { clientId: string }) {
             onClick={() => setShowPicker((v) => !v)}
             disabled={adding || unassigned.length === 0}
             style={{
-              background: "#E02020",
+              background: "var(--color-red)",
               color: "#fff",
               border: "none",
               borderRadius: 8,
@@ -332,7 +332,7 @@ export function ClientAssignments({ clientId }: { clientId: string }) {
             { column: "Approved for Publish", arrow: "→", roles: "Social Media Managers", color: "#10B981" },
             { column: "Revise", arrow: "→", roles: "Editors", color: "#EF4444" },
             { column: "Scheduled", arrow: "→", roles: "Client", color: "#06B6D4" },
-            { column: "Published", arrow: "→", roles: "Client", color: "#E02020" },
+            { column: "Published", arrow: "→", roles: "Client", color: "var(--color-red)" },
           ].map(({ column, arrow, roles, color }) => (
             <div key={column} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
               <span style={{ color, fontWeight: 600, minWidth: 160 }}>{column}</span>

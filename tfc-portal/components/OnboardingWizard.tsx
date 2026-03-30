@@ -239,7 +239,7 @@ export function OnboardingWizard({ onComplete }: Props) {
         <div className="mb-8">
           <div className="flex gap-1.5 mb-3.5">
             {Array.from({ length: 8 }, (_, i) => (
-              <div key={i} className="h-[3px] flex-1 rounded-sm transition-colors duration-300" style={{ background: i <= step ? "#E02020" : "#2E2E2E" }} />
+              <div key={i} className="h-[3px] flex-1 rounded-sm transition-colors duration-300" style={{ background: i <= step ? "var(--color-red)" : "#2E2E2E" }} />
             ))}
           </div>
           <div className="text-red text-[11px] font-bold tracking-[0.14em] uppercase mb-2">Step {step + 1} of 8</div>

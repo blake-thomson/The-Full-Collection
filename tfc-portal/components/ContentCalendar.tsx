@@ -192,7 +192,7 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
           {/* Legend */}
           <div className="flex items-center gap-4 mb-2 px-1">
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(224,32,32,0.3)", borderLeft: "2px solid #E02020" }} />
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(224,32,32,0.3)", borderLeft: "2px solid var(--color-red)" }} />
               <span className="text-text-3 text-[10px] font-semibold">Publish Date</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -219,7 +219,7 @@ export function ContentCalendar({ cards, onCardClick }: Props) {
                   className="min-h-[70px] sm:min-h-[90px] p-1.5 sm:p-2 rounded-lg cursor-pointer transition-all border"
                   style={{
                     background: isSelected ? "rgba(224,32,32,0.06)" : d.isCurrentMonth ? "#111111" : "#0D0D0D",
-                    borderColor: isSelected ? "#E02020" : "transparent",
+                    borderColor: isSelected ? "var(--color-red)" : "transparent",
                     opacity: d.isCurrentMonth ? 1 : 0.4,
                   }}
                 >

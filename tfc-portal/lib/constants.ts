@@ -80,17 +80,46 @@ export const EMPTY_ONBOARDING_DATA = {
 
 export type OnboardingData = typeof EMPTY_ONBOARDING_DATA;
 
-/** Shared design tokens (mirrors tailwind.config.ts) */
-export const COLORS = {
-  red: "#E02020",
-  redLight: "#FF3B3B",
-  bg: "#0A0A0A",
-  surface: "#111111",
-  surface2: "#181818",
-  surface3: "#202020",
-  border: "#252525",
-  border2: "#2E2E2E",
-  text: "#F0EDE6",
-  text2: "#A8A49C",
-  text3: "#5A5652",
-} as const;
+/** Industry options used in client onboarding + profile editing */
+export const INDUSTRIES = [
+  "Real Estate",
+  "E-Commerce",
+  "Health & Wellness",
+  "Beauty & Skincare",
+  "Fitness & Sports",
+  "Food & Beverage",
+  "Fashion & Apparel",
+  "Music & Entertainment",
+  "Tech & SaaS",
+  "Finance & Investing",
+  "Education & Coaching",
+  "Non-Profit",
+  "Construction & Trades",
+  "Automotive",
+  "Travel & Hospitality",
+  "Legal",
+  "Marketing & Advertising",
+  "Other",
+] as const;
+
+/** Role metadata for team members */
+export const ROLE_META: Record<string, { label: string; color: string; emoji: string; welcomeLine: string }> = {
+  owner: { label: "Owner", color: "#F59E0B", emoji: "👑", welcomeLine: "You're running the show. Let's set up your profile so the team knows who's boss." },
+  admin: { label: "Admin", color: "#FF3B3B", emoji: "🛡️", welcomeLine: "You keep everything running smooth. Let's get your profile set up." },
+  project_manager: { label: "Project Manager", color: "#3B82F6", emoji: "📋", welcomeLine: "You keep the pipeline moving. Let's get your profile set up so the team knows who's keeping them on track." },
+  editor: { label: "Editor", color: "#10B981", emoji: "🎬", welcomeLine: "The magic happens in the edit bay. Let's get your profile looking as good as your cuts." },
+  smm: { label: "Social Media Manager", color: "#8B5CF6", emoji: "📱", welcomeLine: "You're the voice of the brand. Let's make sure your profile matches the energy." },
+  social_media_manager: { label: "Social Media Manager", color: "#8B5CF6", emoji: "📱", welcomeLine: "You're the voice of the brand. Let's make sure your profile matches the energy." },
+};
+
+/** Normalize AI-generated content_type values to DB enum format */
+export const CONTENT_TYPE_MAP: Record<string, string> = {
+  "short-form": "short_form", "short form": "short_form", "shortform": "short_form",
+  "long-form": "long_form", "long form": "long_form", "longform": "long_form",
+  "post/carousel": "carousel", "post": "carousel",
+};
+
+export function normalizeContentType(raw: string): string {
+  const key = raw.toLowerCase().trim();
+  return CONTENT_TYPE_MAP[key] || key.replace(/[-\s]/g, "_");
+}

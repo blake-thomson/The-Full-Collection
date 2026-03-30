@@ -536,7 +536,7 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
               >
                 {/* Card badges */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
-                  <span className="text-[10px] font-bold tracking-[0.06em] uppercase py-[3px] px-[8px] rounded-md" style={{ background: "rgba(224,32,32,0.1)", color: "#E02020", border: "1px solid rgba(224,32,32,0.2)" }}>
+                  <span className="text-[10px] font-bold tracking-[0.06em] uppercase py-[3px] px-[8px] rounded-md" style={{ background: "rgba(224,32,32,0.1)", color: "var(--color-red)", border: "1px solid rgba(224,32,32,0.2)" }}>
                     {currentIdea.content_type}
                   </span>
                   <span className="text-[10px] font-bold tracking-[0.06em] uppercase py-[3px] px-[8px] rounded-md" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6", border: "1px solid rgba(59,130,246,0.2)" }}>
@@ -608,7 +608,7 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
           {phase === "summary" && (
             <div className="text-center py-4">
               <div className="w-16 h-16 rounded-full bg-red/10 flex items-center justify-center mx-auto mb-4">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>

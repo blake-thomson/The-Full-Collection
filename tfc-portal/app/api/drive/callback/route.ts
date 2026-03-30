@@ -4,6 +4,8 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { encryptJson } from "@/lib/crypto";
 
+export const dynamic = "force-dynamic";
+
 // GET — handle OAuth callback, exchange code for tokens, encrypt and store in DB
 export async function GET(req: NextRequest) {
   try {

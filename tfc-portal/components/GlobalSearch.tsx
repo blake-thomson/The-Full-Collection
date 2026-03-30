@@ -49,7 +49,7 @@ interface Props {
 const COL_MAP = Object.fromEntries(COLUMNS.map((c) => [c.id, { label: c.label, color: c.color }]));
 
 const TYPE_CONFIG = {
-  content: { label: "Content", color: "#E02020", bg: "rgba(224,32,32,0.12)" },
+  content: { label: "Content", color: "var(--color-red)", bg: "rgba(224,32,32,0.12)" },
   message: { label: "Messages", color: "#A8A49C", bg: "rgba(168,164,156,0.12)" },
   resource: { label: "Resources", color: "#3B82F6", bg: "rgba(59,130,246,0.12)" },
 };

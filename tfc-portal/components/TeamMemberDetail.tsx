@@ -2,16 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "@/lib/theme";
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  bio?: string;
-  avatar_url?: string;
-  created_at: string;
-}
+import type { TeamMember, KanbanCard } from "@/lib/types";
 
 interface Client {
   id: string;
@@ -19,13 +10,9 @@ interface Client {
   email: string;
 }
 
-interface KanbanCard {
-  id: string;
-  title: string;
-  column_id: string;
-  platform?: string;
-  priority?: string;
-  due_date?: string;
+// Runtime data from API includes extra fields beyond the shared KanbanCard type:
+// client_id, client_name, updated_at — accessed via structural typing
+interface TeamMemberKanbanCard extends KanbanCard {
   client_id: string;
   client_name: string;
   updated_at: string;
@@ -76,7 +63,7 @@ const COLUMN_COLORS: Record<string, string> = {
   approved: "#10B981",
   revise: "#EF4444",
   scheduled: "#06B6D4",
-  published: "#E02020",
+  published: "var(--color-red)",
 };
 
 const ROLE_SOPS: Record<string, { summary: string; responsibilities: string[]; pipeline: { stage: string; action: string }[] }> = {
@@ -168,7 +155,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
   const [tab, setTab] = useState<"profile" | "work" | "clients">("profile");
   const [member, setMember] = useState<TeamMember | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [cards, setCards] = useState<KanbanCard[]>([]);
+  const [cards, setCards] = useState<TeamMemberKanbanCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Edit state
@@ -221,7 +208,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
   };
 
   // Group cards by client
-  const cardsByClient: Record<string, KanbanCard[]> = {};
+  const cardsByClient: Record<string, TeamMemberKanbanCard[]> = {};
   for (const card of cards) {
     if (!cardsByClient[card.client_name]) cardsByClient[card.client_name] = [];
     cardsByClient[card.client_name].push(card);
@@ -398,7 +385,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
               {canEdit && (
                 <button
                   onClick={() => setEditing(true)}
-                  style={{ marginTop: 8, color: "#E02020", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                  style={{ marginTop: 8, color: "var(--color-red)", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
                 >
                   Add a bio →
                 </button>
@@ -494,7 +481,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
                     style={{
                       flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start",
                       gap: 10, padding: 12, borderRadius: 12, cursor: "pointer",
-                      background: "transparent", border: `2px solid ${theme === opt.id ? "#E02020" : "var(--color-border-2)"}`,
+                      background: "transparent", border: `2px solid ${theme === opt.id ? "var(--color-red)" : "var(--color-border-2)"}`,
                       transition: "border-color 0.15s",
                     }}
                   >
@@ -511,7 +498,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
                     <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
                       <span style={{ color: "var(--color-text)", fontSize: 12, fontWeight: 600 }}>{opt.label}</span>
                       {theme === opt.id && (
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto" }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-red)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto" }}>
                           <polyline points="20 6 9 17 4 12"/>
                         </svg>
                       )}
@@ -576,7 +563,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
                           color: "#A8A49C", fontSize: 10, fontWeight: 700, cursor: "pointer",
                           padding: "3px 10px", letterSpacing: "0.06em", textTransform: "uppercase",
                         }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#E02020"; (e.currentTarget as HTMLButtonElement).style.color = "#E02020"; }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--color-red)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--color-red)"; }}
                         onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#252525"; (e.currentTarget as HTMLButtonElement).style.color = "#A8A49C"; }}
                       >
                         Open Board →
@@ -664,7 +651,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
                 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: "50%",
-                    background: "linear-gradient(135deg, #E02020, #8A1010)",
+                    background: "linear-gradient(135deg, var(--color-red), #8A1010)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0,
                   }}>

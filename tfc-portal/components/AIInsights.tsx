@@ -33,7 +33,7 @@ interface Props {
 }
 
 const PRIORITY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  high: { bg: "bg-[#E02020]/20", text: "text-[#E02020]", label: "High" },
+  high: { bg: "bg-red/20", text: "text-red", label: "High" },
   medium: { bg: "bg-[#F59E0B]/20", text: "text-[#F59E0B]", label: "Medium" },
   low: { bg: "bg-[#10B981]/20", text: "text-[#10B981]", label: "Low" },
 };
@@ -97,7 +97,7 @@ export function AIInsights({ clientId }: Props) {
         {!loading && (
           <button
             onClick={handleGenerate}
-            className="px-3 py-1.5 text-sm bg-[#E02020] text-white rounded-lg hover:bg-[#c41a1a] transition-colors"
+            className="px-3 py-1.5 text-sm bg-red text-white rounded-lg hover:bg-[#c41a1a] transition-colors"
           >
             {data ? "Refresh Insights" : "Generate Insights"}
           </button>
@@ -193,7 +193,7 @@ export function AIInsights({ clientId }: Props) {
                       <button
                         onClick={() => handleCreateCard(item, i)}
                         disabled={creatingCard === i}
-                        className="shrink-0 px-2 py-1 text-xs bg-surface-2 border border-border rounded text-text-2 hover:text-text hover:border-[#E02020] transition-colors disabled:opacity-50"
+                        className="shrink-0 px-2 py-1 text-xs bg-surface-2 border border-border rounded text-text-2 hover:text-text hover:border-red transition-colors disabled:opacity-50"
                       >
                         {creatingCard === i ? "..." : "Create Card"}
                       </button>

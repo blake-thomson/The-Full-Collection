@@ -70,7 +70,7 @@ export default function SetupClient() {
         <div className="text-center mb-9">
           <Logo size={15} />
         </div>
-        <div className="bg-surface border border-[rgba(224,32,32,0.3)] rounded-2xl p-[32px_28px]">
+        <div className="bg-surface border border-red/30 rounded-2xl p-[32px_28px]">
           <h2 className="text-text font-heading text-xl font-bold m-0 mb-1 text-center">Activate Your Account</h2>
           <p className="text-text-2 text-[13px] m-0 mb-6 text-center">
             Enter the setup code from your welcome email and create your password.

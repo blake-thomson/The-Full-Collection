@@ -30,7 +30,7 @@ interface Props {
 const TYPE_OPTIONS = [
   { value: "competitor_content", label: "Competitor Content", color: "#3B82F6" },
   { value: "trending_audio", label: "Trending Audio", color: "#F59E0B" },
-  { value: "viral_format", label: "Viral Format", color: "#E02020" },
+  { value: "viral_format", label: "Viral Format", color: "var(--color-red)" },
   { value: "reference_video", label: "Reference Video", color: "#10B981" },
   { value: "other", label: "Other", color: "#6B7280" },
 ] as const;
@@ -43,7 +43,7 @@ const FORMAT_OPTIONS = [
 const TYPE_COLORS: Record<string, string> = {
   competitor_content: "#3B82F6",
   trending_audio: "#F59E0B",
-  viral_format: "#E02020",
+  viral_format: "var(--color-red)",
   reference_video: "#10B981",
   other: "#6B7280",
 };
@@ -352,7 +352,7 @@ export function ResearchBoard({ clients }: Props) {
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
             className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-            style={{ background: "rgba(224,32,32,0.12)", color: "#E02020", border: "1px solid rgba(224,32,32,0.3)" }}
+            style={{ background: "rgba(224,32,32,0.12)", color: "var(--color-red)", border: "1px solid rgba(224,32,32,0.3)" }}
           >
             + Save New
           </button>
@@ -386,7 +386,7 @@ export function ResearchBoard({ clients }: Props) {
                 className="w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors"
                 style={{
                   background: filterType === "all" ? "rgba(224,32,32,0.12)" : "transparent",
-                  color: filterType === "all" ? "#E02020" : "var(--text-2, #a0a0a0)",
+                  color: filterType === "all" ? "var(--color-red)" : "var(--text-2, #a0a0a0)",
                 }}
               >
                 All Types
@@ -417,7 +417,7 @@ export function ResearchBoard({ clients }: Props) {
                 className="w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors"
                 style={{
                   background: filterFormat === "all" ? "rgba(224,32,32,0.12)" : "transparent",
-                  color: filterFormat === "all" ? "#E02020" : "var(--text-2, #a0a0a0)",
+                  color: filterFormat === "all" ? "var(--color-red)" : "var(--text-2, #a0a0a0)",
                 }}
               >
                 All Formats
@@ -429,7 +429,7 @@ export function ResearchBoard({ clients }: Props) {
                   className="w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors"
                   style={{
                     background: filterFormat === f.value ? "rgba(224,32,32,0.12)" : "transparent",
-                    color: filterFormat === f.value ? "#E02020" : "var(--text-2, #a0a0a0)",
+                    color: filterFormat === f.value ? "var(--color-red)" : "var(--text-2, #a0a0a0)",
                   }}
                 >
                   {f.label}
@@ -604,7 +604,7 @@ export function ResearchBoard({ clients }: Props) {
                 onClick={() => handleDelete(deleteConfirm)}
                 disabled={deleting}
                 className="flex-1 py-2 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
-                style={{ background: "rgba(224,32,32,0.15)", color: "#E02020", border: "1px solid rgba(224,32,32,0.3)" }}
+                style={{ background: "rgba(224,32,32,0.15)", color: "var(--color-red)", border: "1px solid rgba(224,32,32,0.3)" }}
               >
                 {deleting ? "Deleting..." : "Delete"}
               </button>
@@ -700,7 +700,7 @@ export function ResearchBoard({ clients }: Props) {
                       className="flex-1 py-2 text-xs font-medium rounded-lg transition-colors border"
                       style={{
                         background: formFormat === f.value ? "rgba(224,32,32,0.12)" : "transparent",
-                        color: formFormat === f.value ? "#E02020" : "var(--color-text-2, #A8A49C)",
+                        color: formFormat === f.value ? "var(--color-red)" : "var(--color-text-2, #A8A49C)",
                         borderColor: formFormat === f.value ? "rgba(224,32,32,0.3)" : "var(--color-border, #252525)",
                       }}
                     >
@@ -770,7 +770,7 @@ export function ResearchBoard({ clients }: Props) {
                 onClick={handleSave}
                 disabled={!formTitle.trim() || formSaving}
                 className="w-full py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                style={{ background: "rgba(224,32,32,0.15)", color: "#E02020", border: "1px solid rgba(224,32,32,0.3)" }}
+                style={{ background: "rgba(224,32,32,0.15)", color: "var(--color-red)", border: "1px solid rgba(224,32,32,0.3)" }}
               >
                 {formSaving ? "Saving..." : editingItem ? "Update" : "Save"}
               </button>

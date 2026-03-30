@@ -185,7 +185,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
         {canManage && !showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 text-sm bg-[#E02020] text-white rounded-lg hover:bg-[#c41a1a] transition-colors"
+            className="px-3 py-1.5 text-sm bg-red text-white rounded-lg hover:bg-[#c41a1a] transition-colors"
           >
             Add Trigger
           </button>
@@ -233,7 +233,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
                   </button>
                   <button
                     onClick={() => handleDelete(trigger.id)}
-                    className="text-text-3 hover:text-[#E02020] text-sm px-2"
+                    className="text-text-3 hover:text-red text-sm px-2"
                   >
                     Delete
                   </button>
@@ -260,7 +260,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
             placeholder="Trigger name"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text placeholder:text-text-3 focus:outline-none focus:border-[#E02020]"
+            className="w-full px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text placeholder:text-text-3 focus:outline-none focus:border-red"
           />
 
           {/* When card moves to */}
@@ -269,7 +269,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
             <select
               value={formColumn}
               onChange={(e) => setFormColumn(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text focus:outline-none focus:border-[#E02020]"
+              className="w-full px-3 py-2 text-sm bg-surface-2 border border-border rounded-lg text-text focus:outline-none focus:border-red"
             >
               {COLUMNS.map((col) => (
                 <option key={col.id} value={col.id}>
@@ -326,7 +326,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
                 />
                 <button
                   onClick={() => setFormConditions(formConditions.filter((_, j) => j !== i))}
-                  className="text-text-3 hover:text-[#E02020] text-sm"
+                  className="text-text-3 hover:text-red text-sm"
                 >
                   x
                 </button>
@@ -405,7 +405,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
 
                 <button
                   onClick={() => removeAction(i)}
-                  className="text-text-3 hover:text-[#E02020] text-sm shrink-0"
+                  className="text-text-3 hover:text-red text-sm shrink-0"
                 >
                   x
                 </button>
@@ -414,19 +414,19 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => addAction("send_in_app_notification")}
-                className="text-xs px-2 py-1 rounded bg-surface-2 border border-border text-text-2 hover:text-text hover:border-[#E02020] transition-colors"
+                className="text-xs px-2 py-1 rounded bg-surface-2 border border-border text-text-2 hover:text-text hover:border-red transition-colors"
               >
                 + Notify Client/Team
               </button>
               <button
                 onClick={() => addAction("move_card")}
-                className="text-xs px-2 py-1 rounded bg-surface-2 border border-border text-text-2 hover:text-text hover:border-[#E02020] transition-colors"
+                className="text-xs px-2 py-1 rounded bg-surface-2 border border-border text-text-2 hover:text-text hover:border-red transition-colors"
               >
                 + Move Card
               </button>
               <button
                 onClick={() => addAction("assign_to")}
-                className="text-xs px-2 py-1 rounded bg-surface-2 border border-border text-text-2 hover:text-text hover:border-[#E02020] transition-colors"
+                className="text-xs px-2 py-1 rounded bg-surface-2 border border-border text-text-2 hover:text-text hover:border-red transition-colors"
               >
                 + Assign To
               </button>
@@ -438,7 +438,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
             <button
               onClick={handleSave}
               disabled={saving || !formName || formActions.length === 0}
-              className="px-4 py-2 text-sm bg-[#E02020] text-white rounded-lg hover:bg-[#c41a1a] transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm bg-red text-white rounded-lg hover:bg-[#c41a1a] transition-colors disabled:opacity-50"
             >
               {saving ? "Saving..." : editingId ? "Update" : "Create Trigger"}
             </button>

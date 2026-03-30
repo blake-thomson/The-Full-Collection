@@ -36,27 +36,7 @@ import { COLUMNS } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
 import { TIERS } from "@/lib/tiers";
 import type { TierKey } from "@/lib/tiers";
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  bio?: string;
-  avatar_url?: string;
-}
-
-interface KanbanCard {
-  id: string;
-  title: string;
-  description?: string;
-  platform?: string;
-  column_id: string;
-  position: number;
-  due_date?: string;
-  priority?: "low" | "medium" | "high";
-  created_at?: string;
-}
+import type { TeamMember, KanbanCard } from "@/lib/types";
 
 interface Client {
   id: string;
@@ -527,8 +507,7 @@ export default function TeamPortalClient() {
           {teamUser && (!teamUser.bio || !teamUser.avatar_url) && (
             <div className="mx-4 mt-3 sm:mx-6 sm:mt-4">
               <div
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all hover:border-[rgba(224,32,32,0.4)]"
-                style={{ background: "rgba(224,32,32,0.06)", borderColor: "rgba(224,32,32,0.15)" }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red/15 bg-red/[0.06] cursor-pointer transition-all hover:border-red/40"
                 onClick={() => router.push("/team/welcome")}
               >
                 <span style={{ fontSize: 20 }}>👋</span>
@@ -542,7 +521,7 @@ export default function TeamPortalClient() {
                       : "Add a bio so the team can get to know you"}
                   </div>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 18l6-6-6-6" />
                 </svg>
               </div>

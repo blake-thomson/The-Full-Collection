@@ -72,7 +72,7 @@ function renderMentions(text: string) {
   return parts.map((part, i) => {
     if (part.startsWith("@")) {
       return (
-        <span key={i} style={{ color: "#E02020", fontWeight: 700 }}>{part}</span>
+        <span key={i} style={{ color: "var(--color-red)", fontWeight: 700 }}>{part}</span>
       );
     }
     return part;
@@ -149,7 +149,7 @@ function VoicePlayer({ url, duration }: { url: string; duration: number | null }
       <button
         onClick={toggle}
         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-        style={{ background: "#E02020", minWidth: 32, minHeight: 32 }}
+        style={{ background: "var(--color-red)", minWidth: 32, minHeight: 32 }}
       >
         {playing ? (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
@@ -159,7 +159,7 @@ function VoicePlayer({ url, duration }: { url: string; duration: number | null }
       </button>
       <div className="flex-1 flex flex-col gap-0.5">
         <div className="h-1.5 rounded-full cursor-pointer" style={{ background: "#2A2A2A" }} onClick={seek}>
-          <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: "#E02020" }} />
+          <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: "var(--color-red)" }} />
         </div>
         <div className="flex justify-between text-[10px]" style={{ color: "#6B6560" }}>
           <span>{fmt(currentTime)}</span>
@@ -212,7 +212,7 @@ function HelpForm({ onSubmit, onCancel }: { onSubmit: (subject: string, desc: st
             onClick={() => setPriority(p)}
             className="px-3 py-1 rounded text-[11px] font-bold"
             style={{
-              background: priority === p ? (p === "High" ? "#E02020" : p === "Medium" ? "#F59E0B" : "#3B82F6") : "#1A1A1A",
+              background: priority === p ? (p === "High" ? "var(--color-red)" : p === "Medium" ? "#F59E0B" : "#3B82F6") : "#1A1A1A",
               color: priority === p ? "#fff" : "#A8A49C",
               minHeight: 28,
             }}
@@ -281,7 +281,7 @@ function MentionPicker({
         >
           <div
             className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-            style={{ background: "#E02020", color: "#fff" }}
+            style={{ background: "var(--color-red)", color: "#fff" }}
           >
             {m.name.charAt(0).toUpperCase()}
           </div>
@@ -445,8 +445,8 @@ function MessageInput({
     return (
       <div className="border-t px-4 py-3 sm:px-6 sm:py-4 shrink-0" style={{ borderColor: "#1A1A1A" }}>
         <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#E02020" }} />
-          <span className="text-[13px] font-semibold" style={{ color: "#E02020" }}>Recording {fmtTime(recordTime)}</span>
+          <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "var(--color-red)" }} />
+          <span className="text-[13px] font-semibold" style={{ color: "var(--color-red)" }}>Recording {fmtTime(recordTime)}</span>
           <div className="flex-1" />
           <button
             onClick={stopRecording}
@@ -508,7 +508,7 @@ function MessageInput({
             style={{
               width: 44,
               height: 44,
-              background: input.trim() ? "#E02020" : "#1A1A1A",
+              background: input.trim() ? "var(--color-red)" : "#1A1A1A",
               color: input.trim() ? "#fff" : "#5A5652",
               opacity: input.trim() ? 1 : 0.5,
             }}
@@ -569,7 +569,7 @@ function MessageRow({
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center text-[13px] font-bold"
               style={{
-                background: msg.sender_type === "team" ? "#202020" : "#E02020",
+                background: msg.sender_type === "team" ? "#202020" : "var(--color-red)",
                 color: "#F0EDE6",
               }}
             >
@@ -605,7 +605,7 @@ function MessageRow({
           {(msg.reply_count || 0) > 0 && (
             <button
               className="flex items-center gap-1 mt-1 text-[12px] font-semibold hover:underline"
-              style={{ color: "#E02020", background: "none", border: "none", cursor: "pointer", padding: 0, minHeight: 28 }}
+              style={{ color: "var(--color-red)", background: "none", border: "none", cursor: "pointer", padding: 0, minHeight: 28 }}
               onClick={() => onViewThread(msg)}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -793,7 +793,7 @@ function ThreadPanel({
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center text-[13px] font-bold shrink-0"
               style={{
-                background: parentMsg.sender_type === "team" ? "#202020" : "#E02020",
+                background: parentMsg.sender_type === "team" ? "#202020" : "var(--color-red)",
                 color: "#F0EDE6",
               }}
             >

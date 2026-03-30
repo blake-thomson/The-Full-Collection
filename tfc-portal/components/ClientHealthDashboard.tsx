@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import type { KanbanCard, TeamMember } from "@/lib/types";
 
 interface Client {
   id: string;
@@ -10,21 +11,6 @@ interface Client {
   last_seen_at?: string;
   created_at: string;
   kanbanCards?: KanbanCard[];
-}
-
-interface KanbanCard {
-  id: string;
-  column_id: string;
-  assigned_editor?: string;
-  title: string;
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar_url?: string;
 }
 
 interface Props {

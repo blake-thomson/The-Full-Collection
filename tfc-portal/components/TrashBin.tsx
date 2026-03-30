@@ -245,7 +245,7 @@ export function TrashBin({ clientId }: Props) {
                     className="text-[9px] font-bold tracking-[0.08em] uppercase py-[3px] px-[7px] rounded shrink-0"
                     style={{
                       background: item.kind === "card" ? "rgba(224,32,32,0.12)" : item.kind === "message" ? "rgba(168,164,156,0.12)" : "rgba(59,130,246,0.12)",
-                      color: item.kind === "card" ? "#E02020" : item.kind === "message" ? "#A8A49C" : "#3B82F6",
+                      color: item.kind === "card" ? "var(--color-red)" : item.kind === "message" ? "#A8A49C" : "#3B82F6",
                     }}
                   >
                     {item.kind === "card" ? "Content" : item.kind === "message" ? "Message" : "Resource"}

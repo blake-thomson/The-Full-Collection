@@ -4,6 +4,8 @@
 
 /* ─── Theme tokens ─── */
 :root {
+  --color-red: #E02020;
+  --color-red-light: #FF3B3B;
   --color-bg: #0A0A0A;
   --color-surface: #111111;
   --color-surface-2: #181818;
@@ -38,14 +40,14 @@ body { margin: 0; background: var(--color-bg); font-family: 'DM Sans', sans-seri
   @apply bg-surface-3 border border-border-2 text-text rounded-lg px-3.5 py-2.5 w-full text-sm outline-none font-body transition-colors;
   min-height: 44px; /* touch-friendly tap target */
 }
-.tfc-input:focus { border-color: #E02020; }
+.tfc-input:focus { border-color: var(--color-red); }
 .tfc-input::placeholder { color: var(--color-text-3); }
 .tfc-input.error { border-color: #EF4444 !important; }
 
 .tfc-textarea {
   @apply bg-surface-3 border border-border-2 text-text rounded-lg px-3.5 py-2.5 w-full text-sm outline-none font-body resize-y min-h-[80px] transition-colors;
 }
-.tfc-textarea:focus { border-color: #E02020; }
+.tfc-textarea:focus { border-color: var(--color-red); }
 .tfc-textarea::placeholder { color: var(--color-text-3); }
 .tfc-textarea.error { border-color: #EF4444 !important; }
 
@@ -75,7 +77,7 @@ body { margin: 0; background: var(--color-bg); font-family: 'DM Sans', sans-seri
   justify-content: center;
 }
 .tfc-pill:hover { border-color: var(--color-border); color: var(--color-text); }
-.tfc-pill.active { background: #E02020; color: #fff; border-color: #E02020; }
+.tfc-pill.active { background: var(--color-red); color: #fff; border-color: var(--color-red); }
 
 .kanban-add-btn {
   @apply w-full p-1.5 bg-transparent border border-dashed border-border rounded-[7px] text-text-3 text-[11px] cursor-pointer mb-1 font-body transition-all;
@@ -96,7 +98,7 @@ body { margin: 0; background: var(--color-bg); font-family: 'DM Sans', sans-seri
   align-items: center;
 }
 .nav-tab:hover { color: var(--color-text); }
-.nav-tab.active { background: #E02020; color: #fff; }
+.nav-tab.active { background: var(--color-red); color: #fff; }
 
 .team-badge {
   @apply inline-flex items-center gap-[5px] bg-[rgba(224,32,32,0.12)] border border-[rgba(224,32,32,0.25)] text-red-light text-[10px] font-bold tracking-[0.1em] uppercase py-[3px] px-[9px] rounded-[6px];

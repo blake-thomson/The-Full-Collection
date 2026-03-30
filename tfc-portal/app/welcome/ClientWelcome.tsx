@@ -4,114 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 import { Logo } from "@/components/ui/Logo";
-
-/* ── Industry options ── */
-const INDUSTRIES = [
-  "Real Estate",
-  "E-Commerce",
-  "Health & Wellness",
-  "Beauty & Skincare",
-  "Fitness & Sports",
-  "Food & Beverage",
-  "Fashion & Apparel",
-  "Music & Entertainment",
-  "Tech & SaaS",
-  "Finance & Investing",
-  "Education & Coaching",
-  "Non-Profit",
-  "Construction & Trades",
-  "Automotive",
-  "Travel & Hospitality",
-  "Legal",
-  "Marketing & Advertising",
-  "Other",
-];
-
-/* ── Confetti particles ── */
-function Confetti() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const colors = ["#E02020", "#F59E0B", "#10B981", "#8B5CF6", "#3B82F6", "#EC4899", "#F0EDE6"];
-    const particles: { x: number; y: number; w: number; h: number; color: string; vx: number; vy: number; rotation: number; rotSpeed: number; opacity: number }[] = [];
-
-    for (let i = 0; i < 120; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height - canvas.height,
-        w: Math.random() * 8 + 4,
-        h: Math.random() * 6 + 2,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        vx: (Math.random() - 0.5) * 3,
-        vy: Math.random() * 4 + 2,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.15,
-        opacity: 1,
-      });
-    }
-
-    let frame: number;
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      let alive = false;
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.rotation += p.rotSpeed;
-        p.vy += 0.04;
-        if (p.y > canvas.height) p.opacity -= 0.02;
-        if (p.opacity <= 0) continue;
-        alive = true;
-        ctx.save();
-        ctx.globalAlpha = p.opacity;
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        ctx.restore();
-      }
-      if (alive) frame = requestAnimationFrame(animate);
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 50 }}
-    />
-  );
-}
-
-/* ── Step indicator dots ── */
-function StepDots({ current, total }: { current: number; total: number }) {
-  return (
-    <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 32 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            width: i === current ? 24 : 8,
-            height: 8,
-            borderRadius: 4,
-            background: i === current ? "#E02020" : i < current ? "#E02020" : "#252525",
-            opacity: i < current ? 0.5 : 1,
-            transition: "all 0.3s ease",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+import { Confetti } from "@/components/ui/Confetti";
+import { StepDots } from "@/components/ui/StepDots";
+import { INDUSTRIES } from "@/lib/constants";
 
 export default function ClientWelcome() {
   const [step, setStep] = useState(0);
@@ -133,7 +28,7 @@ export default function ClientWelcome() {
   const router = useRouter();
   const supabase = createBrowserSupabase();
 
-  const brandColor = "#E02020";
+  const brandColor = "var(--color-red)";
 
   useEffect(() => {
     (async () => {

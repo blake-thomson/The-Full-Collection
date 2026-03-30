@@ -493,7 +493,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
               <div className="rounded-xl border border-red/30 bg-red/5 overflow-hidden">
                 {/* AI Prompt Bar */}
                 <div className="flex items-center gap-2 px-4 py-3 border-b border-red/20">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E02020" strokeWidth="2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-red)" strokeWidth="2">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                   </svg>
                   <input

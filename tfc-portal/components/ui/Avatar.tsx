@@ -17,7 +17,7 @@ export function Avatar({ name, size = 30, src }: { name: string; size?: number; 
       style={{
         width: size,
         height: size,
-        background: "linear-gradient(135deg, #E02020, #8A1010)",
+        background: "linear-gradient(135deg, var(--color-red), #8A1010)",
         fontSize: Math.round(size * 0.4),
       }}
     >

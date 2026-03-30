@@ -137,7 +137,7 @@ export function ReportManager({ clientId }: Props) {
           <button
             onClick={() => setShowPicker(!showPicker)}
             disabled={generating}
-            className="px-4 py-2 bg-[#E02020] text-white text-sm font-semibold rounded-lg hover:bg-[#C01818] transition disabled:opacity-50"
+            className="px-4 py-2 bg-red text-white text-sm font-semibold rounded-lg hover:bg-[#C01818] transition disabled:opacity-50"
           >
             {generating ? (
               <span className="flex items-center gap-2">
@@ -266,7 +266,7 @@ export function ReportManager({ clientId }: Props) {
                 <button
                   onClick={() => handleSend(report.id)}
                   disabled={sendingId === report.id}
-                  className="px-3 py-1.5 text-xs font-medium text-white bg-[#E02020] rounded-lg hover:bg-[#C01818] transition disabled:opacity-50"
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-red rounded-lg hover:bg-[#C01818] transition disabled:opacity-50"
                 >
                   {sendingId === report.id ? "Sending..." : report.sent_at ? "Resend" : "Send to Client"}
                 </button>

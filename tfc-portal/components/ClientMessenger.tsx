@@ -793,7 +793,7 @@ export function ClientMessenger({ clientId, currentUser }: Props) {
                   className="shrink-0 flex items-center justify-center rounded-lg transition-all"
                   style={{
                     width: 44, height: 44,
-                    background: input.trim() ? "#E02020" : "#1A1A1A",
+                    background: input.trim() ? "var(--color-red)" : "#1A1A1A",
                     color: input.trim() ? "#fff" : "#5A5652",
                     opacity: input.trim() ? 1 : 0.7,
                     border: "none", cursor: input.trim() ? "pointer" : "default",

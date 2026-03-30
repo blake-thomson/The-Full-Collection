@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createServerSupabase } from "@/lib/supabase-server";
 
+export const dynamic = "force-dynamic";
+
 // GET — redirect user to Google OAuth consent screen
 export async function GET(req: NextRequest) {
   try {
