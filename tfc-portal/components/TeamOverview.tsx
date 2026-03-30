@@ -41,7 +41,7 @@ const PIPELINE_BUCKETS = [
   { key: "action", label: "Needs Action", columns: ["ready_review", "revise"], color: "#F59E0B" },
   { key: "ship", label: "Ready to Ship", columns: ["approved", "scheduled"], color: "#10B981" },
   { key: "published", label: "Published", columns: ["published"], color: "var(--color-red)" },
-] as const;
+];
 
 function formatRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
