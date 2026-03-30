@@ -15,7 +15,6 @@ const TOKEN_ENDPOINTS: Record<string, string> = {
   instagram: "https://graph.facebook.com/v21.0/oauth/access_token",
   tiktok: "https://open.tiktokapis.com/v2/oauth/token/",
   youtube: "https://oauth2.googleapis.com/token",
-  facebook: "https://graph.facebook.com/v21.0/oauth/access_token",
 };
 
 async function exchangeCode(
@@ -41,9 +40,6 @@ async function exchangeCode(
   } else if (platform === "youtube") {
     body.client_id = process.env.GOOGLE_CLIENT_ID!;
     body.client_secret = process.env.GOOGLE_CLIENT_SECRET!;
-  } else if (platform === "facebook") {
-    body.client_id = process.env.META_APP_ID!;
-    body.client_secret = process.env.META_APP_SECRET!;
   }
 
   const res = await fetch(endpoint, {
@@ -97,13 +93,6 @@ async function fetchAccountName(
       const data = await res.json();
       const ch = data.items?.[0];
       return { name: ch?.snippet?.title || "YouTube Channel", userId: ch?.id };
-    }
-    if (platform === "facebook") {
-      const res = await fetch("https://graph.facebook.com/v21.0/me?fields=id,name", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const data = await res.json();
-      return { name: data.name || "Facebook Page", userId: data.id };
     }
     if (platform === "tiktok") {
       const res = await fetch(

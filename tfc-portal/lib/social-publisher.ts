@@ -313,7 +313,6 @@ const publishers: Record<
   instagram: publishToInstagram,
   tiktok: publishToTikTok,
   youtube: publishToYouTube,
-  facebook: publishToFacebook,
 };
 
 export async function publishToPlatform(

@@ -20,11 +20,6 @@ const PLATFORM_CONFIG: Record<
     scopes: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly",
     clientIdEnv: "GOOGLE_CLIENT_ID",
   },
-  facebook: {
-    authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
-    scopes: "public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts",
-    clientIdEnv: "META_APP_ID",
-  },
 };
 
 // GET /api/social/[platform]/connect?client_id=xxx

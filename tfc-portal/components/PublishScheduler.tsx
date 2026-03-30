@@ -18,10 +18,9 @@ const PLATFORM_META: Record<
   string,
   { name: string; color: string; textColor?: string }
 > = {
-  instagram: { name: "Instagram", color: "#E1306C" },
+  instagram: { name: "Meta", color: "#0081FB" },
   tiktok: { name: "TikTok", color: "#000000", textColor: "#FFFFFF" },
   youtube: { name: "YouTube", color: "#FF0000" },
-  facebook: { name: "Facebook", color: "#1877F2" },
 };
 
 function getNextWeekday11am(): string {
