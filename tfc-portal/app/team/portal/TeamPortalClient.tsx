@@ -375,6 +375,16 @@ export default function TeamPortalClient() {
                 Help
               </button>
               <button
+                onClick={() => { setSelected(null); setShowMyProfile(false); switchTeamTab("recently-deleted"); }}
+                className={`w-full mt-1 px-3 py-2 text-left text-[12px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body flex items-center gap-2 ${teamTab === "recently-deleted" && !selected && !showMyProfile ? "text-red" : "text-text-3 hover:text-text hover:bg-surface-2"}`}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+                Recently Deleted
+              </button>
+              <button
                 onClick={logout}
                 className="w-full mt-1 px-3 py-2 text-left text-text-3 hover:text-text text-[12px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body"
               >
@@ -456,7 +466,7 @@ export default function TeamPortalClient() {
               ))}
             </nav>
 
-            {/* Help + Sign out */}
+            {/* Help + Recently Deleted + Sign out */}
             <div className="px-3 py-3 border-t border-border space-y-0.5">
               <button
                 onClick={() => { setSelected(null); setShowMyProfile(false); switchTeamTab("help"); }}
@@ -466,6 +476,16 @@ export default function TeamPortalClient() {
                   <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
                 Help
+              </button>
+              <button
+                onClick={() => { setSelected(null); setShowMyProfile(false); switchTeamTab("recently-deleted"); }}
+                className={`w-full flex items-center gap-3 px-3 py-3 text-[14px] rounded-lg bg-transparent border-none cursor-pointer transition-colors font-body text-left ${teamTab === "recently-deleted" && !selected && !showMyProfile ? "bg-red/10 text-red" : "text-text-3 hover:text-text hover:bg-surface-2"}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                </svg>
+                Recently Deleted
               </button>
               <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-3 text-left text-text-3 hover:text-red text-[14px] rounded-lg hover:bg-surface-2 bg-transparent border-none cursor-pointer transition-colors font-body">
                 Sign out
@@ -651,6 +671,43 @@ export default function TeamPortalClient() {
           {teamTab === "help" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
               <FAQ userType="team" userRole={teamUser.role} />
+            </div>
+          )}
+
+          {/* ── RECENTLY DELETED ── */}
+          {teamTab === "recently-deleted" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
+              <div className="mb-6">
+                <h2 className="text-text font-heading text-[22px] font-[800] m-0 mb-1 flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                  Recently Deleted
+                </h2>
+                <p className="text-text-2 text-[13px] m-0">Select a client to view their deleted items</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                {clients.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setSelected(c); setClientTab("trash"); }}
+                    className="w-full flex items-center gap-3 p-4 rounded-xl bg-surface border border-border hover:border-red/30 hover:bg-surface-2 transition-all cursor-pointer text-left"
+                    style={{ appearance: "none" }}
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-surface-2 flex items-center justify-center text-text-3 text-[13px] font-bold font-body shrink-0">
+                      {c.business_name?.[0]?.toUpperCase() || c.name?.[0]?.toUpperCase() || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-text text-[13px] font-semibold font-body m-0 truncate">{c.business_name || c.name}</p>
+                      <p className="text-text-3 text-[11px] font-body m-0">{c.email}</p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-3 shrink-0">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
