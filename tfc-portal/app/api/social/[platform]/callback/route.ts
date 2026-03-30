@@ -65,6 +65,24 @@ async function exchangeCode(
     };
   }
 
+  // For Meta (Instagram): exchange short-lived token for long-lived token (60 days)
+  if (platform === "instagram") {
+    try {
+      const llRes = await fetch(
+        `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${process.env.META_APP_ID}&client_secret=${process.env.META_APP_SECRET}&fb_exchange_token=${data.access_token}`
+      );
+      if (llRes.ok) {
+        const llData = await llRes.json();
+        return {
+          access_token: llData.access_token,
+          expires_in: llData.expires_in, // ~5184000 (60 days)
+        };
+      }
+    } catch {
+      // Fall back to short-lived token
+    }
+  }
+
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
