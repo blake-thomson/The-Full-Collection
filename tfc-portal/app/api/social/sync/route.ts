@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { requireTeamMember } from "@/lib/auth-helpers";
+import { requireTeamMember, requireClientAccess } from "@/lib/auth-helpers";
 import { decryptJson, isEncrypted } from "@/lib/crypto";
 
 /**
@@ -20,11 +20,13 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const admin = createSupabaseAdmin();
-  const access = await requireTeamMember(user.email!, admin);
-  if (!access.ok) return access.response;
 
   const { client_id } = await req.json();
   if (!client_id) return NextResponse.json({ error: "client_id required" }, { status: 400 });
+
+  // Allow both team members and clients to sync
+  const access = await requireClientAccess(user.email!, client_id, admin);
+  if (!access.ok) return access.response;
 
   // Fetch all connected social accounts for this client
   const { data: accounts } = await admin
