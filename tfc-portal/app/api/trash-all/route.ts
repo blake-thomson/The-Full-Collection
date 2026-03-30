@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
   if (!teamCheck.ok) return teamCheck.response;
 
   // Only owner/admin can see all deleted items
-  if (!["owner", "admin"].includes(teamCheck.member!.role)) {
+  const { data: member } = await admin
+    .from("team_members")
+    .select("role")
+    .eq("email", user.email!)
+    .single();
+  if (!member || !["owner", "admin"].includes(member.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
