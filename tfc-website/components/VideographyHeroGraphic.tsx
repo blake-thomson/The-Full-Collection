@@ -2,113 +2,129 @@
 
 import { motion } from "framer-motion";
 
-const SHOTS = [
-  { id: "01", label: "Intro — Talking Head", status: "filmed", duration: "0:45" },
-  { id: "02", label: "Product Hero Shot", status: "filmed", duration: "0:30" },
-  { id: "03", label: "B-Roll — Office Walk", status: "filming", duration: "1:15" },
-  { id: "04", label: "CTA Close", status: "queued", duration: "0:20" },
-  { id: "05", label: "Lifestyle — Outdoor", status: "queued", duration: "0:55" },
-];
-
-const STATUS_STYLE: Record<string, string> = {
-  filmed: "bg-green-500/15 text-green-400",
-  filming: "bg-red/20 text-red",
-  queued: "bg-white/8 text-white/30",
-};
-
 export function VideographyHeroGraphic() {
   return (
-    <div className="w-full h-full bg-[#0D0D0D] rounded-2xl overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07]">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red" />
-          <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/50">TFC Portal — Production</span>
-        </div>
-        <motion.div
-          animate={{ opacity: [1, 0.3, 1] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-          className="flex items-center gap-1.5 bg-red/15 border border-red/30 rounded-full px-2 py-0.5"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-red" />
-          <span className="text-[8px] text-red font-bold tracking-wide">REC</span>
-        </motion.div>
+    <div className="w-full h-full bg-[#0D0D0D] rounded-2xl overflow-hidden flex flex-col items-center justify-center relative p-6">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-64 h-64 rounded-full bg-red/5 blur-3xl" />
       </div>
 
-      {/* Shoot day info */}
-      <div className="flex items-center gap-3 px-4 pt-3 pb-2">
-        <div className="flex-1 bg-white/[0.03] border border-white/[0.07] rounded-lg px-3 py-2">
-          <div className="text-[7px] text-white/30 uppercase tracking-wide mb-0.5">Shoot Day</div>
-          <div className="text-[10px] font-bold text-white">April 2025 — Day 1</div>
-        </div>
-        <div className="bg-white/[0.03] border border-white/[0.07] rounded-lg px-3 py-2 text-center">
-          <div className="text-[10px] font-bold text-white">5</div>
-          <div className="text-[7px] text-white/30 mt-0.5">Shots</div>
-        </div>
-        <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2 text-center">
-          <div className="text-[10px] font-bold text-green-400">2</div>
-          <div className="text-[7px] text-green-400/50 mt-0.5">Done</div>
-        </div>
-      </div>
+      {/* REC badge */}
+      <motion.div
+        animate={{ opacity: [1, 0.3, 1] }}
+        transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-4 right-4 flex items-center gap-1.5 bg-red/15 border border-red/30 rounded-full px-2.5 py-1"
+      >
+        <div className="w-1.5 h-1.5 rounded-full bg-red" />
+        <span className="text-[8px] text-red font-bold tracking-widest">REC</span>
+      </motion.div>
 
-      {/* Camera viewfinder */}
-      <div className="mx-4 mb-3">
-        <motion.div
-          className="relative bg-[#111] border border-white/10 rounded-xl overflow-hidden"
-          style={{ aspectRatio: "16/9" }}
-        >
-          {/* Grid overlay */}
-          <div className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
-              backgroundSize: "33.33% 33.33%"
-            }}
+      {/* Camera SVG */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10"
+      >
+        <svg width="220" height="160" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Camera body */}
+          <rect x="30" y="52" width="160" height="88" rx="10" fill="#1a1a1a" stroke="#333" strokeWidth="1.5" />
+
+          {/* Top hump (viewfinder bump) */}
+          <rect x="72" y="36" width="60" height="22" rx="6" fill="#1a1a1a" stroke="#333" strokeWidth="1.5" />
+
+          {/* Hot shoe */}
+          <rect x="86" y="30" width="32" height="8" rx="2" fill="#222" stroke="#2a2a2a" strokeWidth="1" />
+
+          {/* Lens barrel outer */}
+          <circle cx="110" cy="96" r="36" fill="#111" stroke="#2a2a2a" strokeWidth="2" />
+          {/* Lens barrel ring */}
+          <circle cx="110" cy="96" r="30" fill="#0a0a0a" stroke="#333" strokeWidth="1.5" />
+          {/* Lens glass inner */}
+          <circle cx="110" cy="96" r="22" fill="#080d14" stroke="#1a2a3a" strokeWidth="1" />
+          {/* Lens reflection */}
+          <circle cx="110" cy="96" r="16" fill="#070b12" />
+          <motion.circle
+            cx="110" cy="96" r="16"
+            fill="none"
+            stroke="url(#lensGlow)"
+            strokeWidth="2"
+            animate={{ opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           />
-          {/* Center cross */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-3 h-px bg-red/60" />
-            <div className="absolute w-px h-3 bg-red/60" />
-          </div>
-          {/* Corner brackets */}
-          {[["top-2 left-2", "border-t border-l"], ["top-2 right-2", "border-t border-r"], ["bottom-2 left-2", "border-b border-l"], ["bottom-2 right-2", "border-b border-r"]].map(([pos, border]) => (
-            <div key={pos} className={`absolute w-3 h-3 ${pos} ${border} border-white/40`} />
-          ))}
-          {/* Scene label */}
-          <div className="absolute bottom-2 left-2 bg-black/60 rounded px-1.5 py-0.5">
-            <span className="text-[7px] text-white/60 font-mono">SCENE 03 / TAKE 1</span>
-          </div>
-          {/* Focus indicator */}
-          <motion.div
-            animate={{ opacity: [0.4, 0.9, 0.4] }}
-            transition={{ duration: 2.5, repeat: Infinity }}
-            className="absolute top-2 right-2 text-[7px] text-green-400 font-bold"
-          >
-            AF ●
-          </motion.div>
-        </motion.div>
-      </div>
+          {/* Lens sheen */}
+          <ellipse cx="103" cy="89" rx="5" ry="3" fill="white" opacity="0.06" transform="rotate(-30 103 89)" />
+          <ellipse cx="100" cy="86" rx="2" ry="1.5" fill="white" opacity="0.1" transform="rotate(-30 100 86)" />
 
-      {/* Shot list */}
-      <div className="px-4 pb-3 flex-1 overflow-hidden">
-        <div className="text-[8px] font-bold tracking-[0.12em] uppercase text-white/25 mb-2">Shot List</div>
-        <div className="flex flex-col gap-1">
-          {SHOTS.map((shot, i) => (
-            <motion.div
-              key={shot.id}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.08, duration: 0.3 }}
-              className="flex items-center gap-2 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 py-1.5"
-            >
-              <span className="text-[7px] text-white/20 font-mono w-4 flex-shrink-0">{shot.id}</span>
-              <span className="text-[8px] text-white/60 flex-1 truncate">{shot.label}</span>
-              <span className="text-[6px] text-white/20 flex-shrink-0 font-mono">{shot.duration}</span>
-              <span className={`text-[6px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 ${STATUS_STYLE[shot.status]}`}>
-                {shot.status}
-              </span>
-            </motion.div>
+          {/* Lens mount screws */}
+          {[0, 90, 180, 270].map((angle) => {
+            const rad = (angle * Math.PI) / 180;
+            const x = 110 + 26 * Math.cos(rad);
+            const y = 96 + 26 * Math.sin(rad);
+            return <circle key={angle} cx={x} cy={y} r="1.5" fill="#222" stroke="#333" strokeWidth="0.5" />;
+          })}
+
+          {/* Shutter button */}
+          <circle cx="168" cy="52" r="8" fill="#222" stroke="#333" strokeWidth="1" />
+          <circle cx="168" cy="52" r="5" fill="#1a1a1a" />
+
+          {/* Mode dial */}
+          <circle cx="52" cy="52" r="10" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+          <line x1="52" y1="44" x2="52" y2="48" stroke="#e02020" strokeWidth="1.5" strokeLinecap="round" />
+
+          {/* Viewfinder eyepiece */}
+          <rect x="80" y="38" width="44" height="12" rx="3" fill="#111" stroke="#2a2a2a" strokeWidth="1" />
+
+          {/* LCD screen on back — small indicator */}
+          <rect x="148" y="70" width="30" height="20" rx="3" fill="#050f1a" stroke="#1a2a3a" strokeWidth="1" />
+          <motion.rect
+            x="151" y="73" width="24" height="14" rx="2"
+            fill="none"
+            stroke="#e02020"
+            strokeWidth="0.5"
+            animate={{ opacity: [0.3, 0.7, 0.3] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          />
+
+          {/* Grip texture lines */}
+          {[0, 3, 6].map((i) => (
+            <line key={i} x1={36 + i} y1="62" x2={36 + i} y2="130" stroke="#222" strokeWidth="0.8" strokeLinecap="round" />
           ))}
-        </div>
+
+          {/* Defs */}
+          <defs>
+            <radialGradient id="lensGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#e02020" stopOpacity="0.2" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </motion.div>
+
+      {/* Stats row */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="flex items-center gap-4 mt-4 z-10"
+      >
+        {[
+          { label: "4K", sub: "Resolution" },
+          { label: "60fps", sub: "Frame Rate" },
+          { label: "RAW", sub: "Format" },
+        ].map((s) => (
+          <div key={s.label} className="text-center">
+            <div className="text-white font-heading font-[800] text-sm tracking-wide">{s.label}</div>
+            <div className="text-white/30 text-[9px] uppercase tracking-widest">{s.sub}</div>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* Bottom label */}
+      <div className="absolute bottom-4 left-4 flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-red" />
+        <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/30">TFC Production</span>
       </div>
     </div>
   );
