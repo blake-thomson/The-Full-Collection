@@ -110,11 +110,17 @@ export default function DashboardClient() {
   }, [client]);
 
   useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) { cancelled = true; setLoading(false); setError("timeout"); }
+    }, 10000);
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) { router.push("/login"); return; }
         const res = await fetch(`/api/clients?email=${user.email}`);
+        if (cancelled) return;
         if (!res.ok) { router.push("/login"); return; }
         const clients = await res.json();
         if (clients.length > 0) {
@@ -126,16 +132,18 @@ export default function DashboardClient() {
           setError("We couldn't find your account. Please reach out to The Full Collection team for help.");
         }
       } catch {
+        if (cancelled) return;
         setError("Something went wrong on our end. Please refresh the page or contact The Full Collection team.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   useEffect(() => { loadKanbanCards(); }, [loadKanbanCards]);
 
-  // Real-time subscriptions
+  // Real-time subscriptions — only activate after client is loaded (auth confirmed)
   useRealtimeKanban(client?.id || "", () => { loadKanbanCards(); setKanbanKey((k) => k + 1); });
   useRealtimeMessages(client?.id || "", () => { /* triggers re-render for message tab badge */ });
   useRealtimeNotifications(client?.email || "", () => { /* NotificationBell polls, but this gives instant updates */ });

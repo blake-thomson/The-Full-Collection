@@ -169,19 +169,27 @@ export default function TeamPortalClient() {
   }, [clients]);
 
   useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) { cancelled = true; setAuthLoading(false); setAuthError("timeout"); }
+    }, 10000);
     (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) { router.push("/team/login"); return; }
         const { data: member } = await supabase.from("team_members").select("*").eq("email", user.email).single();
+        if (cancelled) return;
         if (!member) { router.push("/team/login"); return; }
         setTeamUser(member);
       } catch {
+        if (cancelled) return;
         setAuthError("Something went wrong on our end. Please refresh the page or contact The Full Collection team.");
       } finally {
-        setAuthLoading(false);
+        if (!cancelled) setAuthLoading(false);
       }
     })();
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, [supabase, router]);
 
   const loadClients = useCallback(async () => {

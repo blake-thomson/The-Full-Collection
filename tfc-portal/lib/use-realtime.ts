@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
 
 type RealtimeEvent = "INSERT" | "UPDATE" | "DELETE";
+
+const DEFAULT_EVENTS: RealtimeEvent[] = ["INSERT", "UPDATE", "DELETE"];
 
 interface UseRealtimeOptions {
   /** Supabase table name */
@@ -31,12 +33,15 @@ export function useRealtime({
   table,
   filterColumn,
   filterValue,
-  events = ["INSERT", "UPDATE", "DELETE"],
+  events = DEFAULT_EVENTS,
   onChanges,
   enabled = true,
 }: UseRealtimeOptions) {
   const callbackRef = useRef(onChanges);
   callbackRef.current = onChanges;
+
+  // Stabilize events so the effect doesn't re-run on every render
+  const eventsKey = useMemo(() => events.join(","), [events]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -68,7 +73,7 @@ export function useRealtime({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [table, filterColumn, filterValue, enabled, events.join(",")]);
+  }, [table, filterColumn, filterValue, enabled, eventsKey]);
 }
 
 /**
