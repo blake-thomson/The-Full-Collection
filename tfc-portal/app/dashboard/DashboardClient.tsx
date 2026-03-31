@@ -88,8 +88,7 @@ const TABS = [
 export default function DashboardClient() {
   const [tab, setTab] = useState("home");
   const [client, setClient] = useState<Client | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [fatalError, setFatalError] = useState(false);
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [kanbanKey, setKanbanKey] = useState(0);
@@ -111,17 +110,23 @@ export default function DashboardClient() {
 
   useEffect(() => {
     let cancelled = false;
-    const timeout = setTimeout(() => {
-      if (!cancelled) { cancelled = true; setLoading(false); setError("timeout"); }
-    }, 10000);
-    (async () => {
+    let attempts = 0;
+    const MAX_RETRIES = 3;
+
+    const initAuth = async () => {
+      attempts++;
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (cancelled) return;
         if (!user) { router.push("/login"); return; }
         const res = await fetch(`/api/clients?email=${user.email}`);
         if (cancelled) return;
-        if (!res.ok) { router.push("/login"); return; }
+        if (!res.ok) {
+          // Network/server error — retry if we can
+          if (attempts < MAX_RETRIES) { setTimeout(initAuth, 2000); return; }
+          router.push("/login");
+          return;
+        }
         const clients = await res.json();
         if (clients.length > 0) {
           const c = clients[0];
@@ -129,16 +134,22 @@ export default function DashboardClient() {
           if (!c.profile_complete) { router.push("/welcome"); return; }
           setClient(c);
         } else {
-          setError("We couldn't find your account. Please reach out to The Full Collection team for help.");
+          // No client record — this is a real problem, no point retrying
+          setFatalError(true);
         }
       } catch {
         if (cancelled) return;
-        setError("Something went wrong on our end. Please refresh the page or contact The Full Collection team.");
-      } finally {
-        if (!cancelled) setLoading(false);
+        // Network error — retry silently
+        if (attempts < MAX_RETRIES) {
+          setTimeout(initAuth, 2000);
+        } else {
+          setFatalError(true);
+        }
       }
-    })();
-    return () => { cancelled = true; clearTimeout(timeout); };
+    };
+
+    initAuth();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => { loadKanbanCards(); }, [loadKanbanCards]);
@@ -208,22 +219,22 @@ export default function DashboardClient() {
     setMobileMenuOpen(false);
   };
 
-  if (loading) return (
-    <div className="bg-bg h-screen flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <Logo size={48} />
-        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    </div>
-  );
-
-  if (error || !client) return (
+  if (fatalError) return (
     <div className="bg-bg h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 text-center px-6">
         <Logo size={48} />
         <button onClick={() => window.location.reload()} className="text-accent text-sm font-medium hover:underline">
           Try again
         </button>
+      </div>
+    </div>
+  );
+
+  if (!client) return (
+    <div className="bg-bg h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Logo size={48} />
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   );

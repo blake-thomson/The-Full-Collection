@@ -114,8 +114,7 @@ const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B",
 export default function TeamPortalClient() {
   const searchParams = useSearchParams();
   const [teamUser, setTeamUser] = useState<TeamMember | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authFatalError, setAuthFatalError] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [selected, setSelected] = useState<Client | null>(null);
   const [teamTab, setTeamTab] = useState(() => searchParams.get("tab") || "overview");
@@ -170,26 +169,35 @@ export default function TeamPortalClient() {
 
   useEffect(() => {
     let cancelled = false;
-    const timeout = setTimeout(() => {
-      if (!cancelled) { cancelled = true; setAuthLoading(false); setAuthError("timeout"); }
-    }, 10000);
-    (async () => {
+    let attempts = 0;
+    const MAX_RETRIES = 3;
+
+    const initAuth = async () => {
+      attempts++;
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (cancelled) return;
         if (!user) { router.push("/team/login"); return; }
         const { data: member } = await supabase.from("team_members").select("*").eq("email", user.email).single();
         if (cancelled) return;
-        if (!member) { router.push("/team/login"); return; }
+        if (!member) {
+          if (attempts < MAX_RETRIES) { setTimeout(initAuth, 2000); return; }
+          router.push("/team/login");
+          return;
+        }
         setTeamUser(member);
       } catch {
         if (cancelled) return;
-        setAuthError("Something went wrong on our end. Please refresh the page or contact The Full Collection team.");
-      } finally {
-        if (!cancelled) setAuthLoading(false);
+        if (attempts < MAX_RETRIES) {
+          setTimeout(initAuth, 2000);
+        } else {
+          setAuthFatalError(true);
+        }
       }
-    })();
-    return () => { cancelled = true; clearTimeout(timeout); };
+    };
+
+    initAuth();
+    return () => { cancelled = true; };
   }, [supabase, router]);
 
   const loadClients = useCallback(async () => {
@@ -316,22 +324,22 @@ export default function TeamPortalClient() {
 
   const switchTeamTab = (id: string) => { setTeamTab(id); setSelected(null); setMobileMenuOpen(false); setShowMyProfile(false); };
 
-  if (authLoading) return (
-    <div className="bg-bg h-screen flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <Logo size={48} />
-        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-      </div>
-    </div>
-  );
-
-  if (authError || !teamUser) return (
+  if (authFatalError) return (
     <div className="bg-bg h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 text-center px-6">
         <Logo size={48} />
         <button onClick={() => window.location.reload()} className="text-accent text-sm font-medium hover:underline">
           Try again
         </button>
+      </div>
+    </div>
+  );
+
+  if (!teamUser) return (
+    <div className="bg-bg h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Logo size={48} />
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   );
