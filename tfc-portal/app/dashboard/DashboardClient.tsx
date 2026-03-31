@@ -88,6 +88,8 @@ const TABS = [
 export default function DashboardClient() {
   const [tab, setTab] = useState("home");
   const [client, setClient] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
   const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
   const [kanbanKey, setKanbanKey] = useState(0);
@@ -109,16 +111,24 @@ export default function DashboardClient() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
-      const res = await fetch(`/api/clients?email=${user.email}`);
-      if (!res.ok) { router.push("/login"); return; }
-      const clients = await res.json();
-      if (clients.length > 0) {
-        const c = clients[0];
-        if (!c.onboarding_complete) { router.push("/onboarding"); return; }
-        if (!c.profile_complete) { router.push("/welcome"); return; }
-        setClient(c);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push("/login"); return; }
+        const res = await fetch(`/api/clients?email=${user.email}`);
+        if (!res.ok) { router.push("/login"); return; }
+        const clients = await res.json();
+        if (clients.length > 0) {
+          const c = clients[0];
+          if (!c.onboarding_complete) { router.push("/onboarding"); return; }
+          if (!c.profile_complete) { router.push("/welcome"); return; }
+          setClient(c);
+        } else {
+          setError("No account found. Please contact your team.");
+        }
+      } catch {
+        setError("Something went wrong. Please refresh the page.");
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -190,7 +200,26 @@ export default function DashboardClient() {
     setMobileMenuOpen(false);
   };
 
-  if (!client) return null;
+  if (loading) return (
+    <div className="bg-bg h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Logo size={48} />
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
+  );
+
+  if (error || !client) return (
+    <div className="bg-bg h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4 text-center px-6">
+        <Logo size={48} />
+        <p className="text-secondary text-sm">{error || "Unable to load your account."}</p>
+        <button onClick={() => window.location.reload()} className="text-accent text-sm font-medium hover:underline">
+          Try again
+        </button>
+      </div>
+    </div>
+  );
 
   const currentUser: CurrentUser = { name: client.name, email: client.email, type: "client" };
   const overflowTabs = ["home", "kanban", "messages", "calendar", "files", "resources", "analytics", "help", "trash"];

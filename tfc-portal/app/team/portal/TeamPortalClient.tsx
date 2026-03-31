@@ -114,6 +114,8 @@ const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B",
 export default function TeamPortalClient() {
   const searchParams = useSearchParams();
   const [teamUser, setTeamUser] = useState<TeamMember | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [selected, setSelected] = useState<Client | null>(null);
   const [teamTab, setTeamTab] = useState(() => searchParams.get("tab") || "overview");
@@ -168,11 +170,17 @@ export default function TeamPortalClient() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/team/login"); return; }
-      const { data: member } = await supabase.from("team_members").select("*").eq("email", user.email).single();
-      if (!member) { router.push("/team/login"); return; }
-      setTeamUser(member);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { router.push("/team/login"); return; }
+        const { data: member } = await supabase.from("team_members").select("*").eq("email", user.email).single();
+        if (!member) { router.push("/team/login"); return; }
+        setTeamUser(member);
+      } catch {
+        setAuthError("Something went wrong. Please refresh the page.");
+      } finally {
+        setAuthLoading(false);
+      }
     })();
   }, [supabase, router]);
 
@@ -300,7 +308,26 @@ export default function TeamPortalClient() {
 
   const switchTeamTab = (id: string) => { setTeamTab(id); setSelected(null); setMobileMenuOpen(false); setShowMyProfile(false); };
 
-  if (!teamUser) return null;
+  if (authLoading) return (
+    <div className="bg-bg h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Logo size={48} />
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
+  );
+
+  if (authError || !teamUser) return (
+    <div className="bg-bg h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4 text-center px-6">
+        <Logo size={48} />
+        <p className="text-secondary text-sm">{authError || "Unable to load your account."}</p>
+        <button onClick={() => window.location.reload()} className="text-accent text-sm font-medium hover:underline">
+          Try again
+        </button>
+      </div>
+    </div>
+  );
 
   const filtered = clients.filter((c) => {
     const matchSearch = c.name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase());
