@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
+import { logActivity, ACTIONS } from "@/lib/activity-logger";
 
 // GET /api/cards/[cardId]/comments
 export async function GET(
@@ -124,5 +125,15 @@ export async function POST(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  logActivity(admin, {
+    client_id: card.client_id,
+    actor_email: user.email!,
+    actor_name: authorName,
+    actor_type: authorType as "team" | "client",
+    action: ACTIONS.COMMENT_ADDED,
+    metadata: { card_id: cardId, comment_id: data.id },
+  });
+
   return NextResponse.json(data);
 }

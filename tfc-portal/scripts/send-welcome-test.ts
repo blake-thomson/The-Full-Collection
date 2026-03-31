@@ -3,17 +3,24 @@ import { createClient } from "@supabase/supabase-js";
 import { ClientWelcomeEmail } from "../emails/ClientWelcome";
 import * as React from "react";
 
-const resend = new Resend("re_4XrjUwWJ_NF3aK8CZt7aVCcAcBBkKNnRG");
+// Load from environment variables — never hardcode secrets
+const resend = new Resend(process.env.RESEND_API_KEY);
 const supabase = createClient(
-  "https://ojgaphhkajdurzkysprc.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qZ2FwaGhrYWpkdXJ6a3lzcHJjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDU1MDMxNiwiZXhwIjoyMDkwMTI2MzE2fQ.z-gryaHDi6AnX9V1naqBNKcl7n_KWIzetqQBB8Z12-A"
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const TO = "blakethomson2@gmail.com";
-const PORTAL_ACCOUNT_EMAIL = "blake@status10inc.com"; // existing Supabase auth user
-const APP_URL = "https://portal.thefullcollection.com";
+const TO = process.env.TEST_EMAIL || "blakethomson2@gmail.com";
+const PORTAL_ACCOUNT_EMAIL = process.env.TEST_PORTAL_EMAIL || "blake@status10inc.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://portal.thefullcollection.com";
 
 async function run() {
+  if (!process.env.RESEND_API_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("Missing required env vars: RESEND_API_KEY, SUPABASE_SERVICE_ROLE_KEY");
+    console.error("Run with: npx tsx --env-file=.env.local scripts/send-welcome-test.ts");
+    process.exit(1);
+  }
+
   // Generate a real recovery link pointing to the new /reset-password page
   const { data, error } = await supabase.auth.admin.generateLink({
     type: "recovery",
@@ -26,7 +33,6 @@ async function run() {
     process.exit(1);
   }
 
-  const resetLink = data.properties.action_link;
   console.log("Reset link generated.");
 
   const result = await resend.emails.send({
@@ -44,7 +50,7 @@ async function run() {
   if (result.error) {
     console.error("Send failed:", result.error);
   } else {
-    console.log("✅ Welcome email sent to", TO);
+    console.log("Welcome email sent to", TO);
   }
 }
 

@@ -1,5 +1,9 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn("[stripe] STRIPE_SECRET_KEY is not set — Stripe calls will fail.");
+}
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   typescript: true,
 });

@@ -28,6 +28,8 @@ import { TeamOverview } from "@/components/TeamOverview";
 import { ResearchBoard } from "@/components/ResearchBoard";
 import { ReportManager } from "@/components/ReportManager";
 import SocialAccounts from "@/components/SocialAccounts";
+import { AuditTrail } from "@/components/AuditTrail";
+import { SessionManager } from "@/components/SessionManager";
 
 import { PerformanceAnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { WorkflowTriggers } from "@/components/WorkflowTriggers";
@@ -55,6 +57,45 @@ interface ActivityItem {
   description: string;
   timestamp: string;
   type?: string;
+}
+
+/* ── Activity helpers ── */
+function formatActivityDescription(action: string, actorName?: string, metadata?: Record<string, unknown>): string {
+  const actor = actorName || "Someone";
+  const title = (metadata?.title as string) || "";
+  switch (action) {
+    case "card_created": return `${actor} created "${title || "a card"}"`;
+    case "card_moved": return `${actor} moved "${title}" from ${metadata?.from || "?"} to ${metadata?.to || "?"}`;
+    case "card_updated": return `${actor} updated "${title || "a card"}"`;
+    case "card_deleted": return `${actor} deleted a card`;
+    case "card_restored": return `${actor} restored a card from trash`;
+    case "card_approved": return `${actor} approved "${title}"`;
+    case "card_revision_requested": return `${actor} requested revisions on "${title}"`;
+    case "comment_added": return `${actor} added a comment on "${title}"`;
+    case "attachment_added": return `${actor} added an attachment`;
+    case "attachment_deleted": return `${actor} removed an attachment`;
+    case "post_scheduled": return `${actor} scheduled "${title || "content"}" for publishing`;
+    case "post_published": return `Content published to ${metadata?.platform || "platform"}`;
+    case "resource_added": return `${actor} added resource "${metadata?.name || ""}"`;
+    case "resource_deleted": return `${actor} removed a resource`;
+    case "report_generated": return `${actor} generated a monthly report`;
+    case "report_sent": return `${actor} sent a report to client`;
+    case "subscription_created": return "New subscription activated";
+    case "subscription_updated": return `Subscription status changed to ${metadata?.status || "updated"}`;
+    case "subscription_canceled": return "Subscription canceled";
+    case "payment_received": return "Payment received";
+    case "payment_failed": return "Payment failed";
+    case "login": return `${actor} logged in`;
+    default: return action.replace(/_/g, " ");
+  }
+}
+
+function activityActionToType(action: string): string {
+  if (action.includes("created") || action.includes("added")) return "create";
+  if (action.includes("moved")) return "move";
+  if (action.includes("deleted") || action.includes("removed") || action.includes("canceled")) return "delete";
+  if (action.includes("published")) return "publish";
+  return "update";
 }
 
 /* ── Icons ── */
@@ -91,6 +132,14 @@ const NAV_ITEMS = [
   {
     id: "team", label: "Team", ownerOnly: true,
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  },
+  {
+    id: "audit", label: "Audit Trail", ownerOnly: true,
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  },
+  {
+    id: "sessions", label: "Sessions", ownerOnly: true,
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>,
   },
 ];
 
@@ -247,8 +296,11 @@ export default function TeamPortalClient() {
       if (cardsRes.ok) setClientCards(await cardsRes.json());
       if (activityRes.ok) {
         const actData = await activityRes.json();
-        setClientActivity((actData.data || []).map((a: { id: string; action: string; created_at: string; actor_type?: string }) => ({
-          id: a.id, description: a.action, timestamp: a.created_at, type: a.actor_type || "system",
+        setClientActivity((actData.data || []).map((a: { id: string; action: string; created_at: string; actor_type?: string; actor_name?: string; metadata?: Record<string, unknown> }) => ({
+          id: a.id,
+          description: formatActivityDescription(a.action, a.actor_name, a.metadata),
+          timestamp: a.created_at,
+          type: activityActionToType(a.action),
         })));
       }
     } catch (err) { console.error("Failed to load client details:", err); }
@@ -261,8 +313,8 @@ export default function TeamPortalClient() {
         const res = await fetch(`/api/activity?client_id=${c.id}&limit=5`);
         if (res.ok) {
           const actData = await res.json();
-          (actData.data || []).forEach((a: { id: string; action: string; created_at: string; actor_type?: string }) => {
-            items.push({ id: a.id, description: `${c.name}: ${a.action}`, timestamp: a.created_at, type: a.actor_type || "system" });
+          (actData.data || []).forEach((a: { id: string; action: string; created_at: string; actor_type?: string; actor_name?: string; metadata?: Record<string, unknown> }) => {
+            items.push({ id: a.id, description: `${c.name}: ${formatActivityDescription(a.action, a.actor_name, a.metadata)}`, timestamp: a.created_at, type: activityActionToType(a.action) });
           });
         }
       }
@@ -697,6 +749,20 @@ export default function TeamPortalClient() {
             </div>
           )}
 
+          {/* ── AUDIT TRAIL TAB ── */}
+          {teamTab === "audit" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-y-auto">
+              <AuditTrail clients={clients.map(c => ({ id: c.id, name: c.name }))} />
+            </div>
+          )}
+
+          {/* ── SESSIONS TAB ── */}
+          {teamTab === "sessions" && !selected && !showMyProfile && (
+            <div className="flex-1 overflow-y-auto">
+              <SessionManager />
+            </div>
+          )}
+
           {/* ── HELP / FAQ ── */}
           {teamTab === "help" && !selected && !showMyProfile && (
             <div className="flex-1 overflow-y-auto p-5 sm:p-[28px_32px]">
@@ -956,6 +1022,26 @@ export default function TeamPortalClient() {
                     {/* Social Accounts */}
                     <div className="mt-6">
                       <SocialAccounts clientId={selected.id} />
+                    </div>
+
+                    {/* Data Export */}
+                    <div className="mt-6 bg-surface border border-border rounded-xl p-5">
+                      <h3 className="text-text font-heading text-[15px] font-bold m-0 mb-2">Data Export</h3>
+                      <p className="text-text-3 text-[12px] m-0 mb-3">Download all client data for backup or portability.</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => window.open(`/api/export?client_id=${selected.id}&format=csv`, "_blank")}
+                          className="bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[12px] font-semibold text-text-2 cursor-pointer hover:text-text transition-colors"
+                        >
+                          Export CSV (Cards)
+                        </button>
+                        <button
+                          onClick={() => window.open(`/api/export?client_id=${selected.id}&format=json`, "_blank")}
+                          className="bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[12px] font-semibold text-text-2 cursor-pointer hover:text-text transition-colors"
+                        >
+                          Export JSON (Full Data)
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

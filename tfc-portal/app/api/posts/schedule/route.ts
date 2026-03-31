@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireTeamMember } from "@/lib/auth-helpers";
+import { logActivity, ACTIONS } from "@/lib/activity-logger";
 
 // POST /api/posts/schedule
 export async function POST(req: NextRequest) {
@@ -52,6 +53,14 @@ export async function POST(req: NextRequest) {
       publish_date: scheduledFor,
     })
     .eq("id", cardId);
+
+  logActivity(admin, {
+    client_id: clientId,
+    actor_email: user.email!,
+    actor_type: "team",
+    action: ACTIONS.POST_SCHEDULED,
+    metadata: { card_id: cardId, platforms, scheduled_for: scheduledFor },
+  });
 
   return NextResponse.json(data, { status: 201 });
 }

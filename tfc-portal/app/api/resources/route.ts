@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
+import { logActivity, ACTIONS } from "@/lib/activity-logger";
 
 // GET /api/resources?client_id=xxx
 export async function GET(req: NextRequest) {
@@ -58,6 +59,15 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  logActivity(supabase, {
+    client_id,
+    actor_email: user.email!,
+    actor_type: "team",
+    action: ACTIONS.RESOURCE_ADDED,
+    metadata: { resource_id: data.id, name },
+  });
+
   return NextResponse.json(data);
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { sendApprovalEmail } from "@/lib/approval-emails";
+import { logActivity, ACTIONS } from "@/lib/activity-logger";
 
 export async function POST(
   req: NextRequest,
@@ -61,6 +62,15 @@ export async function POST(
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
+
+  logActivity(admin, {
+    client_id: card.client_id,
+    actor_email: user.email!,
+    actor_name: client.name,
+    actor_type: "client",
+    action: ACTIONS.CARD_APPROVED,
+    metadata: { card_id: cardId, title: card.title },
+  });
 
   // Get all team members assigned to this client for notifications
   const { data: assignments } = await admin

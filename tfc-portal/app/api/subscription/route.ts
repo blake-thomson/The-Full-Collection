@@ -16,6 +16,11 @@ export async function GET(req: NextRequest) {
 
   const admin = createSupabaseAdmin();
 
+  const userEmail = user.email;
+  if (!userEmail) {
+    return NextResponse.json({ error: "No email on session" }, { status: 401 });
+  }
+
   // Team members can pass a client_id to view any client's subscription
   const clientId = req.nextUrl.searchParams.get("client_id");
 
@@ -27,22 +32,30 @@ export async function GET(req: NextRequest) {
 
   if (clientId) {
     // Verify the requester is a team member
-    const { data: teamMember } = await admin
+    const { data: teamMember, error: tmError } = await admin
       .from("team_members")
       .select("id")
-      .eq("email", user.email!)
-      .single();
+      .eq("email", userEmail)
+      .maybeSingle();
+    if (tmError) {
+      console.error("Team member lookup error:", tmError);
+      return NextResponse.json({ error: "Authorization check failed" }, { status: 500 });
+    }
     if (!teamMember) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     clientQuery = clientQuery.eq("id", clientId);
   } else {
-    clientQuery = clientQuery.eq("email", user.email!);
+    clientQuery = clientQuery.eq("email", userEmail);
   }
 
-  const { data: client, error } = await clientQuery.single();
+  const { data: client, error } = await clientQuery.maybeSingle();
 
-  if (error || !client) {
+  if (error) {
+    console.error("Client query error:", error);
+    return NextResponse.json({ error: "Failed to load client" }, { status: 500 });
+  }
+  if (!client) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
 

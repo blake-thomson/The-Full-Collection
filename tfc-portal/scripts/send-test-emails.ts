@@ -5,13 +5,21 @@ import { TeamInviteEmail } from "../emails/TeamInvite";
 import { StatusNotificationEmail } from "../emails/StatusNotification";
 import * as React from "react";
 
-const resend = new Resend("re_4XrjUwWJ_NF3aK8CZt7aVCcAcBBkKNnRG");
+// Load from environment variables — never hardcode secrets
+const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "The Full Collection <hello@thefullcollection.com>";
-const TO = "blakethomson2@gmail.com";
+const TO = process.env.TEST_EMAIL || "blakethomson2@gmail.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://portal.thefullcollection.com";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function run() {
+  if (!process.env.RESEND_API_KEY) {
+    console.error("Missing RESEND_API_KEY env var.");
+    console.error("Run with: npx tsx --env-file=.env.local scripts/send-test-emails.ts");
+    process.exit(1);
+  }
+
   console.log("Sending email 1/4: Client Welcome...");
   await resend.emails.send({
     from: FROM,
@@ -21,10 +29,10 @@ async function run() {
       name: "Blake Thomson",
       email: TO,
       code: "TFC-TEST-WELCOME",
-      appUrl: "https://portal.thefullcollection.com",
+      appUrl: APP_URL,
     }),
   });
-  console.log("✅ Sent. Waiting 2 minutes...");
+  console.log("Sent. Waiting 2 minutes...");
   await delay(120_000);
 
   console.log("Sending email 2/4: Password Reset...");
@@ -34,11 +42,11 @@ async function run() {
     subject: "Reset Your Password — The Full Collection",
     react: React.createElement(PasswordResetEmail, {
       email: TO,
-      resetLink: "https://portal.thefullcollection.com/reset?token=test456",
-      appUrl: "https://portal.thefullcollection.com",
+      resetLink: `${APP_URL}/reset?token=test456`,
+      appUrl: APP_URL,
     }),
   });
-  console.log("✅ Sent. Waiting 2 minutes...");
+  console.log("Sent. Waiting 2 minutes...");
   await delay(120_000);
 
   console.log("Sending email 3/4: Team Invite...");
@@ -51,10 +59,10 @@ async function run() {
       inviterName: "TFC Admin",
       role: "editor",
       code: "TFC-TEST",
-      appUrl: "https://portal.thefullcollection.com",
+      appUrl: APP_URL,
     }),
   });
-  console.log("✅ Sent. Waiting 2 minutes...");
+  console.log("Sent. Waiting 2 minutes...");
   await delay(120_000);
 
   console.log("Sending email 4/4: Status Notification...");
@@ -67,10 +75,10 @@ async function run() {
       contentTitle: "Brand Shoot BTS",
       oldStatus: "Editing",
       newStatus: "Review",
-      appUrl: "https://portal.thefullcollection.com",
+      appUrl: APP_URL,
     }),
   });
-  console.log("✅ All 4 emails sent.");
+  console.log("All 4 emails sent.");
 }
 
 run().catch(console.error);

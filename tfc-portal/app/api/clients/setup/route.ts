@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+
+const SETUP_RATE_LIMIT = { maxRequests: 10, windowMs: 15 * 60 * 1000 };
 
 // POST /api/clients/setup — validate setup code (returns email, does not create user)
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`setup:${ip}`, SETUP_RATE_LIMIT);
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const { code } = await req.json();
   if (!code) {
     return NextResponse.json({ error: "Setup code is required." }, { status: 400 });
@@ -23,6 +30,10 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/clients/setup — activate: create auth user, sign in, clear code
 export async function PATCH(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`setup-activate:${ip}`, SETUP_RATE_LIMIT);
+  if (!rl.allowed) return rateLimitResponse(rl);
+
   const { code, password } = await req.json();
   if (!code || !password) {
     return NextResponse.json({ error: "Code and password are required." }, { status: 400 });

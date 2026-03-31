@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
 import { triggerKanbanNotifications, triggerShootDateNotifications } from "@/lib/kanban-notifications";
 import { executeTriggersForColumn } from "@/lib/execute-triggers";
+import { logActivity, ACTIONS } from "@/lib/activity-logger";
 import type { ColumnId } from "@/lib/constants";
 
 // GET /api/kanban?client_id=...
@@ -109,6 +110,15 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  logActivity(supabase, {
+    client_id,
+    actor_email: user.email!,
+    actor_type: "team",
+    action: ACTIONS.CARD_CREATED,
+    metadata: { card_id: data.id, title, column_id },
+  });
+
   return NextResponse.json(data);
 }
 
@@ -181,8 +191,27 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Fire notifications when a card moves to a new column (best-effort, non-blocking)
+  // Log activity
   const newColumnId = body.column_id as ColumnId | undefined;
+  if (newColumnId && newColumnId !== card.column_id) {
+    logActivity(supabase, {
+      client_id: card.client_id,
+      actor_email: user.email!,
+      actor_type: access.isTeam ? "team" : "client",
+      action: ACTIONS.CARD_MOVED,
+      metadata: { card_id: id, title: card.title, from: card.column_id, to: newColumnId },
+    });
+  } else if (Object.keys(updates).length > 1) {
+    logActivity(supabase, {
+      client_id: card.client_id,
+      actor_email: user.email!,
+      actor_type: access.isTeam ? "team" : "client",
+      action: ACTIONS.CARD_UPDATED,
+      metadata: { card_id: id, title: card.title, fields: Object.keys(updates).filter(k => k !== "updated_at") },
+    });
+  }
+
+  // Fire notifications when a card moves to a new column (best-effort, non-blocking)
   if (newColumnId && newColumnId !== card.column_id) {
     const cardTitle = (body.title as string | undefined) || card.title;
     triggerKanbanNotifications(card.client_id, cardTitle, newColumnId, id);
@@ -228,5 +257,14 @@ export async function DELETE(req: NextRequest) {
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  logActivity(supabase, {
+    client_id: card.client_id,
+    actor_email: user.email!,
+    actor_type: "team",
+    action: ACTIONS.CARD_DELETED,
+    metadata: { card_id: id },
+  });
+
   return NextResponse.json({ success: true });
 }

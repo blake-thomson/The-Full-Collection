@@ -93,7 +93,65 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // JSON format fallback
+  if (format === "json") {
+    // Full data export — all client data as JSON
+    const exportData: Record<string, unknown> = {
+      exported_at: new Date().toISOString(),
+      exported_by: user.email,
+      client_id: clientId,
+    };
+
+    // Client profile
+    const { data: client } = await admin
+      .from("clients")
+      .select("name, email, phone, address, subscription_tier, subscription_status, onboarding_complete, created_at")
+      .eq("id", clientId)
+      .single();
+    exportData.client = client;
+
+    // Cards
+    exportData.cards = cards || [];
+
+    // Comments for all cards
+    if (cards && cards.length > 0) {
+      const cardIds = cards.map((c: { id: string }) => c.id);
+      const { data: comments } = await admin
+        .from("card_comments")
+        .select("id, card_id, author_name, author_email, content, created_at")
+        .in("card_id", cardIds)
+        .order("created_at", { ascending: true });
+      exportData.comments = comments || [];
+    }
+
+    // Activity log
+    const { data: activity } = await admin
+      .from("activity_log")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    exportData.activity = activity || [];
+
+    // Resources
+    const { data: resources } = await admin
+      .from("resources")
+      .select("id, name, type, url, description, category, created_at, deleted_at")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false });
+    exportData.resources = resources || [];
+
+    const json = JSON.stringify(exportData, null, 2);
+    const clientName = client?.name || "client";
+    return new Response(json, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Disposition": `attachment; filename="${clientName.replace(/[^a-zA-Z0-9]/g, "_")}_export_${new Date().toISOString().slice(0, 10)}.json"`,
+      },
+    });
+  }
+
+  // Fallback: return cards as JSON
   return NextResponse.json(cards);
 }
 

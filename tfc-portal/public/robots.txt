@@ -1,0 +1,5 @@
+# The Full Collection — Client Portal
+# This is a private application. Do not index.
+
+User-agent: *
+Disallow: /

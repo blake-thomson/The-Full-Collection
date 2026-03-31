@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendClientWelcome } from "@/lib/resend";
+import { logActivity, ACTIONS } from "@/lib/activity-logger";
 import Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -117,6 +118,21 @@ export async function POST(req: NextRequest) {
     if (updateResult.error) {
       console.error("Failed to update subscription status on invoice.paid:", updateResult.error);
     }
+    // Log payment activity
+    const { data: paidClient } = await admin
+      .from("clients")
+      .select("id")
+      .eq("stripe_customer_id", invoice.customer as string)
+      .maybeSingle();
+    if (paidClient) {
+      logActivity(admin, {
+        client_id: paidClient.id,
+        actor_email: "stripe",
+        actor_type: "system",
+        action: ACTIONS.PAYMENT_RECEIVED,
+        metadata: { invoice_id: invoice.id, amount: invoice.amount_paid },
+      });
+    }
   }
 
   // Handle one-time checkout completions (invoice Pay Now flow)
@@ -139,6 +155,42 @@ export async function POST(req: NextRequest) {
       .from("clients")
       .update({ subscription_status: "canceled" })
       .eq("stripe_customer_id", subscription.customer as string);
+    const { data: canceledClient } = await admin
+      .from("clients")
+      .select("id")
+      .eq("stripe_customer_id", subscription.customer as string)
+      .maybeSingle();
+    if (canceledClient) {
+      logActivity(admin, {
+        client_id: canceledClient.id,
+        actor_email: "stripe",
+        actor_type: "system",
+        action: ACTIONS.SUBSCRIPTION_CANCELED,
+        metadata: { subscription_id: subscription.id },
+      });
+    }
+  }
+
+  if (event.type === "customer.subscription.updated") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const { data: updatedClient } = await admin
+      .from("clients")
+      .select("id")
+      .eq("stripe_customer_id", subscription.customer as string)
+      .maybeSingle();
+    if (updatedClient) {
+      await admin
+        .from("clients")
+        .update({ subscription_status: subscription.status })
+        .eq("id", updatedClient.id);
+      logActivity(admin, {
+        client_id: updatedClient.id,
+        actor_email: "stripe",
+        actor_type: "system",
+        action: ACTIONS.SUBSCRIPTION_UPDATED,
+        metadata: { subscription_id: subscription.id, status: subscription.status },
+      });
+    }
   }
 
   if (event.type === "invoice.payment_failed") {
@@ -147,6 +199,20 @@ export async function POST(req: NextRequest) {
       .from("clients")
       .update({ subscription_status: "past_due" })
       .eq("stripe_customer_id", invoice.customer as string);
+    const { data: failedClient } = await admin
+      .from("clients")
+      .select("id")
+      .eq("stripe_customer_id", invoice.customer as string)
+      .maybeSingle();
+    if (failedClient) {
+      logActivity(admin, {
+        client_id: failedClient.id,
+        actor_email: "stripe",
+        actor_type: "system",
+        action: ACTIONS.PAYMENT_FAILED,
+        metadata: { invoice_id: invoice.id },
+      });
+    }
   }
 
   return NextResponse.json({ received: true });
@@ -154,9 +220,11 @@ export async function POST(req: NextRequest) {
 
 function generateSetupCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
   let code = "";
   for (let i = 0; i < 8; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += chars[bytes[i] % chars.length];
   }
   return code;
 }

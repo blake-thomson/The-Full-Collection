@@ -230,12 +230,12 @@ export default function LoginClient() {
               <div className="bg-surface-3 border border-border-2 rounded-lg py-[11px] px-[14px] mt-[14px]">
                 <p className="text-text-3 text-xs m-0 leading-relaxed">
                   New client?{" "}
-                  <button
-                    onClick={() => router.push("/setup")}
-                    className="text-red bg-transparent border-none cursor-pointer text-xs font-semibold p-0 font-body"
+                  <a
+                    href="/setup"
+                    className="text-red text-xs font-semibold font-body no-underline"
                   >
                     Activate your account →
-                  </button>
+                  </a>
                 </p>
               </div>
             </>
