@@ -2,152 +2,118 @@
 
 import { motion } from "framer-motion";
 
-const TRACKS = [
-  {
-    label: "VIDEO",
-    color: "bg-red/30 border-red/40",
-    clips: [
-      { w: "w-20", shade: "bg-red/25", label: "Intro" },
-      { w: "w-10", shade: "bg-red/15", label: "" },
-      { w: "w-24", shade: "bg-red/25", label: "Main" },
-      { w: "w-8", shade: "bg-red/15", label: "" },
-      { w: "w-14", shade: "bg-red/20", label: "CTA" },
-    ],
-  },
-  {
-    label: "B-ROLL",
-    color: "bg-blue-500/20 border-blue-500/30",
-    clips: [
-      { w: "w-6", shade: "bg-blue-500/20", label: "" },
-      { w: "w-16", shade: "bg-blue-500/30", label: "Office" },
-      { w: "w-6", shade: "bg-blue-500/15", label: "" },
-      { w: "w-20", shade: "bg-blue-500/25", label: "Product" },
-      { w: "w-10", shade: "bg-blue-500/20", label: "" },
-    ],
-  },
-  {
-    label: "MUSIC",
-    color: "bg-purple-500/20 border-purple-500/30",
-    clips: [
-      { w: "w-full", shade: "bg-purple-500/15", label: "Background Track" },
-    ],
-  },
-  {
-    label: "SFX",
-    color: "bg-amber-500/20 border-amber-500/30",
-    clips: [
-      { w: "w-3", shade: "bg-amber-500/30", label: "" },
-      { w: "w-2", shade: "bg-amber-500/20", label: "" },
-      { w: "w-4", shade: "bg-amber-500/30", label: "" },
-      { w: "w-2", shade: "bg-amber-500/20", label: "" },
-      { w: "w-3", shade: "bg-amber-500/30", label: "" },
-    ],
-  },
-];
-
-const PANELS = [
-  { label: "Color", value: "Applied", dot: "bg-green-400" },
-  { label: "Captions", value: "On", dot: "bg-green-400" },
-  { label: "Export", value: "4K · H.264", dot: "bg-blue-400" },
-];
-
 export function EditingHeroGraphic() {
   return (
-    <div className="w-full h-full bg-[#0D0D0D] rounded-2xl overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.07]">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red" />
-          <span className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/50">TFC Portal — Editing</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <motion.div
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 1.8, repeat: Infinity }}
-            className="text-[8px] text-amber-400 font-bold"
+    <div className="w-full h-full bg-[#0D0D0D] rounded-2xl overflow-hidden flex flex-col items-center justify-center relative p-6">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-64 h-64 rounded-full bg-red/5 blur-3xl" />
+      </div>
+
+      {/* Rendering badge */}
+      <motion.div
+        animate={{ opacity: [1, 0.3, 1] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-4 right-4 flex items-center gap-1.5 bg-amber-400/10 border border-amber-400/25 rounded-full px-2.5 py-1"
+      >
+        <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        <span className="text-[8px] text-amber-400 font-bold tracking-widest">RENDERING</span>
+      </motion.div>
+
+      {/* Clapperboard SVG */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10"
+      >
+        <svg width="210" height="170" viewBox="0 0 210 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Board body */}
+          <rect x="25" y="55" width="160" height="105" rx="8" fill="#161616" stroke="#2a2a2a" strokeWidth="1.5" />
+
+          {/* Board interior — screen area */}
+          <rect x="35" y="68" width="140" height="82" rx="4" fill="#0d0d0d" stroke="#1e1e1e" strokeWidth="1" />
+
+          {/* Clapper arm (top part) */}
+          <motion.g
+            animate={{ rotate: [0, -18, 0] }}
+            transition={{ duration: 0.15, delay: 2, repeat: Infinity, repeatDelay: 3.5, ease: "easeIn" }}
+            style={{ transformOrigin: "25px 55px" }}
           >
-            ● RENDERING
-          </motion.div>
-        </div>
-      </div>
+            <rect x="25" y="30" width="160" height="28" rx="6" fill="#1a1a1a" stroke="#2a2a2a" strokeWidth="1.5" />
+            {/* Clapper stripes */}
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <rect
+                key={i}
+                x={25 + i * 23}
+                y="30"
+                width="11"
+                height="28"
+                rx={i === 0 ? "6 0 0 6" : i === 6 ? "0 6 6 0" : "0"}
+                fill={i % 2 === 0 ? "#e02020" : "#1a1a1a"}
+                opacity={i % 2 === 0 ? 0.85 : 1}
+              />
+            ))}
+            {/* Hinge dots */}
+            <circle cx="35" cy="58" r="3" fill="#222" stroke="#333" strokeWidth="1" />
+            <circle cx="175" cy="58" r="3" fill="#222" stroke="#333" strokeWidth="1" />
+          </motion.g>
 
-      {/* Preview frame */}
-      <div className="mx-4 mt-3 mb-2">
-        <div
-          className="relative bg-[#111] border border-white/10 rounded-xl overflow-hidden flex items-center justify-center"
-          style={{ aspectRatio: "16/9" }}
-        >
-          <div className="absolute inset-0 opacity-10"
-            style={{
-              background: "linear-gradient(135deg, #1a0000 0%, #000 50%, #00001a 100%)"
-            }}
-          />
-          {/* Simulated video frame content */}
-          <div className="flex flex-col items-center gap-1 z-10">
-            <div className="w-16 h-1 bg-white/10 rounded" />
-            <div className="w-10 h-1 bg-white/6 rounded" />
-          </div>
-          {/* Timecode */}
-          <div className="absolute bottom-1.5 left-2 font-mono text-[7px] text-white/40">00:01:24:12</div>
-          {/* Play button */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-              <svg width="8" height="8" viewBox="0 0 10 10" fill="rgba(255,255,255,0.6)">
-                <polygon points="3,1 9,5 3,9" />
-              </svg>
-            </div>
-          </div>
-          {/* Grade badge */}
-          <div className="absolute top-1.5 right-1.5 bg-purple-500/20 border border-purple-500/30 rounded px-1.5 py-0.5">
-            <span className="text-[6px] text-purple-300 font-bold">GRADED</span>
-          </div>
-        </div>
-      </div>
+          {/* Hinge line */}
+          <rect x="25" y="53" width="160" height="4" rx="1" fill="#111" stroke="#252525" strokeWidth="0.5" />
 
-      {/* Timeline */}
-      <div className="px-4 flex-1 overflow-hidden">
-        <div className="text-[8px] font-bold tracking-[0.12em] uppercase text-white/25 mb-1.5">Timeline</div>
-        <div className="flex flex-col gap-1">
-          {TRACKS.map((track, i) => (
-            <motion.div
-              key={track.label}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.3 }}
-              className="flex items-center gap-1.5 h-5"
-            >
-              <div className={`text-[6px] font-bold tracking-wide w-8 flex-shrink-0 text-right ${track.color.includes("red") ? "text-red/60" : track.color.includes("blue") ? "text-blue-400/60" : track.color.includes("purple") ? "text-purple-400/60" : "text-amber-400/60"}`}>
-                {track.label}
-              </div>
-              <div className="flex-1 flex items-center gap-0.5 h-full">
-                {track.clips.map((clip, j) => (
-                  <div
-                    key={j}
-                    className={`h-full ${clip.w} ${clip.shade} rounded-sm border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0`}
-                  >
-                    {clip.label && (
-                      <span className="text-[5px] text-white/40 truncate px-0.5">{clip.label}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+          {/* Board text content */}
+          <text x="44" y="86" fontSize="6" fill="#555" fontFamily="monospace">PRODUCTION</text>
+          <text x="44" y="96" fontSize="9" fill="white" fontFamily="monospace" fontWeight="bold">THE FULL COLLECTION</text>
 
-      {/* Bottom status bar */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/[0.07] mt-2">
-        {PANELS.map((p) => (
-          <div key={p.label} className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2 py-1">
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${p.dot}`} />
-            <span className="text-[7px] text-white/40">{p.label}:</span>
-            <span className="text-[7px] text-white/60 font-bold">{p.value}</span>
+          <line x1="35" y1="102" x2="175" y2="102" stroke="#222" strokeWidth="0.5" />
+
+          <text x="44" y="114" fontSize="6" fill="#555" fontFamily="monospace">SCENE</text>
+          <text x="44" y="124" fontSize="10" fill="#e02020" fontFamily="monospace" fontWeight="bold">03</text>
+
+          <line x1="90" y1="105" x2="90" y2="140" stroke="#222" strokeWidth="0.5" />
+
+          <text x="100" y="114" fontSize="6" fill="#555" fontFamily="monospace">TAKE</text>
+          <text x="100" y="124" fontSize="10" fill="white" fontFamily="monospace" fontWeight="bold">01</text>
+
+          <line x1="146" y1="105" x2="146" y2="140" stroke="#222" strokeWidth="0.5" />
+
+          <text x="152" y="114" fontSize="6" fill="#555" fontFamily="monospace">ROLL</text>
+          <text x="152" y="124" fontSize="10" fill="white" fontFamily="monospace" fontWeight="bold">A</text>
+
+          <line x1="35" y1="133" x2="175" y2="133" stroke="#222" strokeWidth="0.5" />
+
+          {/* Director / Camera lines */}
+          <text x="44" y="143" fontSize="6" fill="#555" fontFamily="monospace">DIRECTOR</text>
+          <text x="110" y="143" fontSize="6" fill="#555" fontFamily="monospace">CAMERA</text>
+          <text x="44" y="151" fontSize="6.5" fill="#888" fontFamily="monospace">TFC</text>
+          <text x="110" y="151" fontSize="6.5" fill="#888" fontFamily="monospace">A-CAM</text>
+        </svg>
+      </motion.div>
+
+      {/* Stats row */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="flex items-center gap-4 mt-2 z-10"
+      >
+        {[
+          { label: "4K", sub: "Export" },
+          { label: "24fps", sub: "Frame Rate" },
+          { label: "H.265", sub: "Codec" },
+        ].map((s) => (
+          <div key={s.label} className="text-center">
+            <div className="text-white font-heading font-[800] text-sm tracking-wide">{s.label}</div>
+            <div className="text-white/30 text-[9px] uppercase tracking-widest">{s.sub}</div>
           </div>
         ))}
-        <div className="ml-auto bg-red/20 border border-red/30 rounded-lg px-2 py-1">
-          <span className="text-[7px] font-bold text-red uppercase tracking-wide">Export</span>
-        </div>
+      </motion.div>
+
+      {/* Bottom label */}
+      <div className="absolute bottom-4 left-4 flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-red" />
+        <span className="text-[9px] font-bold tracking-[0.14em] uppercase text-white/30">TFC Post Production</span>
       </div>
     </div>
   );
