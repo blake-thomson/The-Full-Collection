@@ -123,10 +123,10 @@ export default function DashboardClient() {
           if (!c.profile_complete) { router.push("/welcome"); return; }
           setClient(c);
         } else {
-          setError("No account found. Please contact your team.");
+          setError("We couldn't find your account. Please reach out to The Full Collection team for help.");
         }
       } catch {
-        setError("Something went wrong. Please refresh the page.");
+        setError("Something went wrong on our end. Please refresh the page or contact The Full Collection team.");
       } finally {
         setLoading(false);
       }
@@ -213,7 +213,7 @@ export default function DashboardClient() {
     <div className="bg-bg h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-4 text-center px-6">
         <Logo size={48} />
-        <p className="text-secondary text-sm">{error || "Unable to load your account."}</p>
+        <p className="text-secondary text-sm">{error || "Unable to load your account. Please contact The Full Collection team."}</p>
         <button onClick={() => window.location.reload()} className="text-accent text-sm font-medium hover:underline">
           Try again
         </button>
