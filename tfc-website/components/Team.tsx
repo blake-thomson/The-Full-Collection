@@ -110,7 +110,7 @@ export function Team() {
           <div className="pointer-events-none absolute top-0 left-0 z-10 h-full w-24 md:w-32 bg-gradient-to-r from-white to-transparent" />
           <div className="pointer-events-none absolute top-0 right-0 z-10 h-full w-24 md:w-32 bg-gradient-to-l from-white to-transparent" />
 
-          <Marquee className="[--gap:1.5rem] [--duration:30s]" pauseOnHover={false}>
+          <Marquee className="[--gap:1.5rem] [--duration:30s] pt-4" pauseOnHover>
             {TEAM.map((member) => (
               <div
                 className="group flex w-60 md:w-64 shrink-0 flex-col transition-transform duration-300 hover:-translate-y-2"
