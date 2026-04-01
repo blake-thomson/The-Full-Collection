@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { ServicePageLayout, ServicePageData } from "@/components/ServicePageLayout";
 import { EditingHeroGraphic } from "@/components/EditingHeroGraphic";
+
+export const metadata: Metadata = {
+  title: "Video Editing & Post-Production Nashville",
+  description:
+    "Expert video editing and post-production services in Nashville, TN. Color grading, motion graphics, captions, and platform-ready exports — fast turnaround, unlimited revisions.",
+  alternates: { canonical: "https://thefullcollection.com/services/editing" },
+  openGraph: {
+    title: "Video Editing & Post-Production Nashville | The Full Collection",
+    description:
+      "Expert video editing in Nashville. Color grading, motion graphics, captions, and fast turnaround for brands that move fast.",
+    url: "https://thefullcollection.com/services/editing",
+  },
+};
 
 const data: ServicePageData = {
   heroVisual: <EditingHeroGraphic />,

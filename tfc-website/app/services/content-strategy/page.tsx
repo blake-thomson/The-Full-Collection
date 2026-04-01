@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { ServicePageLayout, ServicePageData } from "@/components/ServicePageLayout";
 import { IdeaMockup } from "@/components/PortalShowcase";
+
+export const metadata: Metadata = {
+  title: "Content Strategy Agency Nashville",
+  description:
+    "Data-driven content strategy for Nashville brands. We research your audience, study competitors, build content pillars, and create a system that compounds — so your content actually grows your business.",
+  alternates: { canonical: "https://thefullcollection.com/services/content-strategy" },
+  openGraph: {
+    title: "Content Strategy Agency Nashville | The Full Collection",
+    description:
+      "Data-driven content strategy for Nashville brands. Audience research, competitor analysis, and a content roadmap that actually drives growth.",
+    url: "https://thefullcollection.com/services/content-strategy",
+  },
+};
 
 const data: ServicePageData = {
   label: "Content Strategy",

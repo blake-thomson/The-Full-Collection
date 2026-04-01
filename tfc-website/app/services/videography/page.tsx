@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { ServicePageLayout, ServicePageData } from "@/components/ServicePageLayout";
 import { VideographyHeroGraphic } from "@/components/VideographyHeroGraphic";
+
+export const metadata: Metadata = {
+  title: "Nashville Videography & Video Production",
+  description:
+    "Professional video production in Nashville, TN. Short-form TikTok & Reels, long-form YouTube, and branded video content — produced at volume by The Full Collection.",
+  alternates: { canonical: "https://thefullcollection.com/services/videography" },
+  openGraph: {
+    title: "Nashville Videography & Video Production | The Full Collection",
+    description:
+      "Professional video production in Nashville. TikTok, Reels, YouTube, and branded content produced at scale.",
+    url: "https://thefullcollection.com/services/videography",
+  },
+};
 
 const data: ServicePageData = {
   heroVisual: <VideographyHeroGraphic />,

@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { ServicePageLayout, ServicePageData } from "@/components/ServicePageLayout";
 import { PhotographyHeroGraphic } from "@/components/PhotographyHeroGraphic";
+
+export const metadata: Metadata = {
+  title: "Brand & Content Photography Nashville",
+  description:
+    "Professional brand and content photography in Nashville, TN. Product shots, lifestyle, headshots, and campaign photography for businesses that want to stand out.",
+  alternates: { canonical: "https://thefullcollection.com/services/photography" },
+  openGraph: {
+    title: "Brand & Content Photography Nashville | The Full Collection",
+    description:
+      "Professional brand photography in Nashville. Product, lifestyle, headshots, and campaign imagery for growing businesses.",
+    url: "https://thefullcollection.com/services/photography",
+  },
+};
 
 const data: ServicePageData = {
   heroVisual: <PhotographyHeroGraphic />,

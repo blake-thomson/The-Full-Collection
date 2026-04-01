@@ -1,6 +1,20 @@
+import type { Metadata } from "next";
 import { ServicePageLayout, ServicePageData } from "@/components/ServicePageLayout";
 import { PortalShowcase } from "@/components/PortalShowcase";
 import { PortalHeroGraphic } from "@/components/PortalHeroGraphic";
+
+export const metadata: Metadata = {
+  title: "Proprietary Client Content Portal",
+  description:
+    "Every Full Collection client gets access to a custom-built client portal — real-time Kanban tracking, content calendar, direct messaging, analytics, AI script writing, and brand asset library.",
+  alternates: { canonical: "https://thefullcollection.com/services/client-portal" },
+  openGraph: {
+    title: "Proprietary Client Content Portal | The Full Collection",
+    description:
+      "Real-time content tracking, review, messaging, and analytics — all in one custom-built platform exclusive to TFC clients.",
+    url: "https://thefullcollection.com/services/client-portal",
+  },
+};
 
 const data: ServicePageData = {
   label: "Client Portal",

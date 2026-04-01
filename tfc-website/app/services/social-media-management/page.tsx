@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import { ServicePageLayout, ServicePageData } from "@/components/ServicePageLayout";
 import { SocialMediaHeroGraphic } from "@/components/SocialMediaHeroGraphic";
+
+export const metadata: Metadata = {
+  title: "Social Media Management Agency Nashville",
+  description:
+    "Full-service social media management in Nashville, TN. Content scheduling, community management, analytics, and growth strategy for brands that want to dominate TikTok, Instagram, and YouTube.",
+  alternates: { canonical: "https://thefullcollection.com/services/social-media-management" },
+  openGraph: {
+    title: "Social Media Management Agency Nashville | The Full Collection",
+    description:
+      "Full-service social media management in Nashville. TikTok, Instagram, YouTube — scheduling, community management, and growth strategy.",
+    url: "https://thefullcollection.com/services/social-media-management",
+  },
+};
 
 const data: ServicePageData = {
   label: "Social Media Management",
