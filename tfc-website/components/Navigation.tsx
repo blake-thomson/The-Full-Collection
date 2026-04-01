@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: "Team", href: "/#team" },
   { label: "Locations", href: "/#locations" },
   { label: "Contact", href: "/#contact" },
+  { label: "Book a Call", href: "/book" },
 ];
 
 export function Navigation() {
@@ -53,7 +54,7 @@ export function Navigation() {
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
+            {NAV_LINKS.filter((l) => l.label !== "Book a Call").map((link) => (
               <a
                 key={link.href}
                 href={link.href}
@@ -62,9 +63,9 @@ export function Navigation() {
                 {link.label}
               </a>
             ))}
-            <a href="/#contact" className="btn-primary ml-4 !py-2.5 !px-6 !text-[12px] !min-h-[40px] no-underline">
-              Get Started
-            </a>
+            <Link href="/book" className="btn-primary ml-4 !py-2.5 !px-6 !text-[12px] !min-h-[40px] no-underline">
+              Book a Call
+            </Link>
           </div>
 
           {/* Hamburger */}
@@ -112,16 +113,17 @@ export function Navigation() {
                 {link.label}
               </motion.a>
             ))}
-            <motion.a
-              href="/#contact"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              onClick={() => setMobileOpen(false)}
-              className="btn-primary mt-6 no-underline"
-            >
-              Get Started
-            </motion.a>
+            <Link href="/book">
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                onClick={() => setMobileOpen(false)}
+                className="btn-primary mt-6 no-underline block text-center"
+              >
+                Book a Call
+              </motion.span>
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>
