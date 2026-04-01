@@ -10,7 +10,7 @@ interface VSLProps {
 
 export function VSL({ videoUrl }: VSLProps = {}) {
   return (
-    <section id="vsl" className="bg-warm-900 overflow-hidden pt-6 pb-4 px-5 md:px-8">
+    <section id="vsl" className="bg-warm-900 overflow-hidden pt-6 pb-20 md:pb-28 lg:pb-36 px-5 md:px-8">
       <div className="container-tight">
         <FadeIn className="text-center mb-10">
           <div className="text-[11px] font-bold tracking-[0.14em] uppercase text-red-light mb-4">
