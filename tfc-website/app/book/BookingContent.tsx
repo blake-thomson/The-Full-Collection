@@ -6,10 +6,10 @@ import { motion } from "framer-motion";
 export function BookingContent() {
   return (
     <>
-      {/* GHL form embed script */}
+      {/* GHL form embed script — must load early so widget initialises correctly */}
       <Script
         src="https://link.msgsndr.com/js/form_embed.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
       />
 
       {/* Hero */}
@@ -52,11 +52,11 @@ export function BookingContent() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden"
+          className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl"
         >
           <iframe
             src="https://api.leadconnectorhq.com/widget/booking/Ebr4Ha96LRvTPKqUdkp6"
-            style={{ width: "100%", border: "none", overflow: "hidden", minHeight: "700px" }}
+            style={{ width: "100%", border: "none", minHeight: "800px", display: "block" }}
             scrolling="no"
             id="Ebr4Ha96LRvTPKqUdkp6_1775003104159"
             title="Book a call with The Full Collection"
