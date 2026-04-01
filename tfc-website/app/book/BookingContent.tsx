@@ -47,13 +47,8 @@ export function BookingContent() {
       </section>
 
       {/* Calendar embed */}
-      <section className="bg-warm-900 py-12 md:py-20 px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3 }}
-          className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl"
-        >
+      <section className="bg-warm-900 px-4 pb-12 md:pb-20">
+        <div className="max-w-4xl mx-auto">
           <iframe
             src="https://api.leadconnectorhq.com/widget/booking/Ebr4Ha96LRvTPKqUdkp6"
             style={{ width: "100%", border: "none", overflow: "hidden", minHeight: "800px", display: "block" }}
@@ -61,7 +56,7 @@ export function BookingContent() {
             id="Ebr4Ha96LRvTPKqUdkp6_1775013514055"
             title="Book a call with The Full Collection"
           />
-        </motion.div>
+        </div>
       </section>
 
       {/* Trust strip */}
