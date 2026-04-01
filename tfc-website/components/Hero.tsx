@@ -38,11 +38,9 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="heading-xl text-warm-900 mb-6"
         >
-          The Agency
+          We Build Content
           <br />
-          Behind the
-          <br />
-          <span className="text-red">Creators</span>
+          <span className="text-red">Machines</span>
         </motion.h1>
 
         {/* Subtitle */}
