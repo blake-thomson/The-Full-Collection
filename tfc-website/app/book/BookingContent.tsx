@@ -47,7 +47,7 @@ export function BookingContent() {
       </section>
 
       {/* Calendar embed */}
-      <section className="bg-warm-100 py-12 md:py-20 px-4">
+      <section className="bg-warm-900 py-12 md:py-20 px-4">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
