@@ -18,9 +18,13 @@ export function VSL({ videoUrl }: VSLProps = {}) {
           </div>
           <h2 className="font-heading font-[800] uppercase text-white tracking-[0.04em] leading-[1.05]"
             style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)" }}>
-            See What We Build
+            See What
             <br />
-            <span className="text-red">For Our Clients</span>
+            We Build
+            <br />
+            <span className="text-red">For Our
+            <br />
+            Clients</span>
           </h2>
           <p className="text-warm-400 text-base leading-relaxed max-w-xl mx-auto mt-4">
             Watch how The Full Collection takes brands from zero to a full content machine —
