@@ -81,7 +81,7 @@ export function VSL({ videoUrl }: VSLProps = {}) {
 
         {/* CTA below video */}
         <FadeIn className="text-center mt-10">
-          <a href="/#contact" className="btn-primary no-underline">
+          <a href="/book" className="btn-primary no-underline">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
               <line x1="16" y1="2" x2="16" y2="6" />

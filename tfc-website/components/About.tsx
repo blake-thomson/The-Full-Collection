@@ -50,7 +50,7 @@ export function About() {
               tracking system where you can see every video move from idea to published.
               No more chasing updates. No more wondering where your content is.
             </p>
-            <a href="#contact" className="btn-primary no-underline">
+            <a href="/book" className="btn-primary no-underline">
               Book a Call
             </a>
           </FadeInLeft>

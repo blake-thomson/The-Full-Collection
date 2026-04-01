@@ -62,7 +62,7 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.65 }}
           className="flex flex-col sm:flex-row gap-4 justify-center items-center"
         >
-          <a href="/#contact" className="btn-primary no-underline">
+          <a href="/book" className="btn-primary no-underline">
             Book a Call
           </a>
           <a href="/#work" className="btn-outline no-underline">

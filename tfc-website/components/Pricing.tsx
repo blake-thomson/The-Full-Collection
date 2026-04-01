@@ -125,7 +125,7 @@ export function Pricing() {
                 </div>
 
                 <a
-                  href="#contact"
+                  href="/book"
                   className={`block text-center py-3.5 rounded-lg font-bold text-[13px] tracking-[0.06em] uppercase transition-all duration-200 no-underline ${
                     tier.popular
                       ? "bg-red text-white hover:bg-red-light"
