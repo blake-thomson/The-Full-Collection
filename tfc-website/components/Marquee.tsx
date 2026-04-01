@@ -17,7 +17,7 @@ const WORDS = [
 
 export function Marquee() {
   return (
-    <div className="relative overflow-hidden py-6 bg-warm-900">
+    <div className="relative overflow-hidden py-6 bg-warm-900 w-full" style={{ transform: "translateZ(0)" }}>
       <motion.div
         animate={{ x: [0, -1920] }}
         transition={{ duration: 30, repeat: Infinity, ease: "linear" }}

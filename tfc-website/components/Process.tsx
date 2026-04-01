@@ -28,7 +28,7 @@ const STEPS = [
 
 export function Process() {
   return (
-    <section className="section bg-cream">
+    <section className="section bg-cream overflow-hidden">
       <div className="container-tight">
         <FadeIn className="text-center mb-16">
           <div className="label text-red mb-4">How It Works</div>
@@ -59,7 +59,7 @@ export function Process() {
                       viewport={{ once: true }}
                       transition={{ duration: 0.6 }}
                     >
-                      <div className="font-heading font-[800] text-red/15 text-6xl md:text-7xl leading-none mb-2">
+                      <div className="font-heading font-[800] text-red/15 text-4xl md:text-7xl leading-none mb-2">
                         {step.number}
                       </div>
                       <h3 className="heading-md text-warm-900 mb-3">{step.title}</h3>

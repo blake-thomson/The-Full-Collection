@@ -3,7 +3,11 @@
 @tailwind utilities;
 
 /* ─── Smooth scrolling ─── */
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
+}
 
 /* ─── Offset anchors so fixed nav doesn't cover headings ─── */
 section[id] {
@@ -22,6 +26,11 @@ body {
   background: #FFFFFF;
   font-family: 'DM Sans', sans-serif;
   color: #1A1917;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+main {
   overflow-x: hidden;
 }
 
@@ -44,15 +53,15 @@ body {
 /* ─── Typography ─── */
 .heading-xl {
   @apply font-heading font-[800] tracking-[0.06em] uppercase leading-[0.95];
-  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  font-size: clamp(2.2rem, 7vw, 5.5rem);
 }
 .heading-lg {
   @apply font-heading font-[800] tracking-[0.06em] uppercase leading-[1];
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
 }
 .heading-md {
   @apply font-heading font-[700] tracking-[0.04em] uppercase leading-[1.1];
-  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-size: clamp(1rem, 2vw, 1.5rem);
 }
 .heading-sm {
   @apply font-heading font-[700] tracking-[0.06em] uppercase text-sm leading-[1.2];

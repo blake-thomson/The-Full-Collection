@@ -73,7 +73,7 @@ export function Portal() {
                 <div className="font-heading font-[800] tracking-[0.28em] uppercase text-[12px]" style={{ color: "#E02020" }}>
                   THE FULL COLLECTION
                 </div>
-                <div className="flex gap-2">
+                <div className="hidden sm:flex gap-2">
                   {["Dashboard", "Calendar", "Messages", "Analytics"].map((tab) => (
                     <div
                       key={tab}
