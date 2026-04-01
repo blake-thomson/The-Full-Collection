@@ -14,11 +14,12 @@ interface Props {
   currentUserRole: string;
 }
 
-const ROLES = ["owner", "admin", "editor", "smm"];
+const ROLES = ["owner", "admin", "editor", "videographer", "smm"];
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   admin: "Admin",
   editor: "Editor",
+  videographer: "Videographer",
   smm: "SMM",
 };
 
@@ -27,8 +28,9 @@ export function PermissionsMatrix({ currentUserRole }: Props) {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
 
-  // Only show to owners
-  if (currentUserRole !== "owner") {
+  const isOwner = currentUserRole === "owner";
+  // Only show to owners and admins
+  if (!["owner", "admin"].includes(currentUserRole)) {
     return null;
   }
 
@@ -64,7 +66,7 @@ export function PermissionsMatrix({ currentUserRole }: Props) {
   }, [fetchPermissions]);
 
   const handleToggle = async (role: string, permission: string) => {
-    if (role === "owner") return;
+    if (role === "owner" || !isOwner) return;
     const key = `${role}-${permission}`;
     setToggling(key);
 
@@ -135,20 +137,23 @@ export function PermissionsMatrix({ currentUserRole }: Props) {
                   const key = `${role}-${perm}`;
                   const isToggling = toggling === key;
 
+                  const isRoleOwner = role === "owner";
+                  const canToggle = isOwner && !isRoleOwner;
+
                   return (
                     <td key={role} className="text-center py-2.5 px-3">
                       <button
                         onClick={() => handleToggle(role, perm)}
-                        disabled={isOwner || isToggling}
+                        disabled={!canToggle || isToggling}
                         className={`w-7 h-7 rounded-md flex items-center justify-center mx-auto transition-colors ${
-                          isOwner
+                          isRoleOwner
                             ? "bg-[#10B981]/20 cursor-not-allowed"
                             : granted
                             ? "bg-[#10B981]/20 hover:bg-[#10B981]/30"
                             : "bg-surface-2 hover:bg-surface-2/80"
                         } ${isToggling ? "opacity-50" : ""}`}
                       >
-                        {isOwner ? (
+                        {isRoleOwner ? (
                           <svg className="w-4 h-4 text-[#10B981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                           </svg>

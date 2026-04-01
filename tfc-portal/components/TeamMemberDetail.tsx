@@ -30,6 +30,7 @@ const ROLE_COLORS: Record<string, string> = {
   owner: "#F59E0B",
   admin: "#FF3B3B",
   editor: "#10B981",
+  videographer: "#EC4899",
   smm: "#8B5CF6",
   social_media_manager: "#8B5CF6",
 };
@@ -38,6 +39,7 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   admin: "Admin",
   editor: "Editor",
+  videographer: "Videographer",
   smm: "Social Media Manager",
   social_media_manager: "Social Media Manager",
 };
@@ -114,6 +116,22 @@ const ROLE_SOPS: Record<string, { summary: string; responsibilities: string[]; p
       { stage: "Editing", action: "Active editing phase" },
       { stage: "Edited QCC", action: "Submit for quality control review" },
       { stage: "Revise", action: "Notified — address client revision notes" },
+    ],
+  },
+  videographer: {
+    summary: "The Videographer handles all on-location and in-studio shoots, ensuring high-quality footage is delivered on schedule.",
+    responsibilities: [
+      "Coordinate and execute content shoots based on the shoot schedule",
+      "Ensure footage meets brand standards and client creative briefs",
+      "Upload raw footage to Google Drive promptly after each shoot",
+      "Move cards from Idea to Filmed once shooting is complete",
+      "Communicate shoot logistics and any schedule changes early",
+      "Maintain and organize camera equipment and gear",
+    ],
+    pipeline: [
+      { stage: "Idea", action: "Review shoot briefs and plan logistics" },
+      { stage: "Filming", action: "Execute the shoot on location or in studio" },
+      { stage: "Filmed", action: "Upload footage and move card forward" },
     ],
   },
   smm: {
