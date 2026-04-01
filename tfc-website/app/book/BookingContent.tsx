@@ -56,9 +56,9 @@ export function BookingContent() {
         >
           <iframe
             src="https://api.leadconnectorhq.com/widget/booking/Ebr4Ha96LRvTPKqUdkp6"
-            style={{ width: "100%", border: "none", minHeight: "800px", display: "block" }}
+            style={{ width: "100%", border: "none", overflow: "hidden", minHeight: "800px", display: "block" }}
             scrolling="no"
-            id="Ebr4Ha96LRvTPKqUdkp6_1775003104159"
+            id="Ebr4Ha96LRvTPKqUdkp6_1775013514055"
             title="Book a call with The Full Collection"
           />
         </motion.div>
