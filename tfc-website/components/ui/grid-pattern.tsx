@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   motion,
   useMotionTemplate,
@@ -33,7 +33,7 @@ export function GridPattern({
   duration = 4,
   ...props
 }: GridPatternProps) {
-  const id = useRef(`grid-${Math.random().toString(36).slice(2, 9)}`).current;
+  const id = useId();
   const containerRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [squares, setSquares] = useState<Array<[number, number, number]>>([]);
