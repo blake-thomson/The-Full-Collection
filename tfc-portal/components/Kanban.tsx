@@ -35,12 +35,13 @@ interface Props {
   clientName?: string;
   onCardClick?: (card: Card) => void;
   autoOpenCreate?: boolean;
+  onGenerateIdeas?: () => void;
 }
 
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
 const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
 
-export function Kanban({ clientId, editable = true, clientName, onCardClick, autoOpenCreate }: Props) {
+export function Kanban({ clientId, editable = true, clientName, onCardClick, autoOpenCreate, onGenerateIdeas }: Props) {
   const [cards, setCards] = useState<Card[]>([]);
   const [showCreateModal, setShowCreateModal] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ cardId: string; colId: string } | null>(null);
@@ -238,6 +239,18 @@ export function Kanban({ clientId, editable = true, clientName, onCardClick, aut
   return (
     <div className="h-full flex flex-col">
       <div className="px-[22px] py-3 border-b border-border flex items-center gap-5 shrink-0">
+        {onGenerateIdeas && (
+          <button
+            onClick={onGenerateIdeas}
+            className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-full text-[12px] font-semibold cursor-pointer transition-all border border-[#8B5CF6]/25 bg-[#8B5CF6]/8 text-[#8B5CF6] hover:bg-[#8B5CF6]/15 hover:border-[#8B5CF6]/40 font-body"
+            title="AI Idea Generator"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            Generate Ideas
+          </button>
+        )}
         {clientName && (
           <>
             <span className="text-text-2 text-xs">Editing board for <strong className="text-text">{clientName}</strong></span>
