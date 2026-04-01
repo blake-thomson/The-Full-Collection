@@ -235,7 +235,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
   }
 
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div style={{ maxWidth: 1000, padding: "0 24px" }}>
       {/* Back */}
       <button
         onClick={onBack}
