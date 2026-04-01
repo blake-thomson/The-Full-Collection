@@ -1,25 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { InfiniteGridHero } from "@/components/ui/grid-pattern";
 
 export function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-white">
-      {/* Subtle animated grid background */}
-      <div className="absolute inset-0 bg-grid opacity-60" />
-
-      {/* Floating accent shapes */}
-      <motion.div
-        animate={{ y: [0, -20, 0], rotate: [0, 3, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[15%] right-[10%] w-32 h-32 md:w-48 md:h-48 rounded-full bg-red/5 blur-xl"
-      />
-      <motion.div
-        animate={{ y: [0, 15, 0], rotate: [0, -2, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        className="absolute bottom-[20%] left-[5%] w-40 h-40 md:w-64 md:h-64 rounded-full bg-red/[0.03] blur-2xl"
-      />
-
+    <InfiniteGridHero className="min-h-screen flex items-center justify-center">
       <div className="relative z-10 max-w-5xl mx-auto text-center px-5 md:px-8 pt-20">
         {/* Label */}
         <motion.div
@@ -95,7 +81,6 @@ export function Hero() {
           ))}
         </motion.div>
       </div>
-
-    </section>
+    </InfiniteGridHero>
   );
 }
