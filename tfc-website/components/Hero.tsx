@@ -75,7 +75,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.9 }}
-          className="mt-20 flex flex-row justify-center items-start gap-12 md:gap-20 max-w-3xl mx-auto"
+          className="mt-12 flex flex-row justify-center items-start gap-12 md:gap-20 max-w-3xl mx-auto"
         >
           {[
             { number: "1B+", label: "Views Generated" },
