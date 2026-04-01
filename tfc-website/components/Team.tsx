@@ -141,9 +141,9 @@ export function Team() {
         {/* Testimonial */}
         <div className="mx-auto mt-20 max-w-3xl px-5 md:px-8 text-center">
           <p className="mb-8 font-heading font-[700] text-lg text-warm-900 leading-relaxed md:text-xl tracking-[0.02em]">
-            &ldquo;We don&apos;t just create content — we build entire content engines.
-            Every shoot, every edit, every post is part of a system designed to
-            grow your brand.&rdquo;
+            &ldquo;I&apos;m gonna say I love you every time I hang up the phone
+            and every time I leave the office because what we&apos;re building
+            here is truly family.&rdquo;
           </p>
           <div className="flex flex-col items-center gap-3">
             <div className="relative h-14 w-14 overflow-hidden rounded-full ring-2 ring-red/20">
