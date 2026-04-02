@@ -23,6 +23,7 @@ const ROLE_LABELS: Record<string, string> = {
   project_manager: "Project Manager",
   editor: "Editor",
   videographer: "Videographer",
+  smm: "Social Media Manager",
   social_media_manager: "Social Media Manager",
 };
 
@@ -32,6 +33,7 @@ const ROLE_COLORS: Record<string, string> = {
   project_manager: "#3B82F6",
   editor: "#10B981",
   videographer: "#EC4899",
+  smm: "#8B5CF6",
   social_media_manager: "#8B5CF6",
 };
 
@@ -40,6 +42,7 @@ const ROLE_NOTIFICATION_INFO: Record<string, string[]> = {
   editor: ["Filmed → notified", "Revise → notified"],
   project_manager: ["Filmed → notified"],
   videographer: ["Shoot date → notified"],
+  smm: ["Approved for Publish → notified"],
   social_media_manager: ["Approved for Publish → notified"],
   admin: ["Edited QCC → notified"],
   owner: ["Edited QCC → notified"],
