@@ -111,12 +111,22 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
 
   if (apiError || !data) {
     return (
-      <div className="flex items-center justify-center h-48 px-6">
-        <div className="text-center">
-          <p className="text-text-3 text-[13px] m-0">Unable to load billing info.</p>
-          {apiError && (
-            <p className="text-[#EF4444] text-[11px] mt-1 m-0 font-mono">{apiError}</p>
-          )}
+      <div className="flex flex-col h-full">
+        <div className="px-5 py-3.5 border-b border-border flex items-center gap-3 shrink-0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A8A49C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+            <line x1="1" y1="10" x2="23" y2="10" />
+          </svg>
+          <h3 className="text-text font-heading text-[15px] font-bold m-0">Billing</h3>
+        </div>
+        <div className="px-5 py-6">
+          <div className="text-center mb-4">
+            <p className="text-text-3 text-[13px] m-0">No billing info found for this client.</p>
+            {apiError && (
+              <p className="text-[#EF4444] text-[11px] mt-1 m-0 font-mono">{apiError}</p>
+            )}
+          </div>
+          {isTeam && clientId && <StripeLinkForm clientId={clientId} onLinked={load} />}
         </div>
       </div>
     );

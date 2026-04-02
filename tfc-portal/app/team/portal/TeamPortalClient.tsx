@@ -33,7 +33,7 @@ import { SessionManager } from "@/components/SessionManager";
 import { PerformanceAnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { PermissionsMatrix } from "@/components/PermissionsMatrix";
 import { AIInsights } from "@/components/AIInsights";
-import { COLUMNS } from "@/lib/constants";
+import { COLUMNS, normalizeContentType } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/constants";
 import { TIERS } from "@/lib/tiers";
 import type { TierKey } from "@/lib/tiers";
@@ -338,6 +338,7 @@ export default function TeamPortalClient() {
 
   const handleAcceptIdea = async (idea: { title: string; description: string; platform: string; content_style: string; content_type: string; priority: string; hook: string; cta: string }) => {
     if (!selected) return;
+    const normalizedType = normalizeContentType(idea.content_type || "");
     try {
       const res = await fetch("/api/kanban", {
         method: "POST",
@@ -347,9 +348,9 @@ export default function TeamPortalClient() {
           column_id: "idea",
           title: idea.title,
           description: `${idea.description}\n\nHook: "${idea.hook}"${idea.cta ? `\n\nCTA: ${idea.cta}` : ""}`,
-          platform: idea.platform,
+          platform: idea.platform?.toLowerCase().trim(),
           content_style: idea.content_style,
-          content_type: idea.content_type,
+          content_type: normalizedType,
           priority: idea.priority || "medium",
         }),
       });
