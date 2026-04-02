@@ -110,6 +110,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; role: string }[]>([]);
 
 
   // Inline AI state
@@ -121,6 +122,10 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/team-members").then((r) => r.ok ? r.json() : []).then(setTeamMembers).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !showAIPrompt) onClose(); };
@@ -461,7 +466,15 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           <div className="grid grid-cols-2 gap-3 mb-5">
             <div>
               <label className="tfc-label">Editor</label>
-              <input className="tfc-input" value={assignedEditor} onChange={(e) => setAssignedEditor(e.target.value)} placeholder="Editor name" />
+              <select className="tfc-input" value={assignedEditor} onChange={(e) => setAssignedEditor(e.target.value)} style={{ cursor: "pointer" }}>
+                <option value="">Select editor...</option>
+                {teamMembers
+                  .filter((m) => ["editor", "admin", "owner"].includes(m.role))
+                  .map((m) => (
+                    <option key={m.id} value={m.name}>{m.name}</option>
+                  ))
+                }
+              </select>
             </div>
             <div>
               <label className="tfc-label">Shoot Location</label>
