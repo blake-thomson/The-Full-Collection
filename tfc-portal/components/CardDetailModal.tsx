@@ -6,16 +6,6 @@ import PublishScheduler from "@/components/PublishScheduler";
 import TimeTracker from "@/components/TimeTracker";
 import { AICaptionGenerator } from "@/components/AICaptionGenerator";
 
-interface Comment {
-  id: string;
-  card_id: string;
-  author_email: string;
-  author_name: string;
-  author_type: "client" | "team";
-  content: string;
-  created_at: string;
-}
-
 interface Card {
   id: string;
   title: string;
@@ -117,10 +107,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [revisionNotes, setRevisionNotes] = useState(card.revision_notes || "");
 
   const [sendingToRevisions, setSendingToRevisions] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(true);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -134,10 +121,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadComments(); }, [card.id]);
-  useEffect(() => { commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [comments]);
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !showAIPrompt) onClose(); };
     window.addEventListener("keydown", handleKey);
@@ -146,15 +130,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   useEffect(() => {
     if (showAIPrompt && aiPromptRef.current) aiPromptRef.current.focus();
   }, [showAIPrompt]);
-
-  const loadComments = async () => {
-    setLoadingComments(true);
-    try {
-      const res = await fetch(`/api/kanban/comments?card_id=${card.id}`);
-      if (res.ok) setComments(await res.json());
-    } catch { setError("Failed to load comments."); }
-    setLoadingComments(false);
-  };
 
   // Handle space on empty description to trigger AI
   const handleDescriptionKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -266,22 +241,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
     if (!confirmDelete) { setConfirmDelete(true); return; }
     try { await fetch(`/api/kanban?id=${card.id}`, { method: "DELETE" }); onDelete(card.id); onClose(); }
     catch { setError("Failed to delete card."); }
-  };
-
-  const addComment = async () => {
-    if (!newComment.trim()) return;
-    try {
-      const res = await fetch("/api/kanban/comments", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ card_id: card.id, author_email: currentUser.email, author_name: currentUser.name, author_type: currentUser.type, content: newComment.trim() }),
-      });
-      if (res.ok) { const comment = await res.json(); setComments((prev) => [...prev, comment]); setNewComment(""); }
-    } catch { setError("Failed to add comment."); }
-  };
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
   };
 
   return (
@@ -563,38 +522,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
 
           {/* Error */}
           {error && <p className="text-[#EF4444] text-[12px] mb-4">{error}</p>}
-
-          {/* Divider */}
-          <div className="border-t border-border my-6" />
-
-          {/* Comments */}
-          <div>
-            <label className="tfc-label">Comments</label>
-            <div className="bg-surface-2 border border-border rounded-xl overflow-hidden mb-3" style={{ maxHeight: 240, overflowY: "auto" }}>
-              {loadingComments && <div className="p-6 text-text-3 text-[13px] text-center">Loading comments...</div>}
-              {!loadingComments && comments.length === 0 && <div className="p-6 text-text-3 text-[13px] text-center">No comments yet.</div>}
-              {!loadingComments && comments.map((c) => (
-                <div key={c.id} className="px-4 py-3 border-b border-border last:border-b-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-text text-[13px] font-semibold">{c.author_name}</span>
-                    <span className="text-[9px] font-bold tracking-[0.08em] uppercase py-[2px] px-[6px] rounded-[4px]"
-                      style={{ background: c.author_type === "team" ? "rgba(224,32,32,0.12)" : "rgba(168,164,156,0.12)", color: c.author_type === "team" ? "#FF3B3B" : "#A8A49C", border: `1px solid ${c.author_type === "team" ? "rgba(224,32,32,0.25)" : "rgba(168,164,156,0.25)"}` }}>
-                      {c.author_type}
-                    </span>
-                    <span className="text-text-3 text-[11px] ml-auto">{formatDate(c.created_at)}</span>
-                  </div>
-                  <p className="text-text-2 text-[13px] leading-[1.5] m-0">{c.content}</p>
-                </div>
-              ))}
-              <div ref={commentsEndRef} />
-            </div>
-            <div className="flex gap-2">
-              <textarea className="tfc-textarea flex-1" value={newComment} onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write a comment..." style={{ minHeight: 44, resize: "none" }}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addComment(); } }} />
-              <button className="tfc-btn shrink-0 self-end" style={{ padding: "10px 18px", fontSize: 11 }} onClick={addComment} disabled={!newComment.trim()}>Send</button>
-            </div>
-          </div>
         </div>
 
         {/* Publish Scheduler — shown when card is in the approved column */}
