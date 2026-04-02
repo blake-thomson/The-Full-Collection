@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { COLUMNS } from "@/lib/constants";
-import PublishScheduler from "@/components/PublishScheduler";
 import TimeTracker from "@/components/TimeTracker";
-import { AICaptionGenerator } from "@/components/AICaptionGenerator";
 
 interface Card {
   id: string;
@@ -286,20 +284,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             </div>
           </div>
 
-          {/* Review Content CTA for ready_review cards */}
-          {(card.column_id === "ready_review" || status === "ready_review") && (
-            <div className="mb-5">
-              <a
-                href={`/review/${card.id}`}
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl text-sm font-semibold no-underline transition-all"
-                style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                Review Content
-              </a>
-            </div>
-          )}
-
           {/* Description with inline AI */}
           <div className="mb-5">
             <label className="tfc-label flex items-center gap-2">
@@ -516,30 +500,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           {/* Error */}
           {error && <p className="text-[#EF4444] text-[12px] mb-4">{error}</p>}
         </div>
-
-        {/* Publish Scheduler — shown when card is in the approved column */}
-        {card.column_id === "approved" && (
-          <div className="px-6 py-4 border-t border-border">
-            <PublishScheduler
-              cardId={card.id}
-              clientId={clientId}
-              onScheduled={() => {
-                onUpdate({ ...card, column_id: "scheduled" });
-                onClose();
-              }}
-            />
-          </div>
-        )}
-
-        {/* AI Caption Generator — shown for team on approved/scheduled cards */}
-        {currentUser.type === "team" && (card.column_id === "approved" || card.column_id === "scheduled") && (
-          <div className="px-6 py-4 border-t border-border">
-            <AICaptionGenerator
-              cardId={card.id}
-              cardColumnId={card.column_id}
-            />
-          </div>
-        )}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0">
