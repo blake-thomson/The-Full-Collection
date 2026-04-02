@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { TIERS, TierKey } from "@/lib/tiers";
 
 interface SubscriptionData {
   tier: TierKey | null;
   status: string;
+  planName?: string | null;
+  priceAmount?: number | null;
+  priceInterval?: string | null;
   currentPeriodEnd?: number;
   currentPeriodStart?: number;
   startDate?: number;
@@ -120,6 +123,10 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
   }
 
   const tier = data.tier && TIERS[data.tier] ? TIERS[data.tier] : null;
+  // Stripe is the source of truth for plan name and price (works for standard tiers AND custom packages)
+  const displayName = data.planName || (tier ? tier.name : data.tier ?? "—");
+  const displayPrice = data.priceAmount ?? (tier ? tier.price * 100 : null); // normalize to cents
+  const displayInterval = data.priceInterval || "month";
   const statusCfg =
     STATUS_CONFIG[data.status] || STATUS_CONFIG["active"];
   const isOverdue = data.status === "past_due";
@@ -200,7 +207,7 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
                 Current Plan
               </p>
               <h4 className="text-text font-heading text-[22px] font-[800] m-0 leading-none">
-                {tier ? tier.name : data.tier ?? "—"}
+                {displayName}
               </h4>
             </div>
             <span
@@ -217,18 +224,14 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
 
           {/* Stats grid — 5 data points */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {/* Monthly Rate */}
+            {/* Rate */}
             <div className="bg-surface rounded-lg p-3">
               <p className="text-text-3 text-[10px] font-bold tracking-[0.08em] uppercase m-0 mb-1">
-                Monthly Rate
+                {displayInterval === "year" ? "Yearly Rate" : displayInterval === "week" ? "Weekly Rate" : "Monthly Rate"}
               </p>
               <p className="text-text font-heading text-[20px] font-[800] m-0">
-                {tier
-                  ? new Intl.NumberFormat("en-US", {
-                      style: "currency",
-                      currency: "USD",
-                      maximumFractionDigits: 0,
-                    }).format(tier.price)
+                {displayPrice != null
+                  ? formatCurrency(displayPrice)
                   : "—"}
               </p>
             </div>
@@ -316,10 +319,10 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
         </div>
       </div>
 
-      {/* No subscription fallback */}
-      {!tier && !data.currentPeriodEnd && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
+      {/* No subscription fallback — with Stripe linking for team */}
+      {!displayPrice && !data.currentPeriodEnd && (
+        <div className="px-5 py-6">
+          <div className="text-center mb-4">
             <svg
               width="32"
               height="32"
@@ -334,8 +337,91 @@ export function SubscriptionSection({ clientId, isTeam }: Props) {
             </svg>
             <p className="text-text-3 text-[13px] m-0">No active subscription.</p>
           </div>
+          {isTeam && clientId && <StripeLinkForm clientId={clientId} onLinked={load} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── Team-only form to manually link a Stripe customer ── */
+function StripeLinkForm({ clientId, onLinked }: { clientId: string; onLinked: () => void }) {
+  const [stripeId, setStripeId] = useState("");
+  const [linking, setLinking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleLink = async () => {
+    const trimmed = stripeId.trim();
+    if (!trimmed) return;
+    setLinking(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/clients/${clientId}/stripe-link`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stripeCustomerId: trimmed }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error || "Failed to link");
+      } else {
+        setSuccess(
+          json.subscriptionId
+            ? `Linked — subscription ${json.subscriptionStatus}`
+            : "Linked customer (no subscription found)"
+        );
+        setStripeId("");
+        setTimeout(() => onLinked(), 1200);
+      }
+    } catch {
+      setError("Network error");
+    }
+    setLinking(false);
+  };
+
+  return (
+    <div
+      className="rounded-xl p-5 mt-2"
+      style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)" }}
+    >
+      <p className="text-text-2 text-[13px] font-semibold m-0 mb-1">Link Stripe Customer</p>
+      <p className="text-text-3 text-[11px] m-0 mb-3">
+        Paste the Stripe customer ID (cus_...) to connect this client's billing.
+      </p>
+      <div className="flex gap-2">
+        <input
+          ref={inputRef}
+          type="text"
+          value={stripeId}
+          onChange={(e) => setStripeId(e.target.value)}
+          placeholder="cus_..."
+          className="flex-1 min-w-0 rounded-lg px-3 py-2 text-[13px] font-mono outline-none"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text)",
+          }}
+          onKeyDown={(e) => e.key === "Enter" && handleLink()}
+        />
+        <button
+          onClick={handleLink}
+          disabled={linking || !stripeId.trim()}
+          className="rounded-lg px-4 py-2 text-[12px] font-semibold cursor-pointer transition-opacity shrink-0"
+          style={{
+            background: "#635BFF",
+            color: "#fff",
+            border: "none",
+            opacity: linking || !stripeId.trim() ? 0.5 : 1,
+          }}
+        >
+          {linking ? "Linking..." : "Link"}
+        </button>
+      </div>
+      {error && <p className="text-[#EF4444] text-[11px] mt-2 m-0">{error}</p>}
+      {success && <p className="text-[#10B981] text-[11px] mt-2 m-0">{success}</p>}
     </div>
   );
 }

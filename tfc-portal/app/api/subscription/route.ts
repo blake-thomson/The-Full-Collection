@@ -60,20 +60,52 @@ export async function GET(req: NextRequest) {
   }
 
   if (!client.stripe_subscription_id) {
+    // No recurring subscription — still pull invoice history if they have a Stripe customer
+    let totalPaid = 0;
+    let totalPaymentCount = 0;
+    if (client.stripe_customer_id) {
+      try {
+        const invoices = await stripe.invoices.list({
+          customer: client.stripe_customer_id,
+          status: "paid",
+          limit: 100,
+        });
+        totalPaid = invoices.data.reduce(
+          (sum, inv) => sum + (inv.amount_paid ?? 0),
+          0
+        );
+        totalPaymentCount = invoices.data.length;
+      } catch (err) {
+        console.error("Failed to fetch invoices for non-subscription client:", err);
+      }
+    }
     return NextResponse.json({
       subscription: null,
       tier: client.subscription_tier,
-      status: client.subscription_status,
+      planName: client.subscription_tier
+        ? (client.subscription_tier.charAt(0).toUpperCase() + client.subscription_tier.slice(1))
+        : "Custom",
+      status: client.subscription_status || "active",
+      totalPaid,
+      totalPaymentCount,
     });
   }
 
   try {
-    // Fetch live subscription from Stripe
+    // Fetch live subscription from Stripe (expand product so we get the name)
     const subscription = await stripe.subscriptions.retrieve(
-      client.stripe_subscription_id
+      client.stripe_subscription_id,
+      { expand: ["items.data.price.product"] }
     );
     // In Stripe SDK v17+, period dates live on the first subscription item
     const item = subscription.items?.data?.[0] as any;
+
+    // Pull actual plan name and price from Stripe (works for standard tiers AND custom packages)
+    const stripePrice = item?.price;
+    const stripeProduct = stripePrice?.product as any;
+    const planName: string | null = stripeProduct?.name ?? null;
+    const priceAmount: number | null = stripePrice?.unit_amount ?? null;
+    const priceInterval: string | null = stripePrice?.recurring?.interval ?? null;
 
     // Fetch all paid invoices to compute total paid + payment count
     let totalPaid = 0;
@@ -125,6 +157,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       tier: client.subscription_tier,
       status: subscription.status,
+      planName,
+      priceAmount,
+      priceInterval,
       currentPeriodEnd,
       currentPeriodStart,
       startDate,

@@ -149,6 +149,51 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Auto-link Stripe when a subscription is created outside checkout (e.g. from Stripe dashboard)
+  if (event.type === "customer.subscription.created") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId = subscription.customer as string;
+
+    // Look up the customer email from Stripe
+    let customerEmail: string | null = null;
+    try {
+      const customer = await stripe.customers.retrieve(customerId);
+      if (!customer.deleted && customer.email) {
+        customerEmail = customer.email;
+      }
+    } catch (err) {
+      console.error("Failed to fetch Stripe customer for auto-link:", err);
+    }
+
+    if (customerEmail) {
+      // Find matching client by email that doesn't already have a subscription linked
+      const { data: matchedClient } = await admin
+        .from("clients")
+        .select("id, stripe_subscription_id")
+        .eq("email", customerEmail)
+        .maybeSingle();
+
+      if (matchedClient && !matchedClient.stripe_subscription_id) {
+        await admin
+          .from("clients")
+          .update({
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscription.id,
+            subscription_status: subscription.status,
+          })
+          .eq("id", matchedClient.id);
+
+        logActivity(admin, {
+          client_id: matchedClient.id,
+          actor_email: "stripe",
+          actor_type: "system",
+          action: ACTIONS.SUBSCRIPTION_CREATED,
+          metadata: { subscription_id: subscription.id, auto_linked: true },
+        });
+      }
+    }
+  }
+
   if (event.type === "customer.subscription.deleted") {
     const subscription = event.data.object as Stripe.Subscription;
     await admin
