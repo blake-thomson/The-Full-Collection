@@ -99,7 +99,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [referenceUrl, setReferenceUrl] = useState(card.reference_url || "");
   const [uneditedUrl, setUneditedUrl] = useState(card.unedited_url || "");
   const [editedVideoUrl, setEditedVideoUrl] = useState(card.edited_video_url || "");
-  const [assignedEditor, setAssignedEditor] = useState(card.assigned_editor || "");
   const [shootDate, setShootDate] = useState(card.shoot_date || "");
   const [editDeadline, setEditDeadline] = useState(card.edit_deadline || "");
   const [publishDate, setPublishDate] = useState(card.publish_date || "");
@@ -110,7 +109,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; role: string }[]>([]);
 
 
   // Inline AI state
@@ -122,10 +120,6 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   const backdropRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch("/api/team-members").then((r) => r.ok ? r.json() : []).then(setTeamMembers).catch(() => {});
-  }, []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !showAIPrompt) onClose(); };
@@ -200,7 +194,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           due_date: dueDate || null, priority,
           content_style: contentStyle || null, content_type: contentType || null,
           reference_url: referenceUrl.trim() || null, unedited_url: uneditedUrl.trim() || null,
-          edited_video_url: editedVideoUrl.trim() || null, assigned_editor: assignedEditor || null,
+          edited_video_url: editedVideoUrl.trim() || null,
           shoot_date: shootDate || null, edit_deadline: editDeadline || null,
           publish_date: publishDate || null, shoot_location: shootLocation.trim() || null,
           revision_notes: revisionNotes.trim() || null,
@@ -211,7 +205,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           due_date: dueDate || undefined, priority,
           content_style: contentStyle || undefined, content_type: contentType || undefined,
           reference_url: referenceUrl.trim() || undefined, unedited_url: uneditedUrl.trim() || undefined,
-          edited_video_url: editedVideoUrl.trim() || undefined, assigned_editor: assignedEditor || undefined,
+          edited_video_url: editedVideoUrl.trim() || undefined,
           shoot_date: shootDate || undefined, edit_deadline: editDeadline || undefined,
           publish_date: publishDate || undefined, shoot_location: shootLocation.trim() || undefined,
           revision_notes: revisionNotes.trim() || undefined,
@@ -462,24 +456,10 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           </div>
 
 
-          {/* Editor & Location */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <div>
-              <label className="tfc-label">Editor</label>
-              <select className="tfc-input" value={assignedEditor} onChange={(e) => setAssignedEditor(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="">Select editor...</option>
-                {teamMembers
-                  .filter((m) => ["editor", "admin", "owner"].includes(m.role))
-                  .map((m) => (
-                    <option key={m.id} value={m.name}>{m.name}</option>
-                  ))
-                }
-              </select>
-            </div>
-            <div>
-              <label className="tfc-label">Shoot Location</label>
-              <input className="tfc-input" value={shootLocation} onChange={(e) => setShootLocation(e.target.value)} placeholder="Address or location" />
-            </div>
+          {/* Shoot Location */}
+          <div className="mb-5">
+            <label className="tfc-label">Shoot Location</label>
+            <input className="tfc-input" value={shootLocation} onChange={(e) => setShootLocation(e.target.value)} placeholder="Address or location" />
           </div>
 
           {/* Dates & Times */}
