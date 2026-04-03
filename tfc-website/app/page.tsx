@@ -139,7 +139,7 @@ export default function Home() {
       />
       <Hero />
       <Marquee />
-      <VSL />
+      <VSL videoUrl="https://www.youtube.com/embed/TY19gFxz5PU" />
       <Services />
       <Portal />
       <Work />
