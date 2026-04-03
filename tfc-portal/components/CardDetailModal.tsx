@@ -50,6 +50,16 @@ const CONTENT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
+// Normalize legacy display-label values to DB enum values
+function normalizeContentType(raw: string): string {
+  const map: Record<string, string> = {
+    "short-form": "short_form", "short form": "short_form", "shortform": "short_form",
+    "long-form": "long_form", "long form": "long_form", "longform": "long_form",
+    "post/carousel": "carousel", "post": "carousel",
+  };
+  return map[raw.toLowerCase().trim()] || raw;
+}
+
 function getVideoEmbed(url: string): string | null {
   if (!url) return null;
   try {
@@ -99,7 +109,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [dueDate, setDueDate] = useState(card.due_date || "");
   const [priority, setPriority] = useState<"low" | "medium" | "high">(card.priority || "medium");
   const [contentStyle, setContentStyle] = useState(card.content_style || "");
-  const [contentType, setContentType] = useState(card.content_type || "");
+  const [contentType, setContentType] = useState(normalizeContentType(card.content_type || ""));
   const [referenceUrl, setReferenceUrl] = useState(card.reference_url || "");
   const [uneditedUrl, setUneditedUrl] = useState(card.unedited_url || "");
   const [editedVideoUrl, setEditedVideoUrl] = useState(card.edited_video_url || "");
@@ -214,6 +224,9 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
           publish_date: publishDate || undefined, shoot_location: shootLocation.trim() || undefined,
           revision_notes: revisionNotes.trim() || undefined,
         });
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || `Save failed (${res.status})`);
       }
     } catch { setError("Failed to save changes."); }
     setSaving(false);

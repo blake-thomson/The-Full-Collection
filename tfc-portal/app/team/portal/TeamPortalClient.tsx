@@ -27,7 +27,6 @@ import { ClientHealthDashboard } from "@/components/ClientHealthDashboard";
 import { TeamOverview } from "@/components/TeamOverview";
 import { ResearchBoard } from "@/components/ResearchBoard";
 import SocialAccounts from "@/components/SocialAccounts";
-import { SchedulingTab } from "@/components/SchedulingTab";
 import { AuditTrail } from "@/components/AuditTrail";
 import { SessionManager } from "@/components/SessionManager";
 
@@ -137,7 +136,6 @@ const NAV_ITEMS = [
 const BASE_CLIENT_TABS = [
   { id: "kanban", label: "Content Board" },
   { id: "calendar", label: "Calendar" },
-  { id: "scheduling", label: "Scheduling", roles: ["owner", "admin", "smm", "social_media_manager"] },
   { id: "intake", label: "Intake" },
   { id: "resources", label: "Resources" },
   { id: "assignments", label: "Assignments" },
@@ -893,9 +891,7 @@ export default function TeamPortalClient() {
                 </div>
                 {/* Tab row */}
                 <div className="px-4 sm:px-6 flex gap-0.5 overflow-x-auto hide-scrollbar">
-                  {BASE_CLIENT_TABS
-                    .filter((t) => !t.roles || (teamUser && t.roles.includes(teamUser.role)))
-                    .map((t) => (
+                  {BASE_CLIENT_TABS.map((t) => (
                     <button key={t.id} className={`nav-tab whitespace-nowrap${clientTab === t.id ? " active" : ""}`} onClick={() => setClientTab(t.id)}>
                       {t.label}
                     </button>
@@ -910,11 +906,6 @@ export default function TeamPortalClient() {
                 {/* Content Board */}
                 {clientTab === "kanban" && (
                   <Kanban key={kanbanKey} clientId={selected.id} clientName={selected.name} onCardClick={(card) => setSelectedCard(card as KanbanCard)} onGenerateIdeas={() => setShowIdeaSwiper(true)} />
-                )}
-
-                {/* Scheduling */}
-                {clientTab === "scheduling" && (
-                  <SchedulingTab clientId={selected.id} clientName={selected.name} />
                 )}
 
                 {/* Calendar */}
