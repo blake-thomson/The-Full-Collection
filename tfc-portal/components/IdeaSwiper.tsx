@@ -56,13 +56,6 @@ const VIDEO_TYPE_OPTIONS = [
   { id: "voiceover_broll", label: "Voiceover + B-Roll", desc: "Narration over footage" },
 ];
 
-const PLATFORM_OPTIONS = [
-  { id: "instagram", label: "Instagram", color: "#E1306C" },
-  { id: "tiktok", label: "TikTok", color: "#00F2EA" },
-  { id: "youtube", label: "YouTube", color: "#FF0000" },
-  { id: "linkedin", label: "LinkedIn", color: "#0A66C2" },
-];
-
 const TONE_OPTIONS = [
   { id: "serious", label: "Serious" },
   { id: "funny", label: "Funny" },
@@ -93,7 +86,6 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
   const [format, setFormat] = useState("short_form");
   const [styles, setStyles] = useState<string[]>([]);
   const [videoTypes, setVideoTypes] = useState<string[]>([]);
-  const [platforms, setPlatforms] = useState<string[]>([]);
   const [tone, setTone] = useState<string[]>([]);
   const [hookStyle, setHookStyle] = useState<string[]>([]);
   const [cta, setCta] = useState("");
@@ -136,7 +128,6 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
           format,
           styles,
           video_types: videoTypes,
-          platforms,
           tone,
           hook_style: hookStyle,
           cta,
@@ -161,7 +152,7 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
       setGenError("Network error. Please try again.");
     }
     setGenerating(false);
-  }, [clientId, format, styles, videoTypes, platforms, tone, hookStyle, cta, pillarFocus, topicHint, count]);
+  }, [clientId, format, styles, videoTypes, tone, hookStyle, cta, pillarFocus, topicHint, count]);
 
   /* ── Swipe handlers ── */
   const handleSwipe = (direction: "left" | "right") => {
@@ -220,7 +211,6 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
     { title: "What format?", subtitle: "Pick the length of content you want" },
     { title: "What style?", subtitle: "Select one or more content styles" },
     { title: "What type of videos?", subtitle: "How do you want these shot?" },
-    { title: "Which platforms?", subtitle: "Where will this content live?" },
     { title: "What tone?", subtitle: "How should these ideas feel?" },
     { title: "Hook style", subtitle: "How should each video open?" },
     { title: "Final details", subtitle: "CTA, pillars, and topic focus" },
@@ -359,31 +349,8 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
                 </div>
               )}
 
-              {/* Step 3: Platforms */}
+              {/* Step 3: Tone */}
               {step === 3 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {PLATFORM_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.id}
-                      onClick={() => toggle(platforms, setPlatforms, opt.id)}
-                      className={`text-left px-4 py-3.5 rounded-xl border transition-all cursor-pointer font-body ${
-                        platforms.includes(opt.id)
-                          ? "border-red bg-red/8 text-text"
-                          : "border-border bg-surface-2 text-text-2 hover:border-border-2 hover:text-text"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: opt.color }} />
-                        <span className="text-[14px] font-semibold">{opt.label}</span>
-                      </div>
-                    </button>
-                  ))}
-                  <p className="text-text-3 text-[11px] col-span-2 mt-1">Optional — leave empty for all platforms</p>
-                </div>
-              )}
-
-              {/* Step 4: Tone */}
-              {step === 4 && (
                 <div className="grid grid-cols-2 gap-2">
                   {TONE_OPTIONS.map((opt) => (
                     <button
@@ -402,8 +369,8 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
                 </div>
               )}
 
-              {/* Step 5: Hook Style */}
-              {step === 5 && (
+              {/* Step 4: Hook Style */}
+              {step === 4 && (
                 <div className="grid grid-cols-2 gap-2">
                   {HOOK_STYLE_OPTIONS.map((opt) => (
                     <button
@@ -422,8 +389,8 @@ export function IdeaSwiper({ clientId, clientPillars, onAcceptIdea, onClose }: P
                 </div>
               )}
 
-              {/* Step 6: Final Details */}
-              {step === 6 && (
+              {/* Step 5: Final Details */}
+              {step === 5 && (
                 <div className="space-y-4">
                   {/* CTA */}
                   <div>
