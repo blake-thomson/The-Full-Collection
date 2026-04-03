@@ -471,16 +471,20 @@ export function ResearchBoard({ clients }: Props) {
                     key={item.id}
                     className="break-inside-avoid mb-3 bg-surface border border-border rounded-xl overflow-hidden hover:border-[rgba(224,32,32,0.3)] transition-colors"
                   >
-                    {/* Video embed (YouTube only), platform link card, OG image, or gradient */}
+                    {/* YouTube thumbnail, platform link card, OG image, or gradient */}
                     {embed ? (
-                      <div className="w-full relative bg-black" style={{ aspectRatio: embed.aspect }}>
-                        <iframe
-                          src={embed.embedUrl}
-                          className="w-full h-full border-0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
+                      <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full relative bg-black group" style={{ aspectRatio: embed.aspect }}>
+                        <img
+                          src={`https://img.youtube.com/vi/${embed.embedUrl.split("/embed/")[1]}/hqdefault.jpg`}
+                          alt=""
+                          className="w-full h-full object-cover"
                         />
-                      </div>
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                          <div className="w-14 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,0,0,0.9)" }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="10 8 16 12 10 16 10 8" /></svg>
+                          </div>
+                        </div>
+                      </a>
                     ) : item.og_image ? (
                       <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full h-36 relative bg-surface-2">
                         <img

@@ -34,9 +34,15 @@ export async function GET(req: NextRequest) {
     const imageMatch2 = html.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:image"/);
     const titleMatch2 = html.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:title"/);
 
+    // Decode HTML entities (Instagram etc. encode URLs with &amp;)
+    const decodeHtml = (s: string | null | undefined): string | null => {
+      if (!s) return null;
+      return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#x2F;/g, "/");
+    };
+
     return NextResponse.json({
-      title: titleMatch?.[1] || titleMatch2?.[1] || null,
-      image: imageMatch?.[1] || imageMatch2?.[1] || null,
+      title: decodeHtml(titleMatch?.[1] || titleMatch2?.[1]),
+      image: decodeHtml(imageMatch?.[1] || imageMatch2?.[1]),
     });
   } catch {
     return NextResponse.json({ title: null, image: null });
