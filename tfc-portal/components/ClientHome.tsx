@@ -62,10 +62,12 @@ export function ClientHome({ clientName, cards, onCardClick, onMessageTeam }: Pr
 
   /* ── Coming up: next shoots and publishes ── */
   const upcoming = useMemo(() => {
-    const items: { card: Card; type: "publish" | "shoot"; date: string }[] = [];
+    const items: { card: Card; type: "publish" | "shoot" | "scheduled"; date: string }[] = [];
     for (const card of cards) {
       if (card.column_id === "published") continue;
-      if (card.publish_date && card.publish_date >= todayStr) {
+      if (card.column_id === "scheduled" && card.publish_date && card.publish_date >= todayStr) {
+        items.push({ card, type: "scheduled", date: card.publish_date });
+      } else if (card.publish_date && card.publish_date >= todayStr) {
         items.push({ card, type: "publish", date: card.publish_date });
       } else if (card.shoot_date && card.shoot_date >= todayStr) {
         items.push({ card, type: "shoot", date: card.shoot_date });
@@ -187,9 +189,9 @@ export function ClientHome({ clientName, cards, onCardClick, onMessageTeam }: Pr
                     style={{ borderBottom: i < upcoming.length - 1 ? "1px solid var(--color-border)" : "none" }}
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[12px]" style={{
-                      background: item.type === "shoot" ? "rgba(245,158,11,0.12)" : "rgba(16,185,129,0.12)",
+                      background: item.type === "shoot" ? "rgba(245,158,11,0.12)" : item.type === "scheduled" ? "rgba(6,182,212,0.12)" : "rgba(16,185,129,0.12)",
                     }}>
-                      {item.type === "shoot" ? "📷" : "📤"}
+                      {item.type === "shoot" ? "📷" : item.type === "scheduled" ? "📅" : "📤"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-text text-[13px] font-medium m-0 truncate">{item.card.title}</p>

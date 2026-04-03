@@ -42,7 +42,16 @@ interface Props {
 }
 
 const CONTENT_STYLES = ["Education", "Lifestyle", "Entertainment", "Vlog"];
-const CONTENT_TYPES = ["Short-form", "Long-form", "Post/Carousel"];
+const CONTENT_TYPES = [
+  { value: "short_form", label: "Short-form" },
+  { value: "long_form", label: "Long-form" },
+  { value: "carousel", label: "Post/Carousel" },
+  { value: "story", label: "Story" },
+  { value: "live", label: "Live" },
+  { value: "podcast", label: "Podcast" },
+  { value: "blog", label: "Blog" },
+  { value: "other", label: "Other" },
+];
 
 function getVideoEmbed(url: string): string | null {
   if (!url) return null;
@@ -397,7 +406,7 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
               <label className="tfc-label">Content Type</label>
               <select className="tfc-input" aria-label="Content Type" value={contentType} onChange={(e) => setContentType(e.target.value)} style={{ cursor: "pointer" }}>
                 <option value="">Select...</option>
-                {CONTENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                {CONTENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
@@ -446,19 +455,19 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             <input className="tfc-input" value={shootLocation} onChange={(e) => setShootLocation(e.target.value)} placeholder="Address or location" />
           </div>
 
-          {/* Dates & Times */}
+          {/* Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <div>
-              <label className="tfc-label">Shoot Date & Time</label>
-              <input type="datetime-local" className="tfc-input" aria-label="Shoot Date & Time" value={shootDate} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <label className="tfc-label">Shoot Date</label>
+              <input type="date" className="tfc-input" aria-label="Shoot Date" value={shootDate ? shootDate.slice(0, 10) : ""} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
               <label className="tfc-label">Edit Deadline</label>
-              <input type="datetime-local" className="tfc-input" aria-label="Edit Deadline" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
+              <input type="date" className="tfc-input" aria-label="Edit Deadline" value={editDeadline ? editDeadline.slice(0, 10) : ""} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
-              <label className="tfc-label">Publish Date & Time</label>
-              <input type="datetime-local" className="tfc-input" aria-label="Publish Date & Time" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <label className="tfc-label">Publish Date</label>
+              <input type="date" className="tfc-input" aria-label="Publish Date" value={publishDate ? publishDate.slice(0, 10) : ""} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
           </div>
 
