@@ -500,14 +500,34 @@ export function ResearchBoard({ clients }: Props) {
                         </div>
                       </a>
                     ) : item.og_image ? (
-                      /* OG image at the platform's native aspect ratio */
+                      /* OG image at the platform's native aspect ratio — re-fetches if expired */
                       <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full relative bg-surface-2 group" style={{ aspectRatio: aspect }}>
                         <img
                           src={item.og_image}
                           alt=""
                           className="w-full h-full object-cover"
-                          onError={(e) => {
+                          onError={async (e) => {
                             const img = e.target as HTMLImageElement;
+                            // Try re-fetching the OG image (Instagram URLs expire)
+                            if (item.url && !img.dataset.retried) {
+                              img.dataset.retried = "1";
+                              try {
+                                const res = await fetch(`/api/research/og-preview?url=${encodeURIComponent(item.url)}`);
+                                if (res.ok) {
+                                  const { image } = await res.json();
+                                  if (image && image !== item.og_image) {
+                                    img.src = image;
+                                    // Update in DB silently
+                                    fetch("/api/research", {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ id: item.id, og_image: image }),
+                                    });
+                                    return;
+                                  }
+                                }
+                              } catch { /* fall through to fallback */ }
+                            }
                             img.style.display = "none";
                             const fallback = img.nextElementSibling as HTMLElement;
                             if (fallback) fallback.style.display = "flex";
