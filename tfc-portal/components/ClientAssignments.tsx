@@ -39,8 +39,8 @@ const ROLE_COLORS: Record<string, string> = {
 
 // Which roles get notified for which column moves (for display purposes)
 const ROLE_NOTIFICATION_INFO: Record<string, string[]> = {
-  editor: ["Filmed → notified", "Revise → notified"],
   project_manager: ["Filmed → notified"],
+  editor: ["Ready to Edit → notified", "Revise → notified"],
   videographer: ["Shoot date → notified"],
   smm: ["Approved for Publish → notified"],
   social_media_manager: ["Approved for Publish → notified"],
@@ -335,14 +335,15 @@ export function ClientAssignments({ clientId }: { clientId: string }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[
-            { column: "Filmed", arrow: "→", roles: "Editors & Project Managers", color: "#3B82F6" },
+            { column: "Filmed", arrow: "→", roles: "Project Managers", color: "#3B82F6" },
+            { column: "Ready to Edit", arrow: "→", roles: "Editors", color: "#60A5FA" },
             { column: "Edited QCC", arrow: "→", roles: "Admins & Owners", color: "#A78BFA" },
             { column: "Ready for Review", arrow: "→", roles: "Client", color: "#EC4899" },
             { column: "Approved for Publish", arrow: "→", roles: "Social Media Managers", color: "#10B981" },
             { column: "Revise", arrow: "→", roles: "Editors", color: "#EF4444" },
             { column: "Scheduled", arrow: "→", roles: "Client", color: "#06B6D4" },
             { column: "Published", arrow: "→", roles: "Client", color: "var(--color-red)" },
-            { column: "Shoot Date", arrow: "→", roles: "Editors, Videographers, Admins & Owners", color: "#EC4899" },
+            { column: "Shoot Date", arrow: "→", roles: "Videographers", color: "#EC4899" },
           ].map(({ column, arrow, roles, color }) => (
             <div key={column} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
               <span style={{ color, fontWeight: 600, minWidth: 160 }}>{column}</span>

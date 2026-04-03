@@ -219,7 +219,7 @@ export async function triggerShootDateNotifications(
       .from("team_members")
       .select("email, role")
       .in("email", assignedEmails)
-      .in("role", ["editor", "videographer", "admin", "owner"]);
+      .in("role", ["videographer"]);
 
     if (!members?.length) return;
 
