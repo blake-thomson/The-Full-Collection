@@ -61,16 +61,28 @@ const FORMAT_LABELS: Record<string, string> = {
   long_form: "Long Form",
 };
 
-function getEmbed(url: string): { embedUrl: string; aspect: "9/16" | "16/9" | "1/1" } | null {
+// Detect YouTube videos and extract video ID + aspect ratio
+function getYouTubeInfo(url: string): { videoId: string; aspect: "9/16" | "16/9" } | null {
   if (!url) return null;
-  // YouTube long-form — only YouTube reliably supports iframe embeds
-  const ytLong = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-  if (ytLong) return { embedUrl: `https://www.youtube.com/embed/${ytLong[1]}`, aspect: "16/9" };
-  // YouTube Shorts (vertical)
   const ytShort = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
-  if (ytShort) return { embedUrl: `https://www.youtube.com/embed/${ytShort[1]}`, aspect: "9/16" };
-  // TikTok & Instagram block iframe embeds — use thumbnail link instead (handled in render)
+  if (ytShort) return { videoId: ytShort[1], aspect: "9/16" };
+  const ytLong = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (ytLong) return { videoId: ytLong[1], aspect: "16/9" };
   return null;
+}
+
+// Determine the correct aspect ratio for any URL
+function getAspectRatio(url: string): "9/16" | "16/9" | "1/1" {
+  if (!url) return "1/1";
+  // Vertical: TikTok, Instagram Reels, YouTube Shorts
+  if (/tiktok\.com/i.test(url)) return "9/16";
+  if (/instagram\.com\/reel\//i.test(url)) return "9/16";
+  if (/youtube\.com\/shorts\//i.test(url)) return "9/16";
+  // Horizontal: YouTube long-form
+  if (/youtube\.com\/watch|youtu\.be\//i.test(url)) return "16/9";
+  // Square: Instagram posts
+  if (/instagram\.com\/p\//i.test(url)) return "1/1";
+  return "1/1";
 }
 
 function getPlatformInfo(url: string): { platform: string; color: string; icon: string } | null {
@@ -463,19 +475,21 @@ export function ResearchBoard({ clients }: Props) {
                 const formatLabel = FORMAT_LABELS[item.platform || ""] || null;
                 const clientName = clients.find((c) => c.id === item.client_id)?.name;
                 const isExpanded = expandedNotes.has(item.id);
-                const embed = item.url ? getEmbed(item.url) : null;
+                const ytInfo = item.url ? getYouTubeInfo(item.url) : null;
                 const platformInfo = item.url ? getPlatformInfo(item.url) : null;
+                const aspect = item.url ? getAspectRatio(item.url) : "1/1";
 
                 return (
                   <div
                     key={item.id}
                     className="break-inside-avoid mb-3 bg-surface border border-border rounded-xl overflow-hidden hover:border-[rgba(224,32,32,0.3)] transition-colors"
                   >
-                    {/* YouTube thumbnail, platform link card, OG image, or gradient */}
-                    {embed ? (
-                      <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full relative bg-black group" style={{ aspectRatio: embed.aspect }}>
+                    {/* Content preview: YouTube thumbnail, OG image at correct aspect, platform card, or gradient */}
+                    {ytInfo ? (
+                      /* YouTube — thumbnail with play button at correct aspect ratio */
+                      <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full relative bg-black group" style={{ aspectRatio: ytInfo.aspect }}>
                         <img
-                          src={`https://img.youtube.com/vi/${embed.embedUrl.split("/embed/")[1]}/hqdefault.jpg`}
+                          src={`https://img.youtube.com/vi/${ytInfo.videoId}/hqdefault.jpg`}
                           alt=""
                           className="w-full h-full object-cover"
                         />
@@ -486,32 +500,37 @@ export function ResearchBoard({ clients }: Props) {
                         </div>
                       </a>
                     ) : item.og_image ? (
-                      <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full h-36 relative bg-surface-2">
+                      /* OG image at the platform's native aspect ratio */
+                      <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full relative bg-surface-2 group" style={{ aspectRatio: aspect }}>
                         <img
                           src={item.og_image}
                           alt=""
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            const container = (e.target as HTMLImageElement).parentElement;
-                            if (container) {
-                              container.innerHTML = `<div class="w-full h-full flex items-center justify-center" style="background: linear-gradient(135deg, ${typeColor}30, ${typeColor}10)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${typeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div>`;
-                            }
+                            const img = e.target as HTMLImageElement;
+                            img.style.display = "none";
+                            const fallback = img.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = "flex";
                           }}
                         />
+                        {/* Fallback shown when image fails */}
+                        <div className="absolute inset-0 items-center justify-center hidden" style={{ background: `linear-gradient(135deg, ${platformInfo?.color || typeColor}25, ${platformInfo?.color || typeColor}08)` }}>
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={platformInfo?.color || typeColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={platformInfo?.icon || "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"} /></svg>
+                        </div>
                         {platformInfo && (
                           <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold" style={{ background: "rgba(0,0,0,0.7)", color: platformInfo.color }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={platformInfo.icon} /></svg>
                             {platformInfo.platform}
                           </div>
                         )}
                       </a>
                     ) : platformInfo && item.url ? (
+                      /* No OG image — branded platform card at native aspect ratio */
                       <a href={item.url} target="_blank" rel="noopener noreferrer"
-                        className="block w-full h-24 flex items-center justify-center gap-2 no-underline transition-opacity hover:opacity-80"
-                        style={{ background: `linear-gradient(135deg, ${platformInfo.color}25, ${platformInfo.color}08)` }}
+                        className="w-full flex items-center justify-center gap-3 no-underline transition-opacity hover:opacity-80"
+                        style={{ aspectRatio: aspect, background: `linear-gradient(135deg, ${platformInfo.color}20, ${platformInfo.color}08)` }}
                       >
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={platformInfo.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={platformInfo.icon} /></svg>
-                        <span className="text-[12px] font-bold" style={{ color: platformInfo.color }}>{platformInfo.platform}</span>
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={platformInfo.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={platformInfo.icon} /></svg>
+                        <span className="text-[14px] font-bold" style={{ color: platformInfo.color }}>{platformInfo.platform}</span>
                       </a>
                     ) : (
                       <div
