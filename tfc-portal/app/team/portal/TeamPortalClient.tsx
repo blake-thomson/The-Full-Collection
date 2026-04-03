@@ -47,6 +47,9 @@ interface Client {
   onboarding_data: OnboardingData | null;
   created_at: string;
   subscription_tier?: string | null;
+  short_form_count?: number | null;
+  youtube_count?: number | null;
+  smm_included?: boolean | null;
   kanbanCards?: KanbanCard[];
 }
 
@@ -824,6 +827,9 @@ export default function TeamPortalClient() {
                   )}
                   {filtered.map((c) => {
                     const tier = c.subscription_tier && c.subscription_tier in TIERS ? TIERS[c.subscription_tier as TierKey] : null;
+                    const shortVal = c.short_form_count ?? tier?.shortForm ?? null;
+                    const ytVal = c.youtube_count ?? tier?.youtube ?? null;
+                    const smmVal = c.smm_included ?? tier?.smm ?? false;
                     return (
                     <div key={c.id} className="client-row" onClick={() => { setSelected(c); setClientTab("kanban"); }}>
                       <div className="flex items-center gap-2.5">
@@ -833,18 +839,57 @@ export default function TeamPortalClient() {
                           <span className="text-text-3 text-[11px] hidden sm:block">{c.email}</span>
                         </div>
                       </div>
-                      <span className="col-short text-text-2 text-[13px] hidden sm:inline font-medium">
-                        {tier ? (tier.shortForm === null ? "∞" : `${tier.shortForm}`) : "—"}
+                      <span
+                        className="col-short text-text-2 text-[13px] hidden sm:inline font-medium cursor-pointer hover:text-text transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const val = prompt("Short-form videos per month:", String(shortVal ?? ""));
+                          if (val === null) return;
+                          const num = val.trim() === "" ? null : parseInt(val, 10);
+                          if (val.trim() !== "" && isNaN(num as number)) return;
+                          fetch(`/api/clients/${c.id}/deliverables`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ short_form_count: num }),
+                          }).then((r) => { if (r.ok) setClients((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, short_form_count: num } : cl)); });
+                        }}
+                      >
+                        {shortVal != null ? shortVal : "—"}
                       </span>
-                      <span className="col-long text-text-2 text-[13px] hidden sm:inline font-medium">
-                        {tier ? (tier.youtube === 0 ? "—" : `${tier.youtube}`) : "—"}
+                      <span
+                        className="col-long text-text-2 text-[13px] hidden sm:inline font-medium cursor-pointer hover:text-text transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const val = prompt("YouTube videos per month:", String(ytVal ?? ""));
+                          if (val === null) return;
+                          const num = val.trim() === "" ? null : parseInt(val, 10);
+                          if (val.trim() !== "" && isNaN(num as number)) return;
+                          fetch(`/api/clients/${c.id}/deliverables`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ youtube_count: num }),
+                          }).then((r) => { if (r.ok) setClients((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, youtube_count: num } : cl)); });
+                        }}
+                      >
+                        {ytVal != null && ytVal > 0 ? ytVal : "—"}
                       </span>
-                      <span className="text-[11px] font-bold tracking-[0.06em] py-[3px] px-2 rounded-md inline-block"
-                        style={tier?.smm
+                      <span
+                        className="text-[11px] font-bold tracking-[0.06em] py-[3px] px-2 rounded-md inline-block cursor-pointer transition-colors"
+                        style={smmVal
                           ? { background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }
                           : { background: "rgba(168,164,156,0.08)", color: "#6B6763", border: "1px solid rgba(168,164,156,0.12)" }
-                        }>
-                        {tier?.smm ? "Yes" : "—"}
+                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newVal = !smmVal;
+                          fetch(`/api/clients/${c.id}/deliverables`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ smm_included: newVal }),
+                          }).then((r) => { if (r.ok) setClients((prev) => prev.map((cl) => cl.id === c.id ? { ...cl, smm_included: newVal } : cl)); });
+                        }}
+                      >
+                        {smmVal ? "Yes" : "—"}
                       </span>
                       <span
                         className="col-status text-[11px] font-bold tracking-[0.06em] py-[3px] px-2.5 rounded-md inline-block"

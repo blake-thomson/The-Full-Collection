@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { sendClientWelcome } from "@/lib/resend";
 import { logActivity, ACTIONS } from "@/lib/activity-logger";
+import { TIERS } from "@/lib/tiers";
 import Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest) {
       // Generate a one-time setup code (no auth user yet — created when they activate)
       const setupCode = generateSetupCode();
 
+      // Auto-populate deliverable counts from tier
+      const tierData = tier && tier in TIERS ? TIERS[tier as keyof typeof TIERS] : null;
+
       const { error: clientErr } = await admin.from("clients").insert({
         name,
         email,
@@ -63,6 +67,9 @@ export async function POST(req: NextRequest) {
         subscription_status: "active",
         subscription_tier: tier,
         setup_code: setupCode,
+        short_form_count: tierData?.shortForm ?? null,
+        youtube_count: tierData?.youtube ?? null,
+        smm_included: tierData?.smm ?? false,
       });
 
       if (clientErr) {
