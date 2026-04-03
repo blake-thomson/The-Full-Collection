@@ -19,6 +19,7 @@ import { DriveFiles } from "@/components/DriveFiles";
 import { TrashBin } from "@/components/TrashBin";
 import { FAQ } from "@/components/FAQ";
 import { IdeaSwiper } from "@/components/IdeaSwiper";
+import { OnboardingWalkthrough } from "@/components/OnboardingWalkthrough";
 import { useRealtimeKanban, useRealtimeMessages, useRealtimeNotifications } from "@/lib/use-realtime";
 
 import { PerformanceAnalyticsDashboard } from "@/components/AnalyticsDashboard";
@@ -98,6 +99,7 @@ export default function DashboardClient() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   const router = useRouter();
   const supabase = createBrowserSupabase();
@@ -133,6 +135,11 @@ export default function DashboardClient() {
           if (!c.onboarding_complete) { router.push("/onboarding"); return; }
           if (!c.profile_complete) { router.push("/welcome"); return; }
           setClient(c);
+          // Show walkthrough on first visit after onboarding
+          const walkthroughKey = `tfc_walkthrough_done_${c.id}`;
+          if (!localStorage.getItem(walkthroughKey)) {
+            setShowWalkthrough(true);
+          }
         } else {
           // No client record — this is a real problem, no point retrying
           setFatalError(true);
@@ -628,6 +635,19 @@ export default function DashboardClient() {
           clientPillars={(client.onboarding_data as OnboardingData | null)?.pillars?.filter(Boolean)}
           onAcceptIdea={handleAcceptIdea}
           onClose={() => setShowIdeaSwiper(false)}
+        />
+      )}
+
+      {showWalkthrough && (
+        <OnboardingWalkthrough
+          onComplete={() => {
+            setShowWalkthrough(false);
+            localStorage.setItem(`tfc_walkthrough_done_${client.id}`, "1");
+          }}
+          onStepChange={(tabId) => {
+            if (tabId === "profile") setTab("home"); // profile isn't a tab — stay on home
+            else setTab(tabId);
+          }}
         />
       )}
     </div>

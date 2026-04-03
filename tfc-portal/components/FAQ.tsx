@@ -44,15 +44,19 @@ const FAQ_DATA: FAQCategory[] = [
     items: [
       {
         q: "What do the different columns mean?",
-        a: "Your content moves through these stages: Idea (new concepts), Filmed (footage captured), Editing (editor is working on it), Edited QCC (quality check complete), Ready for Review (waiting for your approval), Approved for Publish (you've approved it), Revise (needs changes), Scheduled (set to go live), and Published (live on your platforms). Each stage has a color-coded dot so you can see progress at a glance.",
+        a: "Your content moves through these stages: Idea (new concepts), Filmed (footage captured), Ready to Edit (waiting for an editor), Editing (editor is working on it), Edited QCC (quality check complete), Ready for Review (waiting for your approval), Approved (you've approved it), Revise (needs changes), Scheduled (set to go live), and Published (live on your platforms). Each stage has a color-coded dot so you can see progress at a glance.",
       },
       {
         q: "How do I submit a new content idea?",
-        a: "From your Home tab, click the 'Submit an Idea' button, or go to the Content Tracker and click '+ New Card' in the Idea column. Fill in the title, description, and any details like platform preference, content style, or reference links. Your team will be notified automatically.",
+        a: "Go to the Content Tracker and click '+ Add card' on the Idea column. This opens the full card detail modal where you can fill in the title, description, and any details like platform preference, content style, or reference links. Your team will be notified automatically.",
+      },
+      {
+        q: "What is the AI Idea Generator?",
+        a: "Click 'Generate Ideas' above the Content Tracker to open the idea generator. Walk through a quick questionnaire about content format, style, video type, tone, and hook style, then AI generates ideas you can swipe through — swipe right to keep, left to skip. Accepted ideas are automatically added to your Idea column.",
       },
       {
         q: "How do I approve or request revisions on content?",
-        a: "When content reaches the 'Ready for Review' column, you'll receive a notification. Open the card to see all the details, preview links, and comments. You can leave a comment with your feedback. Your team will move it to 'Approved' or 'Revise' based on your input.",
+        a: "When content reaches the 'Ready for Review' column, you'll receive a notification. Open the card to see all the details and watch the edited video URL. Your team will move it to 'Approved' or 'Revise' based on your input.",
       },
       {
         q: "What does the AI writing assistant do?",
@@ -114,7 +118,11 @@ const FAQ_DATA: FAQCategory[] = [
       },
       {
         q: "How do I view my billing information?",
-        a: "Click your profile at the bottom of the sidebar, then select the 'Billing' tab. You'll see your current plan, billing period, total paid, and subscription status. If your payment is past due, you'll see a banner with instructions.",
+        a: "Click your profile at the bottom of the sidebar, then select the 'Billing' tab. You'll see your current plan name, monthly rate, next payment date, total paid, and subscription start date. You can also click 'Manage Billing & Payment Method' to update your payment info through Stripe. If your payment is past due, you'll see a banner with instructions.",
+      },
+      {
+        q: "What if I have a custom subscription?",
+        a: "If you have a custom package, your plan name and price will reflect exactly what was set up in Stripe. Your billing section always shows your actual plan details regardless of whether it's a standard tier or custom scope.",
       },
       {
         q: "What happens if my payment fails?",
@@ -219,7 +227,7 @@ const TEAM_FAQ_DATA: FAQCategory[] = [
     items: [
       {
         q: "What roles are available?",
-        a: "Owner (full control, gold badge), Admin (management access, red badge), Project Manager (operational oversight, blue badge), Editor (content editing, green badge), and Social Media Manager (publishing & scheduling, purple badge). Only Owners and Admins can invite members, delete members, and create clients.",
+        a: "Owner (full control, gold badge), Admin (management access, red badge), Project Manager (operational oversight, blue badge), Editor (content editing, green badge), Videographer (content capture, pink badge), and Social Media Manager (publishing & scheduling, purple badge). Only Owners and Admins can invite members, delete members, and create clients.",
       },
       {
         q: "How do I invite a new team member?",
@@ -237,11 +245,11 @@ const TEAM_FAQ_DATA: FAQCategory[] = [
     items: [
       {
         q: "How does the notification system work for card moves?",
-        a: "When content moves between columns, notifications are automatically sent based on role routing: 'Filmed' notifies editors, 'Edited QCC' notifies admins/owners, 'Ready for Review' notifies the client, 'Approved' notifies SMMs, 'Revise' notifies editors, 'Scheduled' and 'Published' notify the client. Only team members assigned to that client receive notifications.",
+        a: "When content moves between columns, notifications are automatically sent based on role routing: 'Filmed' notifies Project Managers, 'Ready to Edit' notifies Editors, 'Edited QCC' notifies Admins/Owners, 'Ready for Review' notifies the Client, 'Approved' notifies SMMs, 'Revise' notifies Editors, 'Scheduled' notifies the Client, 'Published' notifies the Client. When a Shoot Date is set, Videographers are notified. When an Edit Deadline is set, Editors are notified. Only team members assigned to that client receive notifications.",
       },
       {
         q: "How do I use the AI content generator?",
-        a: "Open the AI Writer from a card detail, or use the inline AI trigger (press space in an empty description). Choose a content type (video hook, script, caption, bio, CTA, content ideas) and optionally select a platform. The AI uses the client's onboarding data to generate tailored content.",
+        a: "Use the inline AI trigger (press space in an empty description) in a card detail. Choose a content type (video hook, script, caption, bio, CTA, content ideas) and optionally select a platform. The AI uses the client's onboarding data to generate tailored content.",
       },
     ],
   },
