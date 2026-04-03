@@ -96,6 +96,22 @@ function VideoPreview({ url, label }: { url: string; label: string }) {
   );
 }
 
+// Convert ISO timestamp (e.g. "2026-04-02T00:00:00+00:00") to datetime-local format ("2026-04-02T00:00")
+function toDatetimeLocal(val: string | undefined): string {
+  if (!val) return "";
+  // Already in datetime-local format
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val)) return val;
+  // ISO with timezone or seconds — parse and reformat
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${mins}`;
+}
+
 const PRIORITY_CONFIG = {
   low: { label: "Low", color: "#6B7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.25)" },
   medium: { label: "Medium", color: "#F59E0B", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.25)" },
@@ -113,9 +129,9 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
   const [referenceUrl, setReferenceUrl] = useState(card.reference_url || "");
   const [uneditedUrl, setUneditedUrl] = useState(card.unedited_url || "");
   const [editedVideoUrl, setEditedVideoUrl] = useState(card.edited_video_url || "");
-  const [shootDate, setShootDate] = useState(card.shoot_date || "");
-  const [editDeadline, setEditDeadline] = useState(card.edit_deadline || "");
-  const [publishDate, setPublishDate] = useState(card.publish_date || "");
+  const [shootDate, setShootDate] = useState(toDatetimeLocal(card.shoot_date));
+  const [editDeadline, setEditDeadline] = useState(toDatetimeLocal(card.edit_deadline));
+  const [publishDate, setPublishDate] = useState(toDatetimeLocal(card.publish_date));
   const [shootLocation, setShootLocation] = useState(card.shoot_location || "");
   const [revisionNotes, setRevisionNotes] = useState(card.revision_notes || "");
 
