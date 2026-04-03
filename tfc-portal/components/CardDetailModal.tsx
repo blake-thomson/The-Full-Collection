@@ -47,9 +47,6 @@ const CONTENT_TYPES = [
   { value: "long_form", label: "Long-form" },
   { value: "carousel", label: "Post/Carousel" },
   { value: "story", label: "Story" },
-  { value: "live", label: "Live" },
-  { value: "podcast", label: "Podcast" },
-  { value: "blog", label: "Blog" },
   { value: "other", label: "Other" },
 ];
 
@@ -455,19 +452,19 @@ export function CardDetailModal({ card, clientId, currentUser, onClose, onUpdate
             <input className="tfc-input" value={shootLocation} onChange={(e) => setShootLocation(e.target.value)} placeholder="Address or location" />
           </div>
 
-          {/* Dates */}
+          {/* Dates & Times */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <div>
-              <label className="tfc-label">Shoot Date</label>
-              <input type="date" className="tfc-input" aria-label="Shoot Date" value={shootDate ? shootDate.slice(0, 10) : ""} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <label className="tfc-label">Shoot Date & Time</label>
+              <input type="datetime-local" className="tfc-input" aria-label="Shoot Date & Time" value={shootDate} onChange={(e) => setShootDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
               <label className="tfc-label">Edit Deadline</label>
-              <input type="date" className="tfc-input" aria-label="Edit Deadline" value={editDeadline ? editDeadline.slice(0, 10) : ""} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
+              <input type="datetime-local" className="tfc-input" aria-label="Edit Deadline" value={editDeadline} onChange={(e) => setEditDeadline(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
             <div>
-              <label className="tfc-label">Publish Date</label>
-              <input type="date" className="tfc-input" aria-label="Publish Date" value={publishDate ? publishDate.slice(0, 10) : ""} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
+              <label className="tfc-label">Publish Date & Time</label>
+              <input type="datetime-local" className="tfc-input" aria-label="Publish Date & Time" value={publishDate} onChange={(e) => setPublishDate(e.target.value)} style={{ colorScheme: "dark" }} />
             </div>
           </div>
 

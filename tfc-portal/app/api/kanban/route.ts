@@ -63,8 +63,12 @@ export async function POST(req: NextRequest) {
 
   const dateFields = ["due_date", "shoot_date", "edit_deadline", "publish_date"] as const;
   for (const df of dateFields) {
-    if (body[df] && isNaN(Date.parse(body[df]))) {
-      return NextResponse.json({ error: `Invalid ${df}. Must be a valid ISO date string.` }, { status: 400 });
+    if (body[df]) {
+      if (isNaN(Date.parse(body[df]))) {
+        return NextResponse.json({ error: `Invalid ${df}. Must be a valid date string.` }, { status: 400 });
+      }
+      // DB columns are date type — strip time if datetime-local sends "2024-04-02T11:00"
+      body[df] = String(body[df]).slice(0, 10);
     }
   }
 
@@ -164,8 +168,12 @@ export async function PATCH(req: NextRequest) {
 
   const dateFields = ["due_date", "shoot_date", "edit_deadline", "publish_date"] as const;
   for (const df of dateFields) {
-    if (body[df] !== undefined && body[df] && isNaN(Date.parse(body[df]))) {
-      return NextResponse.json({ error: `Invalid ${df}. Must be a valid ISO date string.` }, { status: 400 });
+    if (body[df] !== undefined && body[df]) {
+      if (isNaN(Date.parse(body[df]))) {
+        return NextResponse.json({ error: `Invalid ${df}. Must be a valid date string.` }, { status: 400 });
+      }
+      // DB columns are date type — strip time if datetime-local sends "2024-04-02T11:00"
+      body[df] = String(body[df]).slice(0, 10);
     }
   }
 
