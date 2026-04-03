@@ -63,21 +63,23 @@ const FORMAT_LABELS: Record<string, string> = {
 
 function getEmbed(url: string): { embedUrl: string; aspect: "9/16" | "16/9" | "1/1" } | null {
   if (!url) return null;
-  // YouTube long-form
+  // YouTube long-form — only YouTube reliably supports iframe embeds
   const ytLong = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
   if (ytLong) return { embedUrl: `https://www.youtube.com/embed/${ytLong[1]}`, aspect: "16/9" };
   // YouTube Shorts (vertical)
   const ytShort = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
   if (ytShort) return { embedUrl: `https://www.youtube.com/embed/${ytShort[1]}`, aspect: "9/16" };
-  // TikTok (vertical)
-  const ttMatch = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
-  if (ttMatch) return { embedUrl: `https://www.tiktok.com/embed/v2/${ttMatch[1]}`, aspect: "9/16" };
-  // Instagram Reels (vertical)
-  const igReel = url.match(/instagram\.com\/reel\/([a-zA-Z0-9_-]+)/);
-  if (igReel) return { embedUrl: `https://www.instagram.com/reel/${igReel[1]}/embed`, aspect: "9/16" };
-  // Instagram Posts (square-ish)
-  const igPost = url.match(/instagram\.com\/p\/([a-zA-Z0-9_-]+)/);
-  if (igPost) return { embedUrl: `https://www.instagram.com/p/${igPost[1]}/embed`, aspect: "1/1" };
+  // TikTok & Instagram block iframe embeds — use thumbnail link instead (handled in render)
+  return null;
+}
+
+function getPlatformInfo(url: string): { platform: string; color: string; icon: string } | null {
+  if (!url) return null;
+  if (/tiktok\.com/i.test(url)) return { platform: "TikTok", color: "#00F2EA", icon: "M9 12a4 4 0 100 8 4 4 0 000-8zM15 2v7.5a4.5 4.5 0 004.5 4.5" };
+  if (/instagram\.com/i.test(url)) return { platform: "Instagram", color: "#E1306C", icon: "M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 01-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 017.8 2m-.2 2A3.6 3.6 0 004 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 003.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5M12 7a5 5 0 110 10 5 5 0 010-10m0 2a3 3 0 100 6 3 3 0 000-6" };
+  if (/youtube\.com|youtu\.be/i.test(url)) return { platform: "YouTube", color: "#FF0000", icon: "M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.4 19.6C5.12 20 12 20 12 20s6.88 0 8.6-.46a2.78 2.78 0 001.94-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" };
+  if (/linkedin\.com/i.test(url)) return { platform: "LinkedIn", color: "#0A66C2", icon: "M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 2a2 2 0 110 4 2 2 0 010-4z" };
+  if (/twitter\.com|x\.com/i.test(url)) return { platform: "X", color: "#1DA1F2", icon: "M23 3a10.9 10.9 0 01-3.14 1.53A4.48 4.48 0 0012 7.5v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" };
   return null;
 }
 
@@ -462,13 +464,14 @@ export function ResearchBoard({ clients }: Props) {
                 const clientName = clients.find((c) => c.id === item.client_id)?.name;
                 const isExpanded = expandedNotes.has(item.id);
                 const embed = item.url ? getEmbed(item.url) : null;
+                const platformInfo = item.url ? getPlatformInfo(item.url) : null;
 
                 return (
                   <div
                     key={item.id}
                     className="break-inside-avoid mb-3 bg-surface border border-border rounded-xl overflow-hidden hover:border-[rgba(224,32,32,0.3)] transition-colors"
                   >
-                    {/* Video embed at native aspect ratio, OG image, or gradient */}
+                    {/* Video embed (YouTube only), platform link card, OG image, or gradient */}
                     {embed ? (
                       <div className="w-full relative bg-black" style={{ aspectRatio: embed.aspect }}>
                         <iframe
@@ -479,14 +482,33 @@ export function ResearchBoard({ clients }: Props) {
                         />
                       </div>
                     ) : item.og_image ? (
-                      <div className="w-full h-36 relative">
+                      <a href={item.url || "#"} target="_blank" rel="noopener noreferrer" className="block w-full h-36 relative bg-surface-2">
                         <img
                           src={item.og_image}
                           alt=""
                           className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          onError={(e) => {
+                            const container = (e.target as HTMLImageElement).parentElement;
+                            if (container) {
+                              container.innerHTML = `<div class="w-full h-full flex items-center justify-center" style="background: linear-gradient(135deg, ${typeColor}30, ${typeColor}10)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${typeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div>`;
+                            }
+                          }}
                         />
-                      </div>
+                        {platformInfo && (
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold" style={{ background: "rgba(0,0,0,0.7)", color: platformInfo.color }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={platformInfo.icon} /></svg>
+                            {platformInfo.platform}
+                          </div>
+                        )}
+                      </a>
+                    ) : platformInfo && item.url ? (
+                      <a href={item.url} target="_blank" rel="noopener noreferrer"
+                        className="block w-full h-24 flex items-center justify-center gap-2 no-underline transition-opacity hover:opacity-80"
+                        style={{ background: `linear-gradient(135deg, ${platformInfo.color}25, ${platformInfo.color}08)` }}
+                      >
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={platformInfo.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={platformInfo.icon} /></svg>
+                        <span className="text-[12px] font-bold" style={{ color: platformInfo.color }}>{platformInfo.platform}</span>
+                      </a>
                     ) : (
                       <div
                         className="w-full h-20"
