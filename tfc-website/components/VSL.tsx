@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { FadeIn } from "./AnimatedSection";
 import { motion } from "framer-motion";
 
@@ -9,6 +10,28 @@ interface VSLProps {
 }
 
 export function VSL({ videoUrl }: VSLProps = {}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!videoUrl || !containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [videoUrl]);
+
+  const iframeSrc = videoUrl && isVisible
+    ? `${videoUrl}?autoplay=1&mute=1&rel=0`
+    : undefined;
+
   return (
     <section id="vsl" className="bg-warm-900 overflow-hidden pt-6 pb-20 md:pb-28 lg:pb-36 px-5 md:px-8">
       <div className="container-tight">
@@ -34,6 +57,7 @@ export function VSL({ videoUrl }: VSLProps = {}) {
 
         {/* Video container */}
         <motion.div
+          ref={containerRef}
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -43,13 +67,17 @@ export function VSL({ videoUrl }: VSLProps = {}) {
           <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40"
             style={{ aspectRatio: "16 / 9" }}>
             {videoUrl ? (
-              <iframe
-                src={videoUrl}
-                title="The Full Collection — Video Sales Letter"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-              />
+              iframeSrc ? (
+                <iframe
+                  src={iframeSrc}
+                  title="The Full Collection — Video Sales Letter"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-warm-800" />
+              )
             ) : (
               /* Placeholder — replace with real videoUrl when ready */
               <div className="absolute inset-0 bg-warm-800 flex flex-col items-center justify-center gap-4">
