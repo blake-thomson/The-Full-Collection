@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireClientAccess } from "@/lib/auth-helpers";
-import { triggerKanbanNotifications, triggerShootDateNotifications } from "@/lib/kanban-notifications";
+import { triggerKanbanNotifications, triggerShootDateNotifications, triggerEditDeadlineNotifications } from "@/lib/kanban-notifications";
 import { executeTriggersForColumn } from "@/lib/execute-triggers";
 import { logActivity, ACTIONS } from "@/lib/activity-logger";
 import type { ColumnId } from "@/lib/constants";
@@ -141,7 +141,7 @@ export async function PATCH(req: NextRequest) {
   // Verify card ownership before updating
   const { data: card } = await supabase
     .from("kanban_cards")
-    .select("client_id, column_id, title, shoot_date")
+    .select("client_id, column_id, title, shoot_date, edit_deadline")
     .eq("id", id)
     .single();
   if (!card) return NextResponse.json({ error: "Card not found" }, { status: 404 });
@@ -233,6 +233,12 @@ export async function PATCH(req: NextRequest) {
   if (body.shoot_date && body.shoot_date !== card.shoot_date) {
     const cardTitle = (body.title as string | undefined) || card.title;
     triggerShootDateNotifications(supabase, card.client_id, cardTitle, body.shoot_date, id);
+  }
+
+  // Fire edit deadline notifications when edit_deadline is newly set or changed
+  if (body.edit_deadline && body.edit_deadline !== card.edit_deadline) {
+    const cardTitle = (body.title as string | undefined) || card.title;
+    triggerEditDeadlineNotifications(supabase, card.client_id, cardTitle, body.edit_deadline, id);
   }
 
   return NextResponse.json(data);

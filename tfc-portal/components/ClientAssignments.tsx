@@ -40,7 +40,7 @@ const ROLE_COLORS: Record<string, string> = {
 // Which roles get notified for which column moves (for display purposes)
 const ROLE_NOTIFICATION_INFO: Record<string, string[]> = {
   project_manager: ["Filmed → notified"],
-  editor: ["Ready to Edit → notified", "Revise → notified"],
+  editor: ["Ready to Edit → notified", "Revise → notified", "Edit Deadline → notified"],
   videographer: ["Shoot date → notified"],
   smm: ["Approved for Publish → notified"],
   social_media_manager: ["Approved for Publish → notified"],
@@ -344,6 +344,7 @@ export function ClientAssignments({ clientId }: { clientId: string }) {
             { column: "Scheduled", arrow: "→", roles: "Client", color: "#06B6D4" },
             { column: "Published", arrow: "→", roles: "Client", color: "var(--color-red)" },
             { column: "Shoot Date", arrow: "→", roles: "Videographers", color: "#EC4899" },
+            { column: "Edit Deadline", arrow: "→", roles: "Editors", color: "#10B981" },
           ].map(({ column, arrow, roles, color }) => (
             <div key={column} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
               <span style={{ color, fontWeight: 600, minWidth: 160 }}>{column}</span>

@@ -237,3 +237,52 @@ export async function triggerShootDateNotifications(
     console.error("shoot-date-notifications: failed", err);
   }
 }
+
+/**
+ * Fires in-app notifications to editors assigned to a client
+ * when a card's edit_deadline is set or updated.
+ */
+export async function triggerEditDeadlineNotifications(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
+  clientId: string,
+  cardTitle: string,
+  editDeadline: string,
+  cardId: string
+): Promise<void> {
+  try {
+    const formatted = new Date(editDeadline).toLocaleDateString("en-US", {
+      weekday: "short", month: "short", day: "numeric",
+    });
+
+    const { data: assignments } = await supabase
+      .from("client_assignments")
+      .select("team_member_email")
+      .eq("client_id", clientId);
+
+    if (!assignments?.length) return;
+
+    const assignedEmails = assignments.map((a: { team_member_email: string }) => a.team_member_email);
+
+    const { data: members } = await supabase
+      .from("team_members")
+      .select("email, role")
+      .in("email", assignedEmails)
+      .in("role", ["editor"]);
+
+    if (!members?.length) return;
+
+    const notifications = members.map((m: { email: string; role: string }) => ({
+      recipient_email: m.email,
+      recipient_type: "team",
+      title: "Edit Deadline Set",
+      message: `"${cardTitle}" has an edit deadline of ${formatted}.`,
+      link: `/team/portal?card=${cardId}`,
+      type: "edit_deadline",
+    }));
+
+    await supabase.from("notifications").insert(notifications);
+  } catch (err) {
+    console.error("edit-deadline-notifications: failed", err);
+  }
+}
