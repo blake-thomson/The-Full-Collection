@@ -33,7 +33,7 @@ function HealthBadge({ days }: { days: number | null }) {
 
 const ROLE_COLOR: Record<string, string> = {
   owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6",
-  editor: "#10B981", social_media_manager: "#8B5CF6", smm: "#8B5CF6",
+  youtube_editor: "#10B981", short_form_editor: "#06B6D4", social_media_manager: "#8B5CF6", smm: "#8B5CF6",
 };
 
 export function ClientHealthDashboard({ clients, teamMembers }: Props) {
@@ -63,7 +63,7 @@ export function ClientHealthDashboard({ clients, teamMembers }: Props) {
 
     // Initialize all editors/SMMs
     teamMembers
-      .filter((m) => ["editor", "social_media_manager", "smm", "project_manager"].includes(m.role))
+      .filter((m) => ["youtube_editor", "short_form_editor", "social_media_manager", "smm", "project_manager"].includes(m.role))
       .forEach((m) => map.set(m.email, { cards: [], member: m }));
 
     // Count assigned cards

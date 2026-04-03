@@ -21,7 +21,8 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   admin: "Admin",
   project_manager: "Project Manager",
-  editor: "Editor",
+  youtube_editor: "YouTube Editor",
+  short_form_editor: "Short Form Editor",
   videographer: "Videographer",
   smm: "Social Media Manager",
   social_media_manager: "Social Media Manager",
@@ -31,7 +32,8 @@ const ROLE_COLORS: Record<string, string> = {
   owner: "#F59E0B",
   admin: "#FF3B3B",
   project_manager: "#3B82F6",
-  editor: "#10B981",
+  youtube_editor: "#10B981",
+  short_form_editor: "#06B6D4",
   videographer: "#EC4899",
   smm: "#8B5CF6",
   social_media_manager: "#8B5CF6",
@@ -40,7 +42,8 @@ const ROLE_COLORS: Record<string, string> = {
 // Which roles get notified for which column moves (for display purposes)
 const ROLE_NOTIFICATION_INFO: Record<string, string[]> = {
   project_manager: ["Filmed → notified"],
-  editor: ["Ready to Edit → notified", "Revise → notified", "Edit Deadline → notified"],
+  youtube_editor: ["Ready to Edit (long-form) → notified", "Revise (long-form) → notified", "Edit Deadline → notified"],
+  short_form_editor: ["Ready to Edit (short-form) → notified", "Revise (short-form) → notified", "Edit Deadline → notified"],
   videographer: ["Shoot date → notified"],
   smm: ["Approved for Publish → notified"],
   social_media_manager: ["Approved for Publish → notified"],
@@ -336,15 +339,15 @@ export function ClientAssignments({ clientId }: { clientId: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {[
             { column: "Filmed", arrow: "→", roles: "Project Managers", color: "#3B82F6" },
-            { column: "Ready to Edit", arrow: "→", roles: "Editors", color: "#60A5FA" },
+            { column: "Ready to Edit", arrow: "→", roles: "YouTube / Short Form Editors (by content type)", color: "#60A5FA" },
             { column: "Edited QCC", arrow: "→", roles: "Admins & Owners", color: "#A78BFA" },
             { column: "Ready for Review", arrow: "→", roles: "Client", color: "#EC4899" },
             { column: "Approved for Publish", arrow: "→", roles: "Social Media Managers", color: "#10B981" },
-            { column: "Revise", arrow: "→", roles: "Editors", color: "#EF4444" },
+            { column: "Revise", arrow: "→", roles: "YouTube / Short Form Editors (by content type)", color: "#EF4444" },
             { column: "Scheduled", arrow: "→", roles: "Client", color: "#06B6D4" },
             { column: "Published", arrow: "→", roles: "Client", color: "var(--color-red)" },
             { column: "Shoot Date", arrow: "→", roles: "Videographers", color: "#EC4899" },
-            { column: "Edit Deadline", arrow: "→", roles: "Editors", color: "#10B981" },
+            { column: "Edit Deadline", arrow: "→", roles: "YouTube / Short Form Editors (by content type)", color: "#10B981" },
           ].map(({ column, arrow, roles, color }) => (
             <div key={column} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
               <span style={{ color, fontWeight: 600, minWidth: 160 }}>{column}</span>

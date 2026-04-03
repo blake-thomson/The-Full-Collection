@@ -138,7 +138,7 @@ function FocusSection({ title, items, emptyMessage, onNavigate }: {
 export function TeamOverview({ teamUser, clients, allCards, allActivity, allTeamMembers, myAssignedClientIds, onNavigateToClient }: Props) {
   const [pulseTab, setPulseTab] = useState<"activity" | "health">("activity");
   const isAdmin = ["owner", "admin"].includes(teamUser.role);
-  const isEditor = teamUser.role === "editor";
+  const isEditor = ["youtube_editor", "short_form_editor"].includes(teamUser.role);
   const isSMM = ["smm", "social_media_manager"].includes(teamUser.role);
   const isPM = teamUser.role === "project_manager";
   const isVideographer = teamUser.role === "videographer";

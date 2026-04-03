@@ -18,6 +18,8 @@ type NotificationRule = {
   targetRoles?: string[];
   /** Whether to also notify the client directly */
   notifyClient?: boolean;
+  /** When true, filter target roles based on the card's content_type */
+  contentTypeAware?: boolean;
   title: (cardTitle: string) => string;
   message: (cardTitle: string) => string;
 };
@@ -33,7 +35,8 @@ const COLUMN_RULES: Partial<Record<ColumnId, NotificationRule>> = {
     message: (t) => `"${t}" has been filmed and is ready for the next step.`,
   },
   ready_to_edit: {
-    targetRoles: ["editor"],
+    targetRoles: ["youtube_editor", "short_form_editor"],
+    contentTypeAware: true,
     title: (t) => `Ready for Editing`,
     message: (t) => `"${t}" is ready for editing.`,
   },
@@ -53,7 +56,8 @@ const COLUMN_RULES: Partial<Record<ColumnId, NotificationRule>> = {
     message: (t) => `"${t}" has been approved and is ready to schedule.`,
   },
   revise: {
-    targetRoles: ["editor"],
+    targetRoles: ["youtube_editor", "short_form_editor"],
+    contentTypeAware: true,
     title: () => `Revision Requested`,
     message: (t) => `"${t}" has been sent back for revisions.`,
   },
@@ -68,6 +72,20 @@ const COLUMN_RULES: Partial<Record<ColumnId, NotificationRule>> = {
     message: (t) => `"${t}" is now published and live!`,
   },
 };
+
+/**
+ * Given a card's content_type, return only the editor roles that should
+ * receive notifications. Returns both editor types for null / unknown types.
+ */
+function filterEditorRolesByContentType(
+  contentType: string | null
+): string[] {
+  if (contentType === "long_form") return ["youtube_editor"];
+  if (contentType === "short_form" || contentType === "carousel" || contentType === "story")
+    return ["short_form_editor"];
+  // null, "other", or anything unexpected → notify both
+  return ["youtube_editor", "short_form_editor"];
+}
 
 /**
  * Fires in-app notifications when a kanban card moves to a new column.
@@ -90,6 +108,18 @@ export async function triggerKanbanNotifications(
     const title = rule.title(cardTitle);
     const message = rule.message(cardTitle);
 
+    // ── Resolve effective target roles (content-type-aware filtering) ─────────
+    let effectiveTargetRoles = rule.targetRoles;
+    if (rule.contentTypeAware && effectiveTargetRoles) {
+      const { data: card } = await admin
+        .from("kanban_cards")
+        .select("content_type")
+        .eq("id", cardId)
+        .maybeSingle();
+
+      effectiveTargetRoles = filterEditorRolesByContentType(card?.content_type ?? null);
+    }
+
     const notifications: Array<{
       recipient_email: string;
       recipient_type: string;
@@ -100,7 +130,7 @@ export async function triggerKanbanNotifications(
     }> = [];
 
     // ── Team member notifications ─────────────────────────────────────────────
-    if (rule.targetRoles && rule.targetRoles.length > 0) {
+    if (effectiveTargetRoles && effectiveTargetRoles.length > 0) {
       // Get all team members assigned to this client
       const { data: assignments } = await admin
         .from("client_assignments")
@@ -115,7 +145,7 @@ export async function triggerKanbanNotifications(
           .from("team_members")
           .select("email, role")
           .in("email", assignedEmails)
-          .in("role", rule.targetRoles);
+          .in("role", effectiveTargetRoles);
 
         if (members) {
           for (const member of members) {
@@ -264,11 +294,20 @@ export async function triggerEditDeadlineNotifications(
 
     const assignedEmails = assignments.map((a: { team_member_email: string }) => a.team_member_email);
 
+    // Fetch card content_type for editor role filtering
+    const { data: card } = await supabase
+      .from("kanban_cards")
+      .select("content_type")
+      .eq("id", cardId)
+      .maybeSingle();
+
+    const editorRoles = filterEditorRolesByContentType(card?.content_type ?? null);
+
     const { data: members } = await supabase
       .from("team_members")
       .select("email, role")
       .in("email", assignedEmails)
-      .in("role", ["editor"]);
+      .in("role", editorRoles);
 
     if (!members?.length) return;
 

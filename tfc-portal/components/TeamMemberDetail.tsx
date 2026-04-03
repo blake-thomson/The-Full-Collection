@@ -29,7 +29,8 @@ interface Props {
 const ROLE_COLORS: Record<string, string> = {
   owner: "#F59E0B",
   admin: "#FF3B3B",
-  editor: "#10B981",
+  youtube_editor: "#10B981",
+  short_form_editor: "#06B6D4",
   smm: "#8B5CF6",
   social_media_manager: "#8B5CF6",
 };
@@ -37,7 +38,8 @@ const ROLE_COLORS: Record<string, string> = {
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   admin: "Admin",
-  editor: "Editor",
+  youtube_editor: "YouTube Editor",
+  short_form_editor: "Short Form Editor",
   smm: "Social Media Manager",
   social_media_manager: "Social Media Manager",
 };
@@ -99,18 +101,35 @@ const ROLE_SOPS: Record<string, { summary: string; responsibilities: string[]; p
       { stage: "Revise", action: "Coordinate revision requests with editors" },
     ],
   },
-  editor: {
-    summary: "The Editor is responsible for all video editing, content production quality, and timely delivery.",
+  youtube_editor: {
+    summary: "The YouTube Editor is responsible for long-form video editing (YouTube videos), production quality, and timely delivery.",
     responsibilities: [
-      "Pick up footage when cards move to Filmed column",
-      "Edit video content to brand standards and client brief",
+      "Pick up long-form footage when cards move to Ready to Edit",
+      "Edit YouTube videos to brand standards and client brief",
       "Submit completed edits for QCC review",
       "Address revision requests promptly",
       "Maintain organized file management in Google Drive",
       "Meet all edit deadlines and communicate blockers early",
     ],
     pipeline: [
-      { stage: "Filmed", action: "Notified — pick up footage and begin editing" },
+      { stage: "Ready to Edit", action: "Notified — pick up long-form footage and begin editing" },
+      { stage: "Editing", action: "Active editing phase" },
+      { stage: "Edited QCC", action: "Submit for quality control review" },
+      { stage: "Revise", action: "Notified — address client revision notes" },
+    ],
+  },
+  short_form_editor: {
+    summary: "The Short Form Editor is responsible for editing reels, TikToks, and YouTube Shorts — fast-paced, short-form content.",
+    responsibilities: [
+      "Pick up short-form footage when cards move to Ready to Edit",
+      "Edit reels, TikToks, and Shorts to brand standards and client brief",
+      "Submit completed edits for QCC review",
+      "Address revision requests promptly",
+      "Maintain organized file management in Google Drive",
+      "Meet all edit deadlines and communicate blockers early",
+    ],
+    pipeline: [
+      { stage: "Ready to Edit", action: "Notified — pick up short-form footage and begin editing" },
       { stage: "Editing", action: "Active editing phase" },
       { stage: "Edited QCC", action: "Submit for quality control review" },
       { stage: "Revise", action: "Notified — address client revision notes" },
@@ -521,7 +540,7 @@ export function TeamMemberDetail({ memberId, currentUserEmail, currentUserRole, 
             }}>
               <div style={{ color: "#5A5652", fontSize: 14 }}>No active work items.</div>
               <div style={{ color: "#3A3632", fontSize: 12, marginTop: 6 }}>
-                {member.role === "editor"
+                {["youtube_editor", "short_form_editor"].includes(member.role)
                   ? "Cards will appear here when assigned_editor is set to this member."
                   : "Cards from assigned clients will appear here."}
               </div>

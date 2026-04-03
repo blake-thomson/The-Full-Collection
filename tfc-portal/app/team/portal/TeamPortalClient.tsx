@@ -146,7 +146,7 @@ const BASE_CLIENT_TABS = [
   { id: "trash", label: "Trash" },
 ];
 
-const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", editor: "#10B981", videographer: "#EC4899", smm: "#8B5CF6", social_media_manager: "#8B5CF6" };
+const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", youtube_editor: "#10B981", short_form_editor: "#06B6D4", videographer: "#EC4899", smm: "#8B5CF6", social_media_manager: "#8B5CF6" };
 
 export default function TeamPortalClient() {
   const searchParams = useSearchParams();

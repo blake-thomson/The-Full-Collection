@@ -46,7 +46,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
   const [showInvite, setShowInvite] = useState(false);
   const [invName, setInvName] = useState("");
   const [invEmail, setInvEmail] = useState("");
-  const [invRole, setInvRole] = useState("editor");
+  const [invRole, setInvRole] = useState("short_form_editor");
   const [invErr, setInvErr] = useState("");
   const [lastInvite, setLastInvite] = useState<{ name: string; email: string; code: string; role: string } | null>(null);
   const [showNewClient, setShowNewClient] = useState(false);
@@ -96,7 +96,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
     const data = await res.json();
     if (!res.ok) { setInvErr(data.error || "Failed to create invite."); return; }
 
-    setInvName(""); setInvEmail(""); setInvRole("editor");
+    setInvName(""); setInvEmail(""); setInvRole("short_form_editor");
     setShowInvite(false);
     setLastInvite({ name, email, code: data.code, role: invRole });
     load();
@@ -148,7 +148,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
     if (res.ok) load();
   };
 
-  const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", editor: "#10B981", smm: "#8B5CF6", videographer: "#EC4899" };
+  const ROLE_COLOR: Record<string, string> = { owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6", youtube_editor: "#10B981", short_form_editor: "#06B6D4", smm: "#8B5CF6", videographer: "#EC4899" };
   const pendingInvites = invites.filter((i) => !i.used);
 
   if (selectedMemberId) {
@@ -211,9 +211,9 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
               <div className="mb-[18px]">
                 <label className="tfc-label">Role</label>
                 <div className="flex gap-2">
-                  {(teamUser.role === "owner" ? ["admin", "project_manager", "editor", "videographer", "smm"] : ["editor", "videographer", "smm"]).map((r) => (
+                  {(teamUser.role === "owner" ? ["admin", "project_manager", "youtube_editor", "short_form_editor", "videographer", "smm"] : ["youtube_editor", "short_form_editor", "videographer", "smm"]).map((r) => (
                     <button key={r} className={`tfc-pill capitalize${invRole === r ? " active" : ""}`} onClick={() => setInvRole(r)}>
-                      {r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r === "videographer" ? "Videographer" : r}
+                      {r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r === "youtube_editor" ? "YouTube Editor" : r === "short_form_editor" ? "Short Form Editor" : r === "videographer" ? "Videographer" : r}
                     </button>
                   ))}
                 </div>
@@ -267,7 +267,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                             style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
                             title="Change role"
                           >
-                            {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
+                            {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "youtube_editor" ? "YT Editor" : m.role === "short_form_editor" ? "SF Editor" : m.role === "videographer" ? "Video" : m.role}
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
                           </button>
                           {changingRoleId === m.id && roleDropdownPos && (
@@ -276,7 +276,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                               className="bg-surface border border-border rounded-xl shadow-xl py-1 min-w-[180px]"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              {(teamUser.role === "owner" ? ["admin", "project_manager", "editor", "videographer", "smm"] : ["editor", "videographer", "smm"]).map((r) => (
+                              {(teamUser.role === "owner" ? ["admin", "project_manager", "youtube_editor", "short_form_editor", "videographer", "smm"] : ["youtube_editor", "short_form_editor", "videographer", "smm"]).map((r) => (
                                 <button
                                   key={r}
                                   disabled={savingRole || m.role === r}
@@ -284,7 +284,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                                   className="w-full text-left px-4 py-2 text-[12px] font-medium bg-transparent border-none cursor-pointer hover:bg-surface-2 transition-colors flex items-center justify-between"
                                   style={{ color: m.role === r ? ROLE_COLOR[r] || "#A8A49C" : "var(--text-2)" }}
                                 >
-                                  {r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r === "videographer" ? "Videographer" : r.charAt(0).toUpperCase() + r.slice(1)}
+                                  {r === "smm" ? "Social Media Manager" : r === "project_manager" ? "Project Manager" : r === "youtube_editor" ? "YouTube Editor" : r === "short_form_editor" ? "Short Form Editor" : r === "videographer" ? "Videographer" : r.charAt(0).toUpperCase() + r.slice(1)}
                                   {m.role === r && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
                                 </button>
                               ))}
@@ -296,7 +296,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                           className="text-[10px] font-bold tracking-[0.08em] uppercase py-[2px] px-[8px] rounded-md"
                           style={{ color: ROLE_COLOR[m.role] || "#A8A49C", background: `${ROLE_COLOR[m.role] || "#A8A49C"}18`, border: `1px solid ${ROLE_COLOR[m.role] || "#A8A49C"}30` }}
                         >
-                          {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "videographer" ? "Video" : m.role}
+                          {m.role === "smm" ? "SMM" : m.role === "project_manager" ? "PM" : m.role === "youtube_editor" ? "YT Editor" : m.role === "short_form_editor" ? "SF Editor" : m.role === "videographer" ? "Video" : m.role}
                         </span>
                       )}
                     </div>
@@ -347,7 +347,7 @@ export function TeamManagement({ teamUser, onClientSelect }: Props) {
                 </div>
                 <div className="flex items-center gap-2.5">
                   <span className="text-text-3 text-[11px] font-mono tracking-[0.12em] bg-surface-3 py-[3px] px-2.5 rounded-md border border-border-2 hidden sm:inline">{inv.code}</span>
-                  <span className="capitalize text-[11px] hidden sm:inline" style={{ color: ROLE_COLOR[inv.role] || "#A8A49C" }}>{inv.role === "smm" ? "SMM" : inv.role === "project_manager" ? "PM" : inv.role}</span>
+                  <span className="capitalize text-[11px] hidden sm:inline" style={{ color: ROLE_COLOR[inv.role] || "#A8A49C" }}>{inv.role === "smm" ? "SMM" : inv.role === "project_manager" ? "PM" : inv.role === "youtube_editor" ? "YT Editor" : inv.role === "short_form_editor" ? "SF Editor" : inv.role}</span>
                   <span className="text-[11px] font-bold text-[#F59E0B] bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.2)] py-[3px] px-2.5 rounded-md uppercase tracking-[0.06em]">Pending</span>
                   {canManage && (
                     <button

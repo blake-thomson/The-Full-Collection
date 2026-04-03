@@ -32,7 +32,7 @@ interface Props {
 }
 
 const COLUMN_MAP = Object.fromEntries(COLUMNS.map((c) => [c.id, c.label]));
-const ROLES = ["editor", "admin", "smm", "social_media_manager"];
+const ROLES = ["youtube_editor", "short_form_editor", "admin", "smm", "social_media_manager"];
 
 function actionSummary(action: TriggerAction): string {
   switch (action.type) {
@@ -153,7 +153,7 @@ export function WorkflowTriggers({ currentUserRole }: Props) {
     const action: TriggerAction = { type };
     if (type === "send_in_app_notification") action.to = "client";
     if (type === "move_card") action.to_column = COLUMNS[0].id;
-    if (type === "assign_to") action.role = "editor";
+    if (type === "assign_to") action.role = "short_form_editor";
     setFormActions([...formActions, action]);
   };
 

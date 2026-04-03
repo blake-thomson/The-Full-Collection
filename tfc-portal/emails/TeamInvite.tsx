@@ -14,7 +14,8 @@ interface Props {
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
-  editor: "Editor",
+  youtube_editor: "YouTube Editor",
+  short_form_editor: "Short Form Editor",
   videographer: "Videographer",
   smm: "Social Media Manager",
   project_manager: "Project Manager",

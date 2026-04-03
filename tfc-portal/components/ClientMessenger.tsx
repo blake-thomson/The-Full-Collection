@@ -53,7 +53,7 @@ interface Props {
 
 const ROLE_COLOR: Record<string, string> = {
   owner: "#F59E0B", admin: "#FF3B3B", project_manager: "#3B82F6",
-  editor: "#10B981", social_media_manager: "#8B5CF6", smm: "#8B5CF6", videographer: "#EC4899",
+  youtube_editor: "#10B981", short_form_editor: "#06B6D4", social_media_manager: "#8B5CF6", smm: "#8B5CF6", videographer: "#EC4899",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

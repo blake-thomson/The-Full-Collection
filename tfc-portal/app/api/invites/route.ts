@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   if (!name || !email || !role) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
-  if (!["admin", "project_manager", "editor", "videographer", "social_media_manager", "smm"].includes(role)) {
+  if (!["admin", "project_manager", "youtube_editor", "short_form_editor", "videographer", "social_media_manager", "smm"].includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
 

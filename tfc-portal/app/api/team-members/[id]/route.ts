@@ -3,7 +3,7 @@ import { createSupabaseAdmin } from "@/lib/supabase";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { requireTeamMember } from "@/lib/auth-helpers";
 
-const VALID_ROLES = ["admin", "project_manager", "editor", "videographer", "social_media_manager", "smm"];
+const VALID_ROLES = ["admin", "project_manager", "youtube_editor", "short_form_editor", "videographer", "social_media_manager", "smm"];
 
 // PATCH /api/team-members/[id] — update a member's role (owner/admin only)
 export async function PATCH(
@@ -96,7 +96,7 @@ export async function GET(
   // Fetch relevant kanban cards based on role
   let cards: Record<string, unknown>[] = [];
 
-  if (member.role === "editor") {
+  if (["youtube_editor", "short_form_editor"].includes(member.role)) {
     // Cards directly assigned to this editor
     const { data: editorCards } = await supabase
       .from("kanban_cards")

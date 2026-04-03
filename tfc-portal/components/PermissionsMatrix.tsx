@@ -14,11 +14,12 @@ interface Props {
   currentUserRole: string;
 }
 
-const ROLES = ["owner", "admin", "editor", "smm"];
+const ROLES = ["owner", "admin", "youtube_editor", "short_form_editor", "smm"];
 const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   admin: "Admin",
-  editor: "Editor",
+  youtube_editor: "YT Editor",
+  short_form_editor: "SF Editor",
   smm: "SMM",
 };
 

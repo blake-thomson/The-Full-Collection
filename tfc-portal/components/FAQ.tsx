@@ -194,7 +194,7 @@ const FAQ_DATA: FAQCategory[] = [
       },
       {
         q: "Who can see my content and messages?",
-        a: "Only you and your assigned team members can see your content, messages, and files. Team members with the appropriate roles (editor, admin, owner) can view and manage your content pipeline. Other clients cannot see your data.",
+        a: "Only you and your assigned team members can see your content, messages, and files. Team members with the appropriate roles (YouTube Editors / Short Form Editors, admin, owner) can view and manage your content pipeline. Other clients cannot see your data.",
       },
     ],
   },
@@ -227,7 +227,7 @@ const TEAM_FAQ_DATA: FAQCategory[] = [
     items: [
       {
         q: "What roles are available?",
-        a: "Owner (full control, gold badge), Admin (management access, red badge), Project Manager (operational oversight, blue badge), Editor (content editing, green badge), Videographer (content capture, pink badge), and Social Media Manager (publishing & scheduling, purple badge). Only Owners and Admins can invite members, delete members, and create clients.",
+        a: "Owner (full control, gold badge), Admin (management access, red badge), Project Manager (operational oversight, blue badge), YouTube Editor (long-form video editing, green badge), Short Form Editor (short-form content editing, cyan badge), Videographer (content capture, pink badge), and Social Media Manager (publishing & scheduling, purple badge). Only Owners and Admins can invite members, delete members, and create clients.",
       },
       {
         q: "How do I invite a new team member?",
@@ -245,7 +245,7 @@ const TEAM_FAQ_DATA: FAQCategory[] = [
     items: [
       {
         q: "How does the notification system work for card moves?",
-        a: "When content moves between columns, notifications are automatically sent based on role routing: 'Filmed' notifies Project Managers, 'Ready to Edit' notifies Editors, 'Edited QCC' notifies Admins/Owners, 'Ready for Review' notifies the Client, 'Approved' notifies SMMs, 'Revise' notifies Editors, 'Scheduled' notifies the Client, 'Published' notifies the Client. When a Shoot Date is set, Videographers are notified. When an Edit Deadline is set, Editors are notified. Only team members assigned to that client receive notifications.",
+        a: "When content moves between columns, notifications are automatically sent based on role routing: 'Filmed' notifies Project Managers, 'Ready to Edit' notifies YouTube Editors (for long-form) or Short Form Editors (for short-form) based on content type, 'Edited QCC' notifies Admins/Owners, 'Ready for Review' notifies the Client, 'Approved' notifies SMMs, 'Revise' notifies YouTube Editors (for long-form) or Short Form Editors (for short-form) based on content type, 'Scheduled' notifies the Client, 'Published' notifies the Client. When a Shoot Date is set, Videographers are notified. When an Edit Deadline is set, YouTube Editors and Short Form Editors are both notified. Only team members assigned to that client receive notifications.",
       },
       {
         q: "How do I use the AI content generator?",
