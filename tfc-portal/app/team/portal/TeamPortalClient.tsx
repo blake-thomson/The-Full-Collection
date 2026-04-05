@@ -176,6 +176,12 @@ export default function TeamPortalClient() {
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
   const [showIdeaSwiper, setShowIdeaSwiper] = useState(false);
   const [myAssignedClientIds, setMyAssignedClientIds] = useState<string[]>([]);
+  const [showInviteClient, setShowInviteClient] = useState(false);
+  const [invClientName, setInvClientName] = useState("");
+  const [invClientEmail, setInvClientEmail] = useState("");
+  const [invClientErr, setInvClientErr] = useState("");
+  const [invClientSaving, setInvClientSaving] = useState(false);
+  const [lastInvitedClient, setLastInvitedClient] = useState<{ name: string; email: string } | null>(null);
   const pendingClientId = useRef<string | null>(searchParams.get("client"));
 
   const router = useRouter();
@@ -394,6 +400,33 @@ export default function TeamPortalClient() {
     const matchFilter = filter === "all" || (filter === "complete" && c.onboarding_complete) || (filter === "pending" && !c.onboarding_complete);
     return matchSearch && matchFilter;
   });
+
+  const canInviteClients = ["owner", "admin"].includes(teamUser.role);
+
+  const inviteClient = async () => {
+    setInvClientErr("");
+    const name = invClientName.trim();
+    const email = invClientEmail.trim().toLowerCase();
+    if (!name || !email) { setInvClientErr("Name and email are required."); return; }
+    setInvClientSaving(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, createdBy: teamUser.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setInvClientErr(data.error || "Failed to invite client."); return; }
+      setInvClientName(""); setInvClientEmail("");
+      setShowInviteClient(false);
+      setLastInvitedClient({ name, email });
+      loadClients();
+    } catch {
+      setInvClientErr("Something went wrong. Try again.");
+    } finally {
+      setInvClientSaving(false);
+    }
+  };
 
   const totalClients = clients.length;
   const onboarded = clients.filter((c) => c.onboarding_complete).length;
@@ -800,8 +833,48 @@ export default function TeamPortalClient() {
                   <h2 className="text-text font-heading text-[22px] font-[800] m-0 mb-1">All Clients</h2>
                   <p className="text-text-2 text-[13px] m-0">{totalClients} client{totalClients !== 1 ? "s" : ""} · {onboarded} onboarded</p>
                 </div>
-                <button className="tfc-btn-ghost text-xs py-2 px-4 self-start" onClick={loadClients}>↻ Refresh</button>
+                <div className="flex gap-2 self-start">
+                  {canInviteClients && !showInviteClient && (
+                    <button className="tfc-btn py-[9px] px-5 text-xs" onClick={() => { setShowInviteClient(true); setInvClientErr(""); setLastInvitedClient(null); }}>
+                      + Invite Client
+                    </button>
+                  )}
+                  <button className="tfc-btn-ghost text-xs py-2 px-4" onClick={loadClients}>↻ Refresh</button>
+                </div>
               </div>
+
+              {/* Invite success */}
+              {lastInvitedClient && (
+                <div className="bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.25)] rounded-[10px] p-4 mb-5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[#10B981] text-sm font-bold m-0 mb-1.5">Invite sent to {lastInvitedClient.name}</p>
+                      <p className="text-text-2 text-[13px] m-0">A welcome email with setup instructions has been sent to {lastInvitedClient.email}</p>
+                    </div>
+                    <button onClick={() => setLastInvitedClient(null)} className="text-text-3 bg-transparent border-none cursor-pointer text-lg leading-none pl-3">×</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Invite client form */}
+              {showInviteClient && (
+                <div className="bg-surface-2 border border-border-2 rounded-xl p-[22px] mb-6">
+                  <h3 className="text-text font-heading text-[15px] font-bold m-0 mb-[18px]">Invite Client to Portal</h3>
+                  <p className="text-text-3 text-[12px] m-0 mb-4">Add an existing client so they can access the portal. They&apos;ll receive a welcome email with setup instructions.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-[18px]">
+                    <div><label className="tfc-label">Name</label><input className="tfc-input" value={invClientName} onChange={(e) => setInvClientName(e.target.value)} placeholder="Client's full name" /></div>
+                    <div><label className="tfc-label">Email</label><input className="tfc-input" type="email" value={invClientEmail} onChange={(e) => setInvClientEmail(e.target.value)} placeholder="client@email.com" onKeyDown={(e) => { if (e.key === "Enter") inviteClient(); }} /></div>
+                  </div>
+                  {invClientErr && <div className="text-[#FCA5A5] text-[13px] mb-3 bg-[rgba(239,68,68,0.08)] py-2 px-3 rounded-[7px]">{invClientErr}</div>}
+                  <div className="flex gap-2.5">
+                    <button className="tfc-btn py-[9px] px-[22px] text-xs" onClick={inviteClient} disabled={invClientSaving}>
+                      {invClientSaving ? "Sending..." : "Send Invite →"}
+                    </button>
+                    <button className="tfc-btn-ghost py-[9px] px-[18px] text-xs" onClick={() => { setShowInviteClient(false); setInvClientErr(""); }}>Cancel</button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-2.5 mb-5">
                 <input className="tfc-input max-w-full sm:max-w-[280px]" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email..." />
                 <div className="flex gap-1.5">
